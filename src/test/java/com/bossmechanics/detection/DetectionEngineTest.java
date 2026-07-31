@@ -25,6 +25,13 @@ public class DetectionEngineTest
 
 	private static final Boss SIRE = sireFixture();
 
+	// Vorkath-shaped fixture: projectiles have a source actor, graphics don't.
+	private static final int VORKATH_NPC = 8059;
+	private static final int ACID_PROJECTILE = 1483;
+	private static final int SPAWN_GRAPHIC = 700;
+
+	private static final Boss VORKATH = vorkathFixture();
+
 	private DiscoveryState state;
 	private DetectionEngine engine;
 
@@ -113,6 +120,55 @@ public class DetectionEngineTest
 		assertEquals("apocalypse", result.get(0).getMechanic().getId());
 	}
 
+	@Test
+	public void projectileFromTrackedBossDiscoversAcidPoolBarrage()
+	{
+		DetectionEngine vorkathEngine = new DetectionEngine(Collections.singletonList(VORKATH), new DiscoveryState());
+		vorkathEngine.npcSpawned(3, VORKATH_NPC);
+
+		List<Discovery> result = vorkathEngine.projectileFired(3, ACID_PROJECTILE);
+
+		assertEquals(1, result.size());
+		assertEquals("acid-pool-barrage", result.get(0).getMechanic().getId());
+	}
+
+	@Test
+	public void projectileFromUntrackedSourceIsEmptyEvenWithBossPresent()
+	{
+		DetectionEngine vorkathEngine = new DetectionEngine(Collections.singletonList(VORKATH), new DiscoveryState());
+		vorkathEngine.npcSpawned(3, VORKATH_NPC);
+
+		assertTrue(vorkathEngine.projectileFired(99, ACID_PROJECTILE).isEmpty());
+	}
+
+	@Test
+	public void projectileWithNullSourceFallsBackToBossPresence()
+	{
+		DetectionEngine vorkathEngine = new DetectionEngine(Collections.singletonList(VORKATH), new DiscoveryState());
+
+		assertTrue(vorkathEngine.projectileFired(null, ACID_PROJECTILE).isEmpty());
+
+		vorkathEngine.npcSpawned(3, VORKATH_NPC);
+
+		List<Discovery> result = vorkathEngine.projectileFired(null, ACID_PROJECTILE);
+		assertEquals(1, result.size());
+		assertEquals("acid-pool-barrage", result.get(0).getMechanic().getId());
+	}
+
+	@Test
+	public void graphicGatesOnBossPresenceOnly()
+	{
+		DetectionEngine vorkathEngine = new DetectionEngine(Collections.singletonList(VORKATH), new DiscoveryState());
+
+		assertTrue(vorkathEngine.graphicCreated(SPAWN_GRAPHIC).isEmpty());
+
+		vorkathEngine.npcSpawned(3, VORKATH_NPC);
+
+		List<Discovery> result = vorkathEngine.graphicCreated(SPAWN_GRAPHIC);
+		assertEquals(1, result.size());
+		assertEquals("zombified-spawn", result.get(0).getMechanic().getId());
+	}
+
 	private static Boss sireFixture()
 	{
 		Mechanic miasmaPools = mechanic("miasma-pools", "Miasma Pools",
@@ -128,6 +184,18 @@ public class DetectionEngineTest
 			Arrays.asList(SIRE_AWAKE, SIRE_MINION_SURGE_FORM, SIRE_APOCALYPSE_FORM),
 			"https://oldschool.runescape.wiki/w/Abyssal_Sire/Strategies",
 			Arrays.asList(miasmaPools, tentacleGuard, minionSurge, apocalypse));
+	}
+
+	private static Boss vorkathFixture()
+	{
+		Mechanic acidPoolBarrage = mechanic("acid-pool-barrage", "Acid Pool Barrage",
+			Collections.singletonList(trigger("projectile", ACID_PROJECTILE)));
+		Mechanic zombifiedSpawn = mechanic("zombified-spawn", "Zombified Spawn",
+			Collections.singletonList(trigger("graphic", SPAWN_GRAPHIC)));
+
+		return new Boss("vorkath", "Vorkath", Collections.singletonList(VORKATH_NPC),
+			"https://oldschool.runescape.wiki/w/Vorkath/Strategies",
+			Arrays.asList(acidPoolBarrage, zombifiedSpawn));
 	}
 
 	static Mechanic mechanic(String id, String name, List<Trigger> detection)

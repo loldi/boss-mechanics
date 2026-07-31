@@ -92,6 +92,31 @@ public class DetectionEngine
 		return matchGated(TriggerType.ANIMATION, animationId, ownedBy(bossId));
 	}
 
+	/**
+	 * Matches if the projectile's source is a tracked boss NPC. A null source (the game didn't
+	 * report one) falls back to gating on any tracked boss being present.
+	 */
+	public List<Discovery> projectileFired(Integer sourceNpcIndex, int projectileId)
+	{
+		if (sourceNpcIndex != null)
+		{
+			String bossId = presence.get(sourceNpcIndex);
+			if (bossId == null)
+			{
+				return Collections.emptyList();
+			}
+			return matchGated(TriggerType.PROJECTILE, projectileId, ownedBy(bossId));
+		}
+
+		return matchGated(TriggerType.PROJECTILE, projectileId, anyBossPresent());
+	}
+
+	/** Graphics report no source actor, so they gate on boss presence only (curators must pick ids players can't produce). */
+	public List<Discovery> graphicCreated(int graphicId)
+	{
+		return matchGated(TriggerType.GRAPHIC, graphicId, anyBossPresent());
+	}
+
 	private List<Discovery> matchNpcSpawn(int npcId)
 	{
 		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent());
