@@ -1,7 +1,12 @@
 package com.bossmechanics;
 
+import com.bossmechanics.data.Boss;
+import com.bossmechanics.data.BossDataLoader;
+import com.bossmechanics.data.LoadResult;
 import com.bossmechanics.spike.SireWidgetSpike;
 import com.google.inject.Provides;
+import java.util.Collections;
+import java.util.List;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -30,11 +35,24 @@ public class BossMechanicsPlugin extends Plugin
 	@Inject
 	private SireWidgetSpike sireWidgetSpike;
 
+	@Inject
+	private BossDataLoader bossDataLoader;
+
+	private List<Boss> bosses = Collections.emptyList();
+
 	@Override
 	protected void startUp() throws Exception
 	{
 		log.info("Boss Mechanics started");
-		// TODO: load bundled boss data (data/bosses/*.json)
+
+		LoadResult result = bossDataLoader.loadAll();
+		for (String error : result.getErrors())
+		{
+			log.warn("Boss Mechanics data error: {}", error);
+		}
+		bosses = result.getBosses();
+		log.info("Loaded {} boss(es)", bosses.size());
+
 		// TODO: subscribe detection listeners (AnimationChanged, ProjectileMoved, GraphicsObjectCreated)
 		// TODO: inject Boss Mechanics button into the collection log on WidgetLoaded
 
