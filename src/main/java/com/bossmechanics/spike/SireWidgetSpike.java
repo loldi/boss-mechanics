@@ -10,6 +10,7 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
@@ -36,6 +37,7 @@ public class SireWidgetSpike
 
 	private static final int PARENT_CHATBOX = -2;
 	private static final int MAX_PARENT_SCAN = 40;
+	private static final int MAX_BUILD_RETRIES = 10;
 
 	@Inject
 	private Client client;
@@ -48,6 +50,8 @@ public class SireWidgetSpike
 
 	// Widgets we created, so teardown never touches anything we don't own.
 	private final List<Widget> spikeWidgets = new ArrayList<>();
+
+	private int buildRetries;
 
 	/**
 	 * Called from the plugin's startUp. Without this, toggling the plugin off and on
@@ -74,6 +78,7 @@ public class SireWidgetSpike
 		}
 
 		log.info("Sire widget spike: config changed ({}={}), rebuilding on client thread", event.getKey(), event.getNewValue());
+		buildRetries = 0;
 		clientThread.invokeLater(this::rebuild);
 	}
 
@@ -94,6 +99,24 @@ public class SireWidgetSpike
 		{
 			clientThread.invokeLater(this::rebuild);
 		}
+	}
+
+	/**
+	 * The interface tree is not always ready when the spike is switched on or the
+	 * player logs in, which is why the first build silently produced nothing and the
+	 * spike had to be toggled off and on by hand. Retry on tick until the build
+	 * actually yields widgets, then stop.
+	 */
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		if (!config.spikeEnabled() || !spikeWidgets.isEmpty() || buildRetries >= MAX_BUILD_RETRIES)
+		{
+			return;
+		}
+
+		buildRetries++;
+		clientThread.invokeLater(this::rebuild);
 	}
 
 	/** Tear down whatever we last built, then rebuild if the spike is enabled. */
