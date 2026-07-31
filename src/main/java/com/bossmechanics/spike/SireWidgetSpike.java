@@ -21,7 +21,7 @@ import net.runelite.client.events.ConfigChanged;
 
 /**
  * Issue #1 spike: prove/disprove whether a custom RuneLite widget can render the
- * Abyssal Sire model playing an animation (docs/DECISIONS.md D15). Delete-or-promote.
+ * Abyssal Sire model playing an animation (docs/DECISIONS.md D14). Delete-or-promote.
  *
  * Not production code: no button, no real interface, no styling, no data loading.
  * All config is dev-facing (see the "(Spike)" section of BossMechanicsConfig) so the
