@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * The one rule set for whether a parsed {@link Boss} is well-formed. Called only from
@@ -12,6 +13,10 @@ import java.util.Set;
  */
 final class BossDataValidator
 {
+	// Boss and mechanic ids double as ConfigManager key fragments and CSV entries (#8), so a
+	// comma or other punctuation in one would corrupt persisted state. Enforced here, once.
+	private static final Pattern SLUG_PATTERN = Pattern.compile("[a-z0-9-]+");
+
 	private BossDataValidator()
 	{
 	}
@@ -34,6 +39,11 @@ final class BossDataValidator
 		if (!isBlank(boss.getId()) && !boss.getId().equals(expectedId))
 		{
 			errors.add(expectedId + ": id '" + boss.getId() + "' does not match expected '" + expectedId + "'");
+		}
+
+		if (!isBlank(boss.getId()) && !isValidSlug(boss.getId()))
+		{
+			errors.add(expectedId + ": id '" + boss.getId() + "' is not a valid slug (expected lowercase letters, digits, hyphens)");
 		}
 
 		if (isEmpty(boss.getNpcIds()))
@@ -66,6 +76,11 @@ final class BossDataValidator
 			requireNonBlank(errors, expectedId, label + ".name", mechanic.getName());
 			requireNonBlank(errors, expectedId, label + ".description", mechanic.getDescription());
 			requireNonBlank(errors, expectedId, label + ".counterplay", mechanic.getCounterplay());
+
+			if (!isBlank(mechanic.getId()) && !isValidSlug(mechanic.getId()))
+			{
+				errors.add(expectedId + ": " + label + ": id '" + mechanic.getId() + "' is not a valid slug (expected lowercase letters, digits, hyphens)");
+			}
 
 			if (!isBlank(mechanic.getId()) && !seenMechanicIds.add(mechanic.getId()))
 			{
@@ -122,6 +137,11 @@ final class BossDataValidator
 		{
 			errors.add(expectedId + ": missing required field '" + field + "'");
 		}
+	}
+
+	private static boolean isValidSlug(String value)
+	{
+		return SLUG_PATTERN.matcher(value).matches();
 	}
 
 	private static boolean isBlank(String value)

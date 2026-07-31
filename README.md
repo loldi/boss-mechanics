@@ -16,10 +16,12 @@ interface with:
 ## Status
 
 Pre-alpha. Boss data loads and validates at startup, and the detection engine
-tracks which mechanics your client has witnessed this session, announcing each
-one in chat the first time. Still in-memory only (no persistence yet), and
-there's no injected button or interface. See [docs/DECISIONS.md](docs/DECISIONS.md)
-for the locked design and [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
+tracks which mechanics your client has witnessed, announcing each one in chat
+the first time. Discovery (and reveal) state now persists per character via
+RuneLite's profile config, replacing wholesale on character switch. There's
+still no injected button or interface — that's issue #5. See
+[docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
+[data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 
 **Launch bosses:** Abyssal Sire, Zulrah, Vorkath, General Graardor, Mad Angel.
 

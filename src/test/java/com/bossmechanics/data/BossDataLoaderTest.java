@@ -131,6 +131,32 @@ public class BossDataLoaderTest
 		assertEquals(1, result.getErrors().size());
 	}
 
+	@Test
+	public void invalidBossIdSlugIsError()
+	{
+		// expectedId matches the (invalid) boss id so only the slug rule fires, not the
+		// "id does not match expected" rule.
+		String json = MINIMAL_VALID_JSON.replace("\"id\": \"vorkath\",", "\"id\": \"Bad Id\",");
+
+		LoadResult result = loader.parseOne(json, "Bad Id");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "Bad Id"));
+	}
+
+	@Test
+	public void invalidMechanicIdSlugIsError()
+	{
+		// A comma in a mechanic id would corrupt the CSV persistence format (#8), not just
+		// look ugly, so this is the case worth locking down explicitly.
+		String json = MINIMAL_VALID_JSON.replace("\"id\": \"zombified-spawn\",", "\"id\": \"a,b\",");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "a,b"));
+	}
+
 	private static boolean errorContaining(LoadResult result, String substring)
 	{
 		for (String error : result.getErrors())
