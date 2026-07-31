@@ -2,9 +2,16 @@ package com.bossmechanics.data;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.inject.Inject;
 
 /**
@@ -33,9 +40,54 @@ public class BossDataLoader
 		this.resourceRoot = resourceRoot;
 	}
 
+	/**
+	 * Discovers every bundled boss via {@code <resourceRoot>/index.json} and parses+validates
+	 * each one. A missing/malformed index, an unreadable file, or a duplicate id in the index
+	 * becomes an error entry; nothing here throws.
+	 */
 	public LoadResult loadAll()
 	{
-		throw new UnsupportedOperationException("loadAll() lands in a later slice");
+		List<String> ids;
+		try
+		{
+			ids = readIndex();
+		}
+		catch (IOException | JsonParseException e)
+		{
+			return new LoadResult(Collections.emptyList(), Collections.singletonList(
+				resourceRoot + "/index.json: " + e.getMessage()));
+		}
+
+		List<Boss> bosses = new ArrayList<>();
+		List<String> errors = new ArrayList<>();
+		Set<String> seenIds = new HashSet<>();
+
+		for (String id : ids)
+		{
+			if (!seenIds.add(id))
+			{
+				errors.add("index.json: duplicate id '" + id + "'");
+				continue;
+			}
+
+			String path = resourceRoot + "/" + id + ".json";
+			String json;
+			try
+			{
+				json = readResource(path);
+			}
+			catch (IOException e)
+			{
+				errors.add(id + ": could not read " + path + " (" + e.getMessage() + ")");
+				continue;
+			}
+
+			LoadResult parsed = parseOne(json, id);
+			bosses.addAll(parsed.getBosses());
+			errors.addAll(parsed.getErrors());
+		}
+
+		return new LoadResult(bosses, errors);
 	}
 
 	/**
@@ -65,5 +117,32 @@ public class BossDataLoader
 		}
 
 		return new LoadResult(bosses, errors);
+	}
+
+	private List<String> readIndex() throws IOException
+	{
+		String json = readResource(resourceRoot + "/index.json");
+		String[] ids = gson.fromJson(json, String[].class);
+		return ids == null ? Collections.emptyList() : Arrays.asList(ids);
+	}
+
+	private String readResource(String path) throws IOException
+	{
+		try (InputStream in = getClass().getResourceAsStream(path))
+		{
+			if (in == null)
+			{
+				throw new IOException("resource not found: " + path);
+			}
+
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			byte[] buffer = new byte[4096];
+			int read;
+			while ((read = in.read(buffer)) != -1)
+			{
+				out.write(buffer, 0, read);
+			}
+			return out.toString(StandardCharsets.UTF_8.name());
+		}
 	}
 }
