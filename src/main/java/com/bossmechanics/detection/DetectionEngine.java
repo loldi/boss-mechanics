@@ -117,6 +117,12 @@ public class DetectionEngine
 		return matchGated(TriggerType.GRAPHIC, graphicId, anyBossPresent());
 	}
 
+	/** Clears all tracked presence, e.g. on logout/world-hop. Discovery state is untouched. */
+	public void clearPresence()
+	{
+		presence.clear();
+	}
+
 	private List<Discovery> matchNpcSpawn(int npcId)
 	{
 		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent());

@@ -121,6 +121,23 @@ public class DetectionEngineTest
 	}
 
 	@Test
+	public void clearPresenceStopsMatchingButKeepsDiscoveryState()
+	{
+		engine.npcSpawned(1, SIRE_AWAKE);
+		List<Discovery> firstWitness = engine.animationPlayed(1, MIASMA_ANIMATION);
+		assertEquals(1, firstWitness.size());
+
+		engine.clearPresence();
+
+		assertTrue(engine.animationPlayed(1, MIASMA_ANIMATION).isEmpty());
+		assertTrue(state.isDiscovered("abyssal-sire", "miasma-pools"));
+
+		// Re-witnessing after presence is rebuilt stays empty: already discovered.
+		engine.npcSpawned(1, SIRE_AWAKE);
+		assertTrue(engine.animationPlayed(1, MIASMA_ANIMATION).isEmpty());
+	}
+
+	@Test
 	public void projectileFromTrackedBossDiscoversAcidPoolBarrage()
 	{
 		DetectionEngine vorkathEngine = new DetectionEngine(Collections.singletonList(VORKATH), new DiscoveryState());
