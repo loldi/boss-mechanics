@@ -29,22 +29,27 @@ Locked during the planning grill on 2026-07-31. Revisit deliberately, not accide
 8. **Schema splits `description` (what the boss does) from `counterplay` (what you
    do).** Counterplay is 1-2 terse imperative sentences. No damage numbers or max
    hits — they age badly.
+9. **Boss discovery is a `data/bosses/index.json` list, not classpath directory
+   scanning.** **VALIDATED 2026-07-31 (issue #2).** Scanning is unreliable across
+   sideload vs Plugin Hub classloaders; a hardcoded boss enum would violate D7
+   ("adding a boss is a pure data PR"). A test reconciles the index against the
+   real directory listing so a forgotten index line fails the build.
 
 ## Discovery
 
-9. **Discovered = your client witnessed the trigger** (animation / projectile /
-   graphic / npc-spawn fired while a boss NPC is present). You don't have to get hit.
-10. **Two-state model: revealed vs discovered.** "View All" is a reversible reveal
+10. **Discovered = your client witnessed the trigger** (animation / projectile /
+    graphic / npc-spawn fired while a boss NPC is present). You don't have to get hit.
+11. **Two-state model: revealed vs discovered.** "View All" is a reversible reveal
     toggle for reading; the progress bar always shows genuine discoveries. A misclick
     can't destroy the discovery game. (Provisional — validate feel in playtesting.)
-11. **Per-character state**, stored via ConfigManager RS-profile keys.
-12. **Undiscovered mechanics show as locked "???" rows**, not hidden.
-13. **Discovery announces itself** with a collection-log-style chatbox message:
+12. **Per-character state**, stored via ConfigManager RS-profile keys.
+13. **Undiscovered mechanics show as locked "???" rows**, not hidden.
+14. **Discovery announces itself** with a collection-log-style chatbox message:
     "Boss mechanic discovered: X." No popups mid-fight.
 
 ## Presentation
 
-14. **Animations render live from the game cache** via a model widget playing the
+15. **Animations render live from the game cache** via a model widget playing the
     mechanic's animation ID. Known limitation: shows the boss's body animation only —
     no projectiles/AoE/adds. Mechanics that don't read from the body animation set
     `staticFallback` in the schema.
@@ -63,12 +68,12 @@ Locked during the planning grill on 2026-07-31. Revisit deliberately, not accide
       while they render. Never use it as a visibility check; use `getRelativeX/Y`.
     - The interface tree is not always ready when the widget is first built; retry
       until the build yields widgets.
-15. **Plugin name: "Boss Mechanics".** Injected button is a native-styled icon with a
+16. **Plugin name: "Boss Mechanics".** Injected button is a native-styled icon with a
     tooltip (not a text label). Button appears only on bosses that have data.
 
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
   Curate it last.
-- UX feel of revealed-vs-discovered needs playtesting (decision 10 is provisional).
+- UX feel of revealed-vs-discovered needs playtesting (decision 11 is provisional).
 - Exact sprite for the injected button — pick from cache during UI build.
