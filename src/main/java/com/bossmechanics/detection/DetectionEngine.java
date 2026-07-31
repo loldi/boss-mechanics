@@ -62,11 +62,22 @@ public class DetectionEngine
 		}
 	}
 
-	/** A boss NPC appeared. Marks presence so later triggers from this index can be attributed to its boss. */
+	/**
+	 * A boss NPC appeared. Presence updates before matching (docs/DECISIONS.md D17): an id that
+	 * is simultaneously a boss form and an npc-spawn trigger (e.g. Sire phase forms) must count
+	 * as present for its own trigger match in this same call.
+	 */
 	public List<Discovery> npcSpawned(int npcIndex, int npcId)
 	{
 		updatePresence(npcIndex, npcId);
-		return Collections.emptyList();
+		return matchNpcSpawn(npcId);
+	}
+
+	/** A tracked NPC transformed. Counts as an npc-spawn trigger (Sire phase forms transform, they don't spawn). */
+	public List<Discovery> npcChanged(int npcIndex, int newNpcId)
+	{
+		updatePresence(npcIndex, newNpcId);
+		return matchNpcSpawn(newNpcId);
 	}
 
 	/** Matches only if {@code npcIndex} is a currently-tracked boss NPC, and only against that boss's mechanics. */
@@ -79,6 +90,11 @@ public class DetectionEngine
 		}
 
 		return matchGated(TriggerType.ANIMATION, animationId, ownedBy(bossId));
+	}
+
+	private List<Discovery> matchNpcSpawn(int npcId)
+	{
+		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent());
 	}
 
 	private void updatePresence(int npcIndex, int npcId)
@@ -114,5 +130,10 @@ public class DetectionEngine
 	private static Predicate<Discovery> ownedBy(String bossId)
 	{
 		return candidate -> candidate.getBoss().getId().equals(bossId);
+	}
+
+	private Predicate<Discovery> anyBossPresent()
+	{
+		return candidate -> presence.containsValue(candidate.getBoss().getId());
 	}
 }

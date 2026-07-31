@@ -69,6 +69,50 @@ public class DetectionEngineTest
 		assertTrue(engine.animationPlayed(1, MIASMA_ANIMATION).isEmpty());
 	}
 
+	@Test
+	public void npcSpawnTriggerRequiresBossPresence()
+	{
+		assertTrue(engine.npcSpawned(2, TENTACLE_GUARD_NPC).isEmpty());
+	}
+
+	@Test
+	public void npcSpawnTriggerDiscoversWhenBossPresent()
+	{
+		engine.npcSpawned(1, SIRE_AWAKE);
+
+		List<Discovery> result = engine.npcSpawned(2, TENTACLE_GUARD_NPC);
+
+		assertEquals(1, result.size());
+		assertEquals("tentacle-guard", result.get(0).getMechanic().getId());
+	}
+
+	@Test
+	public void npcChangedDiscoversTriggerAndKeepsPresence()
+	{
+		engine.npcSpawned(1, SIRE_AWAKE);
+
+		List<Discovery> result = engine.npcChanged(1, SIRE_APOCALYPSE_FORM);
+
+		assertEquals(1, result.size());
+		assertEquals("apocalypse", result.get(0).getMechanic().getId());
+
+		// Presence survived the transform: this index still resolves to the Sire.
+		List<Discovery> stillTracked = engine.animationPlayed(1, MIASMA_ANIMATION);
+		assertEquals(1, stillTracked.size());
+		assertEquals("miasma-pools", stillTracked.get(0).getMechanic().getId());
+	}
+
+	@Test
+	public void coldNpcSpawnOfPresenceMarkingTriggerDiscoversInSameCall()
+	{
+		// SIRE_APOCALYPSE_FORM is simultaneously a presence marker and a trigger id
+		// (docs/DECISIONS.md D17): presence must update before matching runs.
+		List<Discovery> result = engine.npcSpawned(1, SIRE_APOCALYPSE_FORM);
+
+		assertEquals(1, result.size());
+		assertEquals("apocalypse", result.get(0).getMechanic().getId());
+	}
+
 	private static Boss sireFixture()
 	{
 		Mechanic miasmaPools = mechanic("miasma-pools", "Miasma Pools",
