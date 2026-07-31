@@ -1,0 +1,61 @@
+# Boss Mechanics — design decisions
+
+Locked during the planning grill on 2026-07-31. Revisit deliberately, not accidentally.
+
+## Architecture
+
+1. **External plugin, no RuneLite fork.** Built from the example-plugin template,
+   compiles against published `net.runelite:client` artifacts. RuneLite source is
+   reference reading only.
+2. **In-game UI is the product.** No sidebar-panel version. The injected button and
+   the custom interface are the whole point.
+3. **Own window, not embedded.** The injected "Boss Mechanics" icon button on a
+   boss's collection log page opens our own custom-widget interface styled to match
+   the game. We never squat inside the collection log's widget tree (Jagex scripts
+   rebuild it constantly). Only the single injected button touches their interface.
+4. **Build for Plugin Hub from day one.** Public repo, BSD-2-Clause, hub-compliant
+   structure. Develop and playtest sideloaded; submit when the launch set feels good.
+
+## Data
+
+5. **Hand-curated, wiki-researched.** No runtime scraping — wiki strategy pages are
+   prose, not structured data. One JSON file per boss (see `data/SCHEMA.md`).
+   Paraphrase + attribute (wiki text is CC BY-SA 3.0).
+6. **Bundled at launch.** Data ships inside the plugin. Remote fetch (GitHub raw)
+   only becomes worth it when boss count grows and data PRs outpace releases.
+7. **Launch bosses (5):** Abyssal Sire, Zulrah, Vorkath, General Graardor,
+   Mad Angel. Chosen to span boss archetypes, not maximize coverage. Raids are
+   explicitly out of scope for launch. Adding boss #6 must be a pure data PR.
+8. **Schema splits `description` (what the boss does) from `counterplay` (what you
+   do).** Counterplay is 1-2 terse imperative sentences. No damage numbers or max
+   hits — they age badly.
+
+## Discovery
+
+9. **Discovered = your client witnessed the trigger** (animation / projectile /
+   graphic / npc-spawn fired while a boss NPC is present). You don't have to get hit.
+10. **Two-state model: revealed vs discovered.** "View All" is a reversible reveal
+    toggle for reading; the progress bar always shows genuine discoveries. A misclick
+    can't destroy the discovery game. (Provisional — validate feel in playtesting.)
+11. **Per-character state**, stored via ConfigManager RS-profile keys.
+12. **Undiscovered mechanics show as locked "???" rows**, not hidden.
+13. **Discovery announces itself** with a collection-log-style chatbox message:
+    "Boss mechanic discovered: X." No popups mid-fight.
+
+## Presentation
+
+14. **Animations render live from the game cache** via a model widget playing the
+    mechanic's animation ID. Known limitation: shows the boss's body animation only —
+    no projectiles/AoE/adds. Mechanics that don't read from the body animation set
+    `staticFallback` in the schema.
+    **Spike #1 before any other build work: render one Abyssal Sire animation in a
+    custom widget.** If the widget route dead-ends, fallback is pre-rendered captures.
+15. **Plugin name: "Boss Mechanics".** Injected button is a native-styled icon with a
+    tooltip (not a text label). Button appears only on bosses that have data.
+
+## Open questions
+
+- Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
+  Curate it last.
+- UX feel of revealed-vs-discovered needs playtesting (decision 10 is provisional).
+- Exact sprite for the injected button — pick from cache during UI build.
