@@ -48,8 +48,21 @@ Locked during the planning grill on 2026-07-31. Revisit deliberately, not accide
     mechanic's animation ID. Known limitation: shows the boss's body animation only —
     no projectiles/AoE/adds. Mechanics that don't read from the body animation set
     `staticFallback` in the schema.
-    **Spike #1 before any other build work: render one Abyssal Sire animation in a
-    custom widget.** If the widget route dead-ends, fallback is pre-rendered captures.
+    **VALIDATED 2026-07-31 (issue #1 spike).** The Abyssal Sire renders in a custom
+    widget and animations play and loop. Pre-rendered captures are no longer needed.
+    What the spike established, which the UI work depends on:
+    - Parent the model widget to top-level interface **child index 1**. Index 0 has
+      identical dimensions and silently never draws; picking a parent by size fails.
+    - Zoom ~3000 frames a large boss; 1000 is too far out to read.
+    - The Sire is a **single** cache model, so no multi-model compositing is needed.
+      Verify this per boss during curation — it is not guaranteed for every NPC.
+    - Looping animations loop indefinitely; **one-shot animations (e.g. death) play
+      once and the model then disappears.** Previews must prefer looping animation IDs,
+      or re-trigger one-shots.
+    - `getCanvasLocation()` reads `(-1,-1)` for hand-created dynamic children even
+      while they render. Never use it as a visibility check; use `getRelativeX/Y`.
+    - The interface tree is not always ready when the widget is first built; retry
+      until the build yields widgets.
 15. **Plugin name: "Boss Mechanics".** Injected button is a native-styled icon with a
     tooltip (not a text label). Button appears only on bosses that have data.
 
