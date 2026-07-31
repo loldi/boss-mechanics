@@ -32,6 +32,11 @@ gradlew runClient
 `gradlew test` will not run it. If you launch it from IntelliJ instead, add `-ea`
 to the VM options — RuneLite refuses to start without assertions enabled.)
 
+`gradlew build` runs the boss data validation tests against every file bundled
+in `data/bosses/`. A data-only PR (adding or editing a boss JSON file) is green
+when those tests pass — see [data/SCHEMA.md](data/SCHEMA.md) for the format and
+how to add a boss.
+
 ## Data & attribution
 
 Mechanic names, descriptions, and counterplay are hand-curated, researched from the

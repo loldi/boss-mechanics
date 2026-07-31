@@ -66,6 +66,18 @@ Locked during the planning grill on 2026-07-31. Revisit deliberately, not accide
 15. **Plugin name: "Boss Mechanics".** Injected button is a native-styled icon with a
     tooltip (not a text label). Button appears only on bosses that have data.
 
+## Later decisions
+
+Decision numbers are stable identifiers cited from GitHub issues and code comments,
+so new decisions are appended here rather than inserted in a themed section.
+
+16. **Boss discovery is a `data/bosses/index.json` list, not classpath directory
+    scanning.** **VALIDATED 2026-07-31 (issue #2).** Scanning is unreliable across
+    sideload vs Plugin Hub classloaders; a hardcoded boss enum would violate D7
+    ("adding a boss is a pure data PR"). A test reconciles the index against the
+    real directory listing so a forgotten index line fails the build. Belongs with
+    the Data decisions above (it is the mechanism that enforces D7).
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

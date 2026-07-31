@@ -4,6 +4,17 @@ One JSON file per boss in `data/bosses/`. Hand-curated. The OSRS wiki is the
 research source; every boss file links back to it for attribution (wiki text is
 CC BY-SA 3.0, so we paraphrase and attribute, never copy).
 
+## Adding a boss
+
+1. Add `data/bosses/<id>.json` following the field tables below.
+2. Add `<id>` as a new entry in `data/bosses/index.json` (a JSON array of ids).
+   This is the discovery list the plugin reads at startup; scanning the
+   classpath directory directly was rejected as unreliable across the
+   sideload and Plugin Hub classloaders (see docs/DECISIONS.md).
+3. Run `gradlew build`. `BundledBossDataTest` fails if the new file breaks the
+   schema, or if the index and the real directory listing disagree (a
+   forgotten index line, or an index entry with no matching file).
+
 ## Boss file
 
 | Field | Type | Notes |
@@ -40,10 +51,17 @@ CC BY-SA 3.0, so we paraphrase and attribute, never copy).
 |---|---|---|
 | `animationId` | int? | Animation played on the boss model in the viewer |
 | `npcId` | int? | Which NPC model to show (defaults to first of `npcIds`) |
-| `staticFallback` | bool | true when the body animation alone doesn't read (projectile/AoE mechanics) and a static illustration should be used instead |
+| `staticFallback` | bool | true when the body animation alone doesn't read (projectile/AoE mechanics) and a static illustration should be used instead. Defaults to `false` when the field is absent. |
 
 ## Style rules
 
 - Counterplay is imperative voice: "Keep moving." not "The player should keep moving."
 - No damage numbers, max hits, or attack-style stats. They age badly with rebalances.
 - Descriptions are paraphrased, never lifted from the wiki verbatim.
+
+## Curation notes
+
+Underscore-prefixed fields (e.g. `_note`) are ignored by the loader and may be
+added freely for curation notes, like `vorkath.json`'s `_note` flagging its IDs
+as unverified. The loader tolerates any unknown field, not just underscore-prefixed
+ones, but that's the convention for notes meant to be read, not just parsed past.
