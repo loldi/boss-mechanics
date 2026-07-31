@@ -86,6 +86,23 @@ so new decisions are appended here rather than inserted in a themed section.
     graphic ids players can't produce themselves. Detection state (which
     mechanics have been witnessed) is in-memory only until persistence lands
     in #8.
+18. **Discovery/reveal persistence, state layer only (issue #8).** Supersedes D17's
+    closing sentence: detection state is no longer in-memory only. One key per boss per
+    concern, stored via `ConfigManager` RS-profile keys (D11), CSV-valued:
+    `discovered.<bossId>` holds sorted mechanic ids; `revealed.<bossId>` (the reveal half
+    of D10) is present with value `"true"` iff revealed and unset (not `"false"`) when
+    not. Unknown/stale ids inside a discovered CSV are simply never matched, so renaming
+    or removing a mechanic id never needs a migration — deliberate, since D10 is still
+    provisional. Write-through on every new discovery; load is `DiscoveryState.reload()`,
+    called at the end of `startUp` and on `RuneScapeProfileChanged` (not
+    `GameStateChanged LOGGED_IN`, which fires before the profile key resolves). Reload
+    always replaces, never merges, so switching characters can't leak one character's
+    discoveries into another's. Reveal is per-boss and persisted, not a global toggle — a
+    global reveal would flip bosses the player never opened. The read-modify-write CSV
+    update in `addDiscovered` is safe only because every write happens on the client
+    thread; if #5 later writes from a Swing/UI thread this assumption breaks and the
+    read-modify-write needs a lock or a client-thread hop. Interface consumption of this
+    state (View All button, progress bar rendering) is #5's, not built here.
 
 ## Open questions
 
