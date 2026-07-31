@@ -196,6 +196,43 @@ public class DetectionEngineTest
 		assertEquals("zombified-spawn", result.get(0).getMechanic().getId());
 	}
 
+	@Test
+	public void animationDoesNotUnlockAnotherBossSharingTheSameAnimationId()
+	{
+		// Two bosses whose mechanics share one animation id. Only the boss actually
+		// on screen may unlock; otherwise every boss learns a mechanic at once.
+		Mechanic sharedIdMechanic = mechanic("shared-id-mechanic", "Shared Id Mechanic",
+			Collections.singletonList(trigger("animation", MIASMA_ANIMATION)));
+		Boss otherBoss = new Boss("other-boss", "Other Boss",
+			Collections.singletonList(VORKATH_NPC),
+			"https://oldschool.runescape.wiki/w/Vorkath/Strategies",
+			Collections.singletonList(sharedIdMechanic));
+
+		DetectionEngine bothBosses = new DetectionEngine(Arrays.asList(SIRE, otherBoss), state);
+		bothBosses.npcSpawned(1, SIRE_AWAKE);
+
+		List<Discovery> result = bothBosses.animationPlayed(1, MIASMA_ANIMATION);
+
+		assertEquals(1, result.size());
+		assertEquals("abyssal-sire", result.get(0).getBoss().getId());
+		assertTrue(state.isDiscovered("abyssal-sire", "miasma-pools"));
+		assertTrue(!state.isDiscovered("other-boss", "shared-id-mechanic"));
+	}
+
+	@Test
+	public void repeatedProjectileOfSameFlightDiscoversOnlyOnce()
+	{
+		// ProjectileMoved fires every cycle of a projectile's flight, so the second
+		// call onward must be silent or a single attack spams the chatbox.
+		DetectionEngine vorkathEngine = new DetectionEngine(
+			Collections.singletonList(VORKATH), state);
+		vorkathEngine.npcSpawned(1, VORKATH_NPC);
+
+		assertEquals(1, vorkathEngine.projectileFired(1, ACID_PROJECTILE).size());
+		assertTrue(vorkathEngine.projectileFired(1, ACID_PROJECTILE).isEmpty());
+		assertTrue(vorkathEngine.projectileFired(1, ACID_PROJECTILE).isEmpty());
+	}
+
 	private static Boss sireFixture()
 	{
 		Mechanic miasmaPools = mechanic("miasma-pools", "Miasma Pools",
