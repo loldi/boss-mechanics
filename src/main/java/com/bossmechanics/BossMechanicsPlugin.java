@@ -1,5 +1,6 @@
 package com.bossmechanics;
 
+import com.bossmechanics.spike.SireWidgetSpike;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,9 @@ public class BossMechanicsPlugin extends Plugin
 	@Inject
 	private EventBus eventBus;
 
+	@Inject
+	private SireWidgetSpike sireWidgetSpike;
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -33,6 +37,10 @@ public class BossMechanicsPlugin extends Plugin
 		// TODO: load bundled boss data (data/bosses/*.json)
 		// TODO: subscribe detection listeners (AnimationChanged, ProjectileMoved, GraphicsObjectCreated)
 		// TODO: inject Boss Mechanics button into the collection log on WidgetLoaded
+
+		// Issue #1 spike (delete-or-promote): see com.bossmechanics.spike.SireWidgetSpike
+		eventBus.register(sireWidgetSpike);
+		sireWidgetSpike.onPluginStart();
 	}
 
 	@Override
@@ -40,6 +48,9 @@ public class BossMechanicsPlugin extends Plugin
 	{
 		log.info("Boss Mechanics stopped");
 		// TODO: remove injected button, close our interface if open
+
+		sireWidgetSpike.onPluginStop();
+		eventBus.unregister(sireWidgetSpike);
 	}
 
 	@Provides
