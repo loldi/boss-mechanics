@@ -1,7 +1,9 @@
 package com.bossmechanics.data;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -38,12 +40,22 @@ public class BossDataLoader
 
 	/**
 	 * Parses one boss file's JSON text and validates it against {@code expectedId} (the
-	 * filename/index entry it was loaded as). A boss with any validation error is omitted from
-	 * the result's bosses (skipped), not partially included.
+	 * filename/index entry it was loaded as). Never throws: malformed JSON becomes a single
+	 * error entry instead of propagating Gson's parse exception. A boss with any validation
+	 * error is omitted from the result's bosses (skipped), not partially included.
 	 */
 	public LoadResult parseOne(String json, String expectedId)
 	{
-		Boss boss = gson.fromJson(json, Boss.class);
+		Boss boss;
+		try
+		{
+			boss = gson.fromJson(json, Boss.class);
+		}
+		catch (JsonParseException e)
+		{
+			return new LoadResult(Collections.emptyList(), Collections.singletonList(
+				expectedId + ": malformed JSON (" + e.getMessage() + ")"));
+		}
 
 		List<String> errors = BossDataValidator.validate(boss, expectedId);
 		List<Boss> bosses = new ArrayList<>();

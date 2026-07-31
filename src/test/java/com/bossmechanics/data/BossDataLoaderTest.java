@@ -122,6 +122,15 @@ public class BossDataLoaderTest
 		assertTrue(errorContaining(result, "id"));
 	}
 
+	@Test
+	public void malformedJsonYieldsErrorNotException()
+	{
+		LoadResult result = loader.parseOne("{not json", "x");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertEquals(1, result.getErrors().size());
+	}
+
 	private static boolean errorContaining(LoadResult result, String substring)
 	{
 		for (String error : result.getErrors())
