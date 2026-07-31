@@ -40,6 +40,7 @@ public class BossMechanicsPlugin extends Plugin
 
 		// Issue #1 spike (delete-or-promote): see com.bossmechanics.spike.SireWidgetSpike
 		eventBus.register(sireWidgetSpike);
+		sireWidgetSpike.onPluginStart();
 	}
 
 	@Override
@@ -48,6 +49,7 @@ public class BossMechanicsPlugin extends Plugin
 		log.info("Boss Mechanics stopped");
 		// TODO: remove injected button, close our interface if open
 
+		sireWidgetSpike.onPluginStop();
 		eventBus.unregister(sireWidgetSpike);
 	}
 

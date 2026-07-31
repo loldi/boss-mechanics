@@ -10,6 +10,7 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.api.widgets.WidgetType;
@@ -33,6 +34,9 @@ public class SireWidgetSpike
 	private static final int WIDGET_WIDTH = 220;
 	private static final int WIDGET_HEIGHT = 220;
 
+	private static final int PARENT_CHATBOX = -2;
+	private static final int MAX_PARENT_SCAN = 40;
+
 	@Inject
 	private Client client;
 
@@ -44,6 +48,22 @@ public class SireWidgetSpike
 
 	// Widgets we created, so teardown never touches anything we don't own.
 	private final List<Widget> spikeWidgets = new ArrayList<>();
+
+	/**
+	 * Called from the plugin's startUp. Without this, toggling the plugin off and on
+	 * while already logged in leaves nothing built: no config change and no game state
+	 * change fires, so neither subscriber runs.
+	 */
+	public void onPluginStart()
+	{
+		clientThread.invokeLater(this::rebuild);
+	}
+
+	/** Called from the plugin's shutDown so disabling the plugin doesn't strand widgets on screen. */
+	public void onPluginStop()
+	{
+		clientThread.invokeLater(this::teardown);
+	}
 
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
@@ -106,13 +126,81 @@ public class SireWidgetSpike
 	}
 
 	/**
-	 * Where our widgets get parented. One method so we can swap in the chatbox
-	 * container as a fallback parent if the top-level root layer misbehaves,
-	 * without touching call sites.
+	 * Where our widgets get parented. The top-level interface has many children and
+	 * most are not drawable layers, so index -1 picks the largest visible one from
+	 * the live tree rather than assuming index 0 works. -2 is the chatbox container,
+	 * which core RuneLite (ChatboxPanelManager) proves accepts dynamic children.
 	 */
 	private Widget resolveParent()
 	{
-		return client.getWidget(client.getTopLevelInterfaceId(), 0);
+		int index = config.spikeParentIndex();
+
+		if (index == PARENT_CHATBOX)
+		{
+			return client.getWidget(InterfaceID.Chatbox.UNIVERSE);
+		}
+
+		int topLevel = client.getTopLevelInterfaceId();
+		if (topLevel < 0)
+		{
+			// No top-level interface yet (still loading in). Passing this to getWidget
+			// indexes the client's group array with -1 and throws.
+			log.info("Sire widget spike: no top-level interface yet, skipping build");
+			return null;
+		}
+
+		if (index >= 0)
+		{
+			return client.getWidget(topLevel, index);
+		}
+
+		return largestVisibleChild(topLevel);
+	}
+
+	/**
+	 * Logs every child of the top-level interface and returns the biggest visible
+	 * one. The log is the point: it tells us which indices are real layers, so a
+	 * failed render can be retargeted live via the parent-index config.
+	 */
+	private Widget largestVisibleChild(int topLevel)
+	{
+		Widget best = null;
+		long bestArea = 0;
+
+		log.info("Sire widget spike: top-level interface {} candidate children:", topLevel);
+
+		for (int i = 0; i < MAX_PARENT_SCAN; i++)
+		{
+			Widget candidate = client.getWidget(topLevel, i);
+			if (candidate == null)
+			{
+				continue;
+			}
+
+			long area = (long) candidate.getWidth() * candidate.getHeight();
+			log.info("  [{}] id={} type={} hidden={} {}x{} at ({},{}) area={}",
+				i, candidate.getId(), candidate.getType(), candidate.isHidden(),
+				candidate.getWidth(), candidate.getHeight(),
+				candidate.getRelativeX(), candidate.getRelativeY(), area);
+
+			if (!candidate.isHidden() && area > bestArea)
+			{
+				best = candidate;
+				bestArea = area;
+			}
+		}
+
+		if (best == null)
+		{
+			log.warn("Sire widget spike: no visible child found under top-level {}", topLevel);
+		}
+		else
+		{
+			log.info("Sire widget spike: auto-picked parent index {} (id={}, {}x{})",
+				best.getIndex(), best.getId(), best.getWidth(), best.getHeight());
+		}
+
+		return best;
 	}
 
 	private void build()
@@ -148,12 +236,14 @@ public class SireWidgetSpike
 			return;
 		}
 
-		// Dark backdrop so the model reads against whatever's behind it. Created
-		// first so the model widget (created after) renders on top of it.
+		// Deliberately loud: this backdrop is the diagnostic that separates "parenting
+		// is broken" from "the model is broken". If a magenta square appears and the
+		// boss doesn't, parenting works and the problem is the model or its animation.
+		// Opacity is inverted in RuneLite: 0 is fully opaque, 255 is invisible.
 		Widget backdrop = parent.createChild(-1, WidgetType.RECTANGLE);
 		backdrop.setFilled(true);
-		backdrop.setOpacity(180);
-		backdrop.setTextColor(0x000000);
+		backdrop.setOpacity(0);
+		backdrop.setTextColor(0xFF00FF);
 		backdrop.setOriginalX(WIDGET_X);
 		backdrop.setOriginalY(WIDGET_Y);
 		backdrop.setOriginalWidth(WIDGET_WIDTH);
@@ -171,8 +261,8 @@ public class SireWidgetSpike
 		model.setAnimationId(animationId);
 		model.setModelZoom(zoom);
 		// Rotation must stay within 0-2047 or the client crashes.
-		model.setRotationX(0);
-		model.setRotationY(0);
+		model.setRotationX(clampRotation(config.spikeRotationX()));
+		model.setRotationY(clampRotation(config.spikeRotationY()));
 		model.setRotationZ(0);
 		model.setOriginalX(WIDGET_X);
 		model.setOriginalY(WIDGET_Y);
@@ -181,7 +271,32 @@ public class SireWidgetSpike
 		model.revalidate();
 		spikeWidgets.add(model);
 
-		log.info("Sire widget spike: built widget id={} npcId={} modelId={} animationId={} zoom={}",
-			model.getId(), npcId, modelId, animationId, zoom);
+		// Revalidating a child computes nothing on its own: the first attempt left both
+		// widgets at canvas (-1,-1), built and unhidden but never laid out. Position is
+		// assigned by the parent layer's layout pass, so the parent is what must
+		// revalidate once the children exist.
+		parent.revalidate();
+
+		log.info("Sire widget spike: built parent id={} ({}x{}) npcId={} modelId={} animationId={} zoom={}",
+			parent.getId(), parent.getWidth(), parent.getHeight(), npcId, modelId, animationId, zoom);
+		logPlacement("backdrop", backdrop);
+		logPlacement("model", model);
+	}
+
+	/** Post-revalidate geometry: zero size or an off-screen origin means it will never be seen. */
+	private void logPlacement(String label, Widget widget)
+	{
+		// Note: canvas location reads (-1,-1) for these dynamic children even when they
+		// render on screen, so it is not a usable signal. Trust relative coords.
+		log.info("Sire widget spike: {} hidden={} selfHidden={} {}x{} relative=({},{}) canvas={} parentId={}",
+			label, widget.isHidden(), widget.isSelfHidden(),
+			widget.getWidth(), widget.getHeight(),
+			widget.getRelativeX(), widget.getRelativeY(),
+			widget.getCanvasLocation(), widget.getParentId());
+	}
+
+	private static int clampRotation(int value)
+	{
+		return Math.max(0, Math.min(2047, value));
 	}
 }
