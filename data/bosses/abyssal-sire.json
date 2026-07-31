@@ -1,0 +1,113 @@
+{
+  "id": "abyssal-sire",
+  "name": "Abyssal Sire",
+  "npcIds": [5886, 5887, 5888, 5889, 5890, 5891, 5908],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Abyssal_Sire/Strategies",
+  "mechanics": [
+    {
+      "id": "tentacle-guard",
+      "name": "Tentacle Guard",
+      "description": "Tentacles ring the throne, shielding the respiratory systems and lashing anyone who comes close.",
+      "counterplay": "Stun the Sire to drop them for 30 seconds. Shadow Barrage always stuns; 75 ranged or magic damage also works.",
+      "phase": "Phase 1",
+      "detection": [
+        { "type": "npc-spawn", "id": 5912 }
+      ],
+      "preview": { "npcId": 5912, "staticFallback": true }
+    },
+    {
+      "id": "respiratory-systems",
+      "name": "Respiratory Systems",
+      "description": "Four respiratory systems sit in the corners of the room. The Sire stays on its throne until all four are destroyed.",
+      "counterplay": "Kill all four while the Sire is stunned. Demonbane weapons one-shot them.",
+      "phase": "Phase 1",
+      "detection": [
+        { "type": "npc-spawn", "id": 5914 }
+      ],
+      "preview": { "npcId": 5914, "staticFallback": true }
+    },
+    {
+      "id": "miasma-pools",
+      "name": "Miasma Pools",
+      "description": "The Sire drops a pool of miasma underneath you that deals rapid damage across a 3x3 area.",
+      "counterplay": "Step two tiles clear. Poison protection does nothing against it.",
+      "detection": [
+        { "type": "animation", "id": 4531 },
+        { "type": "animation", "id": 5367 }
+      ],
+      "preview": { "animationId": 4531, "staticFallback": false }
+    },
+    {
+      "id": "spawn-summon",
+      "name": "Spawn Summon",
+      "description": "The Sire launches spawns from its mouth. They swarm you and chip away while you fight.",
+      "counterplay": "Pray Missiles and out-damage them, or clear them fast.",
+      "detection": [
+        { "type": "animation", "id": 4530 },
+        { "type": "animation", "id": 7095 },
+        { "type": "npc-spawn", "id": 5916 }
+      ],
+      "preview": { "animationId": 4530, "staticFallback": false }
+    },
+    {
+      "id": "scions",
+      "name": "Scions",
+      "description": "Spawns left alone for about fifteen seconds mature into scions, which hit considerably harder.",
+      "counterplay": "Kill spawns before they grow up, or keep Protect from Missiles running.",
+      "detection": [
+        { "type": "npc-spawn", "id": 5918 }
+      ],
+      "preview": { "npcId": 5918, "staticFallback": true }
+    },
+    {
+      "id": "melee-combo",
+      "name": "Melee Combo",
+      "description": "Off its throne the Sire swipes with an arm, flicks one tendril, or flicks both at once for heavy damage.",
+      "counterplay": "Pray Melee. The double tendril flick still hurts through it.",
+      "phase": "Phase 2",
+      "detection": [
+        { "type": "animation", "id": 5366 },
+        { "type": "animation", "id": 5369 },
+        { "type": "animation", "id": 5751 },
+        { "type": "animation", "id": 5755 }
+      ],
+      "preview": { "animationId": 5751, "staticFallback": false }
+    },
+    {
+      "id": "safespot-dislodge",
+      "name": "Safespot Dislodge",
+      "description": "Attack from too far away and the Sire hauls you back beside it, then discharges energy into you.",
+      "counterplay": "Stay in melee range. Safespotting only earns you a bigger hit.",
+      "phase": "Phase 2",
+      "detection": [
+        { "type": "animation", "id": 5368 }
+      ],
+      "preview": { "animationId": 5368, "staticFallback": false }
+    },
+    {
+      "id": "minion-surge",
+      "name": "Minion Surge",
+      "description": "Anchored in the arena centre for its final stand, the Sire floods the room with spawns.",
+      "counterplay": "Leave them alive. They die with the Sire, and thinning them out only drags the phase out.",
+      "phase": "Phase 3",
+      "detection": [
+        { "type": "animation", "id": 7096 },
+        { "type": "npc-spawn", "id": 5891 }
+      ],
+      "preview": { "animationId": 7096, "staticFallback": false }
+    },
+    {
+      "id": "apocalypse",
+      "name": "Apocalypse",
+      "description": "Low on health, the Sire drags you beside it and detonates the arena two ticks later.",
+      "counterplay": "Run directly away the moment it moves you. The blast hits for most of your health.",
+      "phase": "Phase 3",
+      "detection": [
+        { "type": "animation", "id": 7098 },
+        { "type": "npc-spawn", "id": 5908 }
+      ],
+      "preview": { "animationId": 7098, "staticFallback": false }
+    }
+  ],
+  "_note": "IDs are taken from RuneLite's gameval NpcID/AnimationID constants, so the numbers themselves are authoritative cache values. What still needs one live fight to confirm is the mapping: that each listed animation is the one the Sire actually plays for that mechanic, and that every trigger fires. See issue #9."
+}
