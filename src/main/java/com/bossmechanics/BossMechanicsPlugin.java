@@ -8,6 +8,7 @@ import com.bossmechanics.detection.Discovery;
 import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.spike.SireWidgetSpike;
 import com.google.inject.Provides;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
@@ -33,6 +34,7 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
@@ -60,6 +62,9 @@ public class BossMechanicsPlugin extends Plugin
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
+	private ConfigManager configManager;
+
+	@Inject
 	private SireWidgetSpike sireWidgetSpike;
 
 	@Inject
@@ -68,6 +73,9 @@ public class BossMechanicsPlugin extends Plugin
 	private List<Boss> bosses = Collections.emptyList();
 	private DiscoveryState discoveryState;
 	private DetectionEngine detectionEngine;
+
+	// A plugin field, not a local, so #5's reveal UI can reach isRevealed/setRevealed.
+	private ProfileStateStore profileStateStore;
 
 	@Override
 	protected void startUp() throws Exception
@@ -82,8 +90,20 @@ public class BossMechanicsPlugin extends Plugin
 		bosses = result.getBosses();
 		log.info("Loaded {} boss(es)", bosses.size());
 
-		discoveryState = new DiscoveryState();
+		List<String> bossIds = new ArrayList<>();
+		for (Boss boss : bosses)
+		{
+			bossIds.add(boss.getId());
+		}
+
+		profileStateStore = new ProfileStateStore(configManager, bossIds);
+		discoveryState = new DiscoveryState(profileStateStore);
 		detectionEngine = new DetectionEngine(bosses, discoveryState);
+
+		// The RS profile is not yet known this early (login screen); reload() here is a no-op
+		// today and the real load happens on RuneScapeProfileChanged below. Kept for the case
+		// where the plugin is toggled on mid-session, after the profile is already resolved.
+		discoveryState.reload();
 
 		// Toggling the plugin on mid-fight fires no spawn events for NPCs already on screen,
 		// so presence has to be seeded from what's already there.
@@ -173,6 +193,16 @@ public class BossMechanicsPlugin extends Plugin
 		{
 			announce(discovery);
 		}
+	}
+
+	// The correct load trigger (docs/DECISIONS.md D18): fires whenever the profile key changes,
+	// including at login once the display name resolves. GameStateChanged LOGGED_IN fires too
+	// early, before that key is known. Replaces (never merges) so switching characters can't
+	// leak one character's discoveries into another's.
+	@Subscribe
+	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
+	{
+		discoveryState.reload();
 	}
 
 	@Subscribe
