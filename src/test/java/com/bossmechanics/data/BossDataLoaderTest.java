@@ -52,4 +52,85 @@ public class BossDataLoaderTest
 		Trigger trigger = boss.getMechanics().get(0).getDetection().get(0);
 		assertEquals(TriggerType.NPC_SPAWN, trigger.triggerType());
 	}
+
+	@Test
+	public void missingNameIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace("\"name\": \"Vorkath\",", "");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "name"));
+	}
+
+	@Test
+	public void unknownTriggerTypeIsErrorNamingTheBadValue()
+	{
+		String json = MINIMAL_VALID_JSON.replace("\"npc-spawn\"", "\"projectil\"");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "projectil"));
+	}
+
+	@Test
+	public void idNotMatchingFilenameIsError()
+	{
+		LoadResult result = loader.parseOne(MINIMAL_VALID_JSON, "not-vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "vorkath"));
+		assertTrue(errorContaining(result, "not-vorkath"));
+	}
+
+	@Test
+	public void duplicateMechanicIdsIsError()
+	{
+		String mechanic = "{"
+			+ "\"id\": \"zombified-spawn\","
+			+ "\"name\": \"Zombified Spawn\","
+			+ "\"description\": \"Vorkath summons a spawn.\","
+			+ "\"counterplay\": \"Kill it fast.\","
+			+ "\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],"
+			+ "\"preview\": { \"animationId\": 7960, \"staticFallback\": true }"
+			+ "}";
+		String json = "{"
+			+ "\"id\": \"vorkath\","
+			+ "\"name\": \"Vorkath\","
+			+ "\"npcIds\": [8059],"
+			+ "\"wikiUrl\": \"https://oldschool.runescape.wiki/w/Vorkath\","
+			+ "\"mechanics\": [" + mechanic + "," + mechanic + "]"
+			+ "}";
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "duplicate"));
+		assertTrue(errorContaining(result, "zombified-spawn"));
+	}
+
+	@Test
+	public void missingTriggerIdIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(", \"id\": 8063", "");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "id"));
+	}
+
+	private static boolean errorContaining(LoadResult result, String substring)
+	{
+		for (String error : result.getErrors())
+		{
+			if (error.contains(substring))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 }

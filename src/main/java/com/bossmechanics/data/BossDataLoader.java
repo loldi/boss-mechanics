@@ -2,7 +2,6 @@ package com.bossmechanics.data;
 
 import com.google.gson.Gson;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -39,14 +38,20 @@ public class BossDataLoader
 
 	/**
 	 * Parses one boss file's JSON text and validates it against {@code expectedId} (the
-	 * filename/index entry it was loaded as). Never throws: malformed JSON becomes an error entry.
+	 * filename/index entry it was loaded as). A boss with any validation error is omitted from
+	 * the result's bosses (skipped), not partially included.
 	 */
 	public LoadResult parseOne(String json, String expectedId)
 	{
 		Boss boss = gson.fromJson(json, Boss.class);
 
+		List<String> errors = BossDataValidator.validate(boss, expectedId);
 		List<Boss> bosses = new ArrayList<>();
-		bosses.add(boss);
-		return new LoadResult(bosses, Collections.emptyList());
+		if (errors.isEmpty())
+		{
+			bosses.add(boss);
+		}
+
+		return new LoadResult(bosses, errors);
 	}
 }
