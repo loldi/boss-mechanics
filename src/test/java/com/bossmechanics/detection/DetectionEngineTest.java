@@ -121,6 +121,16 @@ public class DetectionEngineTest
 	}
 
 	@Test
+	public void npcDespawnedStopsFutureMatchingForThatIndex()
+	{
+		engine.npcSpawned(1, SIRE_AWAKE);
+
+		engine.npcDespawned(1);
+
+		assertTrue(engine.animationPlayed(1, MIASMA_ANIMATION).isEmpty());
+	}
+
+	@Test
 	public void clearPresenceStopsMatchingButKeepsDiscoveryState()
 	{
 		engine.npcSpawned(1, SIRE_AWAKE);

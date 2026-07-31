@@ -117,6 +117,12 @@ public class DetectionEngine
 		return matchGated(TriggerType.GRAPHIC, graphicId, anyBossPresent());
 	}
 
+	/** A tracked NPC left. */
+	public void npcDespawned(int npcIndex)
+	{
+		presence.remove(npcIndex);
+	}
+
 	/** Clears all tracked presence, e.g. on logout/world-hop. Discovery state is untouched. */
 	public void clearPresence()
 	{
