@@ -1,0 +1,30 @@
+{
+  "id": "vorkath",
+  "name": "Vorkath",
+  "npcIds": [8059, 8060, 8061],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Vorkath/Strategies",
+  "mechanics": [
+    {
+      "id": "acid-pool-barrage",
+      "name": "Acid Pool Barrage",
+      "description": "Vorkath spits acid pools across the arena, then rapid-fires dragonfire at your position.",
+      "counterplay": "Keep moving. Standing in acid damages you.",
+      "detection": [
+        { "type": "animation", "id": 7957 },
+        { "type": "projectile", "id": 1483 }
+      ],
+      "preview": { "animationId": 7957, "staticFallback": true }
+    },
+    {
+      "id": "zombified-spawn",
+      "name": "Zombified Spawn",
+      "description": "Vorkath freezes you in ice and summons a zombified spawn that walks toward you and explodes.",
+      "counterplay": "Kill the spawn before it reaches you. Crumble Undead one-shots it.",
+      "detection": [
+        { "type": "npc-spawn", "id": 8063 }
+      ],
+      "preview": { "animationId": 7960, "staticFallback": true }
+    }
+  ],
+  "_note": "SKELETON DATA - IDs and mechanic list unverified. Full curation pass required before launch."
+}
