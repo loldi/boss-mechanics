@@ -45,6 +45,14 @@ CC BY-SA 3.0, so we paraphrase and attribute, never copy).
 | `type` | string | `animation` \| `projectile` \| `graphic` \| `npc-spawn` |
 | `id` | int | The game ID for that type |
 
+**Detection semantics (docs/DECISIONS.md D17):** `animation` only matches when
+played by an NPC the engine is currently tracking as this boss (a nearby player's
+animation never matches). An NPC transform counts as an `npc-spawn` trigger too —
+if a boss's phase form changes id rather than spawning a new NPC, curate it as
+`npc-spawn` on that new id. `graphic` triggers have no source actor to check, so
+they only gate on the boss being present; pick graphic ids players can't produce
+themselves, or the trigger will false-positive.
+
 ## Preview
 
 | Field | Type | Notes |

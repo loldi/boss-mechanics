@@ -15,7 +15,10 @@ interface with:
 
 ## Status
 
-Pre-alpha scaffold. Nothing works yet. See [docs/DECISIONS.md](docs/DECISIONS.md)
+Pre-alpha. Boss data loads and validates at startup, and the detection engine
+tracks which mechanics your client has witnessed this session, announcing each
+one in chat the first time. Still in-memory only (no persistence yet), and
+there's no injected button or interface. See [docs/DECISIONS.md](docs/DECISIONS.md)
 for the locked design and [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 
 **Launch bosses:** Abyssal Sire, Zulrah, Vorkath, General Graardor, Mad Angel.
