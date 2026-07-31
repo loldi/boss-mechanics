@@ -1,0 +1,118 @@
+package com.bossmechanics.detection;
+
+import com.bossmechanics.data.Boss;
+import com.bossmechanics.data.Mechanic;
+import com.bossmechanics.data.Trigger;
+import com.bossmechanics.data.TriggerType;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
+
+/**
+ * Pure detection core: no RuneLite dependency, so it is plain-JUnit testable (see
+ * docs/DECISIONS.md D17). Tracks which boss NPCs are currently present via live spawn events,
+ * and matches witnessed triggers against a per-trigger-type index built once at construction.
+ * Every match is confirmed against {@link DiscoveryState} so a mechanic is only ever returned
+ * once.
+ */
+public class DetectionEngine
+{
+	private final DiscoveryState state;
+
+	/** boss npcId -> owning boss id, for recognizing a spawn as one of a tracked boss's forms. */
+	private final Map<Integer, String> npcIdToBossId = new HashMap<>();
+
+	/** trigger type -> trigger id -> mechanics it can discover. Built once, O(1) lookups per event. */
+	private final Map<TriggerType, Map<Integer, List<Discovery>>> triggerIndex = new HashMap<>();
+
+	/** Live npcIndex -> bossId for NPCs currently on screen that belong to a tracked boss. */
+	private final Map<Integer, String> presence = new HashMap<>();
+
+	public DetectionEngine(List<Boss> bosses, DiscoveryState state)
+	{
+		this.state = state;
+
+		for (Boss boss : bosses)
+		{
+			for (Integer npcId : boss.getNpcIds())
+			{
+				npcIdToBossId.put(npcId, boss.getId());
+			}
+
+			for (Mechanic mechanic : boss.getMechanics())
+			{
+				Discovery discovery = new Discovery(boss, mechanic);
+				for (Trigger trigger : mechanic.getDetection())
+				{
+					TriggerType type = trigger.triggerType();
+					if (type == null)
+					{
+						continue;
+					}
+
+					triggerIndex
+						.computeIfAbsent(type, t -> new HashMap<>())
+						.computeIfAbsent(trigger.getId(), id -> new ArrayList<>())
+						.add(discovery);
+				}
+			}
+		}
+	}
+
+	/** A boss NPC appeared. Marks presence so later triggers from this index can be attributed to its boss. */
+	public List<Discovery> npcSpawned(int npcIndex, int npcId)
+	{
+		updatePresence(npcIndex, npcId);
+		return Collections.emptyList();
+	}
+
+	/** Matches only if {@code npcIndex} is a currently-tracked boss NPC, and only against that boss's mechanics. */
+	public List<Discovery> animationPlayed(int npcIndex, int animationId)
+	{
+		String bossId = presence.get(npcIndex);
+		if (bossId == null)
+		{
+			return Collections.emptyList();
+		}
+
+		return matchGated(TriggerType.ANIMATION, animationId, ownedBy(bossId));
+	}
+
+	private void updatePresence(int npcIndex, int npcId)
+	{
+		String bossId = npcIdToBossId.get(npcId);
+		if (bossId != null)
+		{
+			presence.put(npcIndex, bossId);
+		}
+	}
+
+	private List<Discovery> matchGated(TriggerType type, int triggerId, Predicate<Discovery> gate)
+	{
+		Map<Integer, List<Discovery>> byId = triggerIndex.get(type);
+		List<Discovery> candidates = byId == null ? null : byId.get(triggerId);
+		if (candidates == null)
+		{
+			return Collections.emptyList();
+		}
+
+		List<Discovery> result = new ArrayList<>();
+		for (Discovery candidate : candidates)
+		{
+			if (gate.test(candidate)
+				&& state.markDiscovered(candidate.getBoss().getId(), candidate.getMechanic().getId()))
+			{
+				result.add(candidate);
+			}
+		}
+		return result;
+	}
+
+	private static Predicate<Discovery> ownedBy(String bossId)
+	{
+		return candidate -> candidate.getBoss().getId().equals(bossId);
+	}
+}
