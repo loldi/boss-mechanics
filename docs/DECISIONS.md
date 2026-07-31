@@ -77,6 +77,15 @@ so new decisions are appended here rather than inserted in a themed section.
     ("adding a boss is a pure data PR"). A test reconciles the index against the
     real directory listing so a forgotten index line fails the build. Belongs with
     the Data decisions above (it is the mechanism that enforces D7).
+17. **Detection trigger semantics, locked with the engine (issue #7).** Animation
+    triggers only match when played by an NPC currently tracked as a boss's
+    presence (source gating kills player-collision false positives entirely).
+    NPC transforms (`NpcChanged`) count as npc-spawn triggers, not a separate
+    trigger kind: Sire phase forms transform, they don't spawn. Graphics report
+    no source actor, so they gate on boss presence only — curators must pick
+    graphic ids players can't produce themselves. Detection state (which
+    mechanics have been witnessed) is in-memory only until persistence lands
+    in #8.
 
 ## Open questions
 
