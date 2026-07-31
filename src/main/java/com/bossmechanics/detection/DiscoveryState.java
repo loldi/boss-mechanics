@@ -67,7 +67,13 @@ public class DiscoveryState
 		return count;
 	}
 
-	private static String key(String bossId, String mechanicId)
+	/**
+	 * The one place the stored key format is defined. Every producer of these keys must
+	 * call this: if a second copy of the format drifts, reload() returns keys that
+	 * isDiscovered never matches, so every character silently loads zero discoveries
+	 * while the tests stay green.
+	 */
+	public static String key(String bossId, String mechanicId)
 	{
 		return bossId + ":" + mechanicId;
 	}

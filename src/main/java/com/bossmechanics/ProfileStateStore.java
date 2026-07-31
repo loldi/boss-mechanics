@@ -1,5 +1,6 @@
 package com.bossmechanics;
 
+import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.detection.DiscoveryStore;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,7 +45,7 @@ public class ProfileStateStore implements DiscoveryStore
 			String csv = configManager.getRSProfileConfiguration(BossMechanicsConfig.GROUP, discoveredKey(bossId));
 			for (String mechanicId : parseCsv(csv))
 			{
-				result.add(bossId + ":" + mechanicId);
+				result.add(DiscoveryState.key(bossId, mechanicId));
 			}
 		}
 		return result;

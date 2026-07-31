@@ -116,8 +116,10 @@ public class DiscoveryStateTest
 		@Override
 		public void addDiscovered(String bossId, String mechanicId)
 		{
-			writes.add(bossId + ":" + mechanicId);
-			data.add(bossId + ":" + mechanicId);
+			// Deliberately not re-spelling the format: an independent copy here would
+			// keep agreeing with a drifted DiscoveryState and hide the breakage.
+			writes.add(DiscoveryState.key(bossId, mechanicId));
+			data.add(DiscoveryState.key(bossId, mechanicId));
 		}
 	}
 }
