@@ -22,14 +22,15 @@ for the locked design and [data/SCHEMA.md](data/SCHEMA.md) for the boss data for
 
 ## Development
 
-Requires JDK 11. Run `BossMechanicsPluginTest` (in `src/test/java`) to launch a
-RuneLite client with the plugin sideloaded:
+Launch a RuneLite client with the plugin sideloaded:
 
 ```
-gradlew test --tests BossMechanicsPluginTest
+gradlew runClient
 ```
 
-(Or run the class from IntelliJ, which is the usual RuneLite plugin dev flow.)
+(`BossMechanicsPluginTest` is a `main()` launcher, not a JUnit test, so
+`gradlew test` will not run it. If you launch it from IntelliJ instead, add `-ea`
+to the VM options — RuneLite refuses to start without assertions enabled.)
 
 ## Data & attribution
 
