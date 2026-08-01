@@ -129,6 +129,19 @@ public class DetectionEngine
 		presence.clear();
 	}
 
+	/** True when any curated mechanic lists this trigger. Lets callers tell "no mechanic uses this id" apart from "already discovered", which both return no discoveries. */
+	public boolean isKnownTrigger(TriggerType type, int triggerId)
+	{
+		Map<Integer, List<Discovery>> byId = triggerIndex.get(type);
+		return byId != null && byId.containsKey(triggerId);
+	}
+
+	/** Boss id of a tracked NPC index, or null if that index isn't a boss we follow. */
+	public String trackedBossId(int npcIndex)
+	{
+		return presence.get(npcIndex);
+	}
+
 	private List<Discovery> matchNpcSpawn(int npcId)
 	{
 		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent());
