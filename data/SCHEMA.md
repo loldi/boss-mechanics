@@ -73,3 +73,25 @@ Underscore-prefixed fields (e.g. `_note`) are ignored by the loader and may be
 added freely for curation notes, like `vorkath.json`'s `_note` flagging its IDs
 as unverified. The loader tolerates any unknown field, not just underscore-prefixed
 ones, but that's the convention for notes meant to be read, not just parsed past.
+
+### Finding trigger ids
+
+Turn on **Log boss trigger ids** in the plugin config and fight the boss. Every
+distinct animation, projectile and graphic it produces is logged once with the
+mechanic that claims it, or `UNCLAIMED`.
+
+Two rules learned the hard way while curating Vorkath:
+
+**A gameval constant name describes one known use of an id, not an exclusive
+one.** The game reuses spotanims heavily. Vorkath's dragonfire impact graphics
+come through as `FIRESURGE_IMPACT` and `FIREBLAST_IMPACT`, which reads as though
+the player cast them. Ownership was settled by timestamps, not names: those ids
+landed one to two seconds after Vorkath's dragonfire projectiles, in the same
+order, across two separate fights. **Correlate the log by time before believing a
+name.**
+
+**Graphics can't be attributed to an actor.** Projectiles usually name a source,
+graphics never do, so a graphic trigger fires on boss presence alone. Only use one
+when the id is something a player cannot produce. Vorkath's dragonfire impacts are
+deliberately not triggers for exactly this reason: a player casting Fire Surge
+nearby would unlock the mechanic.
