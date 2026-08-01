@@ -117,7 +117,15 @@ public class CollectionLogButton
 	{
 		if (event.getGroupId() == InterfaceID.COLLECTION)
 		{
-			// Reference only. Jagex owns the tree once the log closes.
+			// Hide before dropping the reference. The anchor is a top-level component of
+			// group 621, so its parent may be the container the log was opened onto rather
+			// than part of 621 itself. If so, closing the log does not tear our button down
+			// and dropping the reference first would strand it on screen with nothing left
+			// able to hide it. Hiding an already-detached widget is harmless.
+			if (button != null)
+			{
+				button.setHidden(true);
+			}
 			button = null;
 			currentBoss = null;
 			lastDiagnosedTitle = null;
