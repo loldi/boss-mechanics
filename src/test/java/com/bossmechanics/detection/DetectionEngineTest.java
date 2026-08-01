@@ -7,6 +7,7 @@ import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.Mechanic;
 import com.bossmechanics.data.Preview;
 import com.bossmechanics.data.Trigger;
+import com.bossmechanics.data.TriggerType;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -194,6 +195,31 @@ public class DetectionEngineTest
 		List<Discovery> result = vorkathEngine.graphicCreated(SPAWN_GRAPHIC);
 		assertEquals(1, result.size());
 		assertEquals("zombified-spawn", result.get(0).getMechanic().getId());
+	}
+
+	@Test
+	public void isKnownTriggerSeparatesUncuratedIdsFromAlreadyDiscoveredOnes()
+	{
+		// Both cases yield no discoveries, so the curation log needs this to tell them
+		// apart: only a genuinely uncurated id is worth reporting.
+		engine.npcSpawned(1, SIRE_AWAKE);
+		engine.animationPlayed(1, MIASMA_ANIMATION);
+
+		assertTrue(engine.animationPlayed(1, MIASMA_ANIMATION).isEmpty());
+		assertTrue(engine.isKnownTrigger(TriggerType.ANIMATION, MIASMA_ANIMATION));
+		assertTrue(!engine.isKnownTrigger(TriggerType.ANIMATION, 9999));
+	}
+
+	@Test
+	public void trackedBossIdReportsPresenceAndClearsOnDespawn()
+	{
+		assertEquals(null, engine.trackedBossId(1));
+
+		engine.npcSpawned(1, SIRE_AWAKE);
+		assertEquals("abyssal-sire", engine.trackedBossId(1));
+
+		engine.npcDespawned(1);
+		assertEquals(null, engine.trackedBossId(1));
 	}
 
 	@Test
