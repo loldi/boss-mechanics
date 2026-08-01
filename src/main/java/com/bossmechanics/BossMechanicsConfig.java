@@ -23,6 +23,17 @@ public interface BossMechanicsConfig extends Config
 	// Note: discovered/revealed state is stored per-character via ConfigManager
 	// RS-profile keys, not exposed here as config items.
 
+	@ConfigItem(
+		keyName = "logUnmatchedTriggers",
+		name = "Log unmatched boss triggers",
+		description = "Curation aid: log animation, projectile and graphic ids a tracked boss produces that no curated mechanic claims. Each id logs once per session",
+		position = 2
+	)
+	default boolean logUnmatchedTriggers()
+	{
+		return false;
+	}
+
 	// --- Issue #1 spike: Abyssal Sire widget animation (delete-or-promote) ---
 
 	@ConfigItem(

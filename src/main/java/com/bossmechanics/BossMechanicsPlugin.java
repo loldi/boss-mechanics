@@ -5,12 +5,15 @@ import com.bossmechanics.data.BossDataLoader;
 import com.bossmechanics.data.LoadResult;
 import com.bossmechanics.detection.DetectionEngine;
 import com.bossmechanics.detection.Discovery;
+import com.bossmechanics.data.TriggerType;
 import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.spike.SireWidgetSpike;
 import com.google.inject.Provides;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Actor;
@@ -73,6 +76,10 @@ public class BossMechanicsPlugin extends Plugin
 	private List<Boss> bosses = Collections.emptyList();
 	private DiscoveryState discoveryState;
 	private DetectionEngine detectionEngine;
+
+	// Ids already reported by the unmatched-trigger log, so a projectile in flight
+	// doesn't reprint every cycle.
+	private final Set<String> loggedUnmatched = new HashSet<>();
 
 	// A plugin field, not a local, so #5's reveal UI can reach isRevealed/setRevealed.
 	private ProfileStateStore profileStateStore;
@@ -168,6 +175,7 @@ public class BossMechanicsPlugin extends Plugin
 		{
 			announce(discovery);
 		}
+		logIfUnmatched(TriggerType.ANIMATION, npc.getAnimation(), npc.getIndex());
 	}
 
 	// ProjectileMoved fires every game cycle a projectile is in flight; DetectionEngine's
@@ -182,6 +190,10 @@ public class BossMechanicsPlugin extends Plugin
 		for (Discovery discovery : detectionEngine.projectileFired(sourceIndex, projectile.getId()))
 		{
 			announce(discovery);
+		}
+		if (sourceIndex != null)
+		{
+			logIfUnmatched(TriggerType.PROJECTILE, projectile.getId(), sourceIndex);
 		}
 	}
 
@@ -253,5 +265,29 @@ public class BossMechanicsPlugin extends Plugin
 			.type(ChatMessageType.GAMEMESSAGE)
 			.runeLiteFormattedMessage(message)
 			.build());
+	}
+
+	/**
+	 * Curation aid: reports ids a tracked boss produced that no curated mechanic claims,
+	 * which is how the mechanics the wiki describes but the cache constants don't name
+	 * get their trigger ids. Deduped per session because these events fire every cycle.
+	 */
+	private void logIfUnmatched(TriggerType type, int triggerId, int npcIndex)
+	{
+		if (!config.logUnmatchedTriggers() || triggerId <= 0)
+		{
+			return;
+		}
+
+		String bossId = detectionEngine.trackedBossId(npcIndex);
+		if (bossId == null || detectionEngine.isKnownTrigger(type, triggerId))
+		{
+			return;
+		}
+
+		if (loggedUnmatched.add(type + ":" + triggerId))
+		{
+			log.info("Unmatched {} id {} from {}", type, triggerId, bossId);
+		}
 	}
 }

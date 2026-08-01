@@ -1,30 +1,55 @@
 {
   "id": "vorkath",
   "name": "Vorkath",
-  "npcIds": [8059, 8060, 8061],
+  "npcIds": [8058, 8059, 8060, 8061],
   "wikiUrl": "https://oldschool.runescape.wiki/w/Vorkath/Strategies",
   "mechanics": [
     {
-      "id": "acid-pool-barrage",
-      "name": "Acid Pool Barrage",
-      "description": "Vorkath spits acid pools across the arena, then rapid-fires dragonfire at your position.",
-      "counterplay": "Keep moving. Standing in acid damages you.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "Vorkath cycles melee, ranged and magic in no fixed order. None of them can be reacted to once launched.",
+      "counterplay": "Keep a protection prayer up the whole fight. Pick the style your gear handles worst.",
       "detection": [
-        { "type": "animation", "id": 7957 },
-        { "type": "projectile", "id": 1483 }
+        { "type": "projectile", "id": 1477 },
+        { "type": "projectile", "id": 1479 },
+        { "type": "animation", "id": 7951 }
       ],
-      "preview": { "animationId": 7957, "staticFallback": true }
+      "preview": { "animationId": 7952, "staticFallback": false }
+    },
+    {
+      "id": "deadly-dragonfire",
+      "name": "Deadly Dragonfire",
+      "description": "A dragonfire ball fired straight up that lands on the tile you are standing on. Neighbouring tiles still take half.",
+      "counterplay": "Step two tiles away as it launches. No dragonfire protection reduces this one.",
+      "detection": [
+        { "type": "projectile", "id": 1481 },
+        { "type": "projectile", "id": 1482 },
+        { "type": "projectile", "id": 2266 }
+      ],
+      "preview": { "animationId": 7960, "staticFallback": true }
     },
     {
       "id": "zombified-spawn",
       "name": "Zombified Spawn",
-      "description": "Vorkath freezes you in ice and summons a zombified spawn that walks toward you and explodes.",
-      "counterplay": "Kill the spawn before it reaches you. Crumble Undead one-shots it.",
+      "description": "Icy breath freezes you in place and drops a zombified spawn across the arena. It walks at you and detonates on arrival.",
+      "counterplay": "Cast Crumble Undead to delete it instantly. Anything slower and you wear the explosion.",
       "detection": [
+        { "type": "projectile", "id": 1484 },
         { "type": "npc-spawn", "id": 8063 }
       ],
       "preview": { "animationId": 7960, "staticFallback": true }
+    },
+    {
+      "id": "acid-phase",
+      "name": "Acid Phase",
+      "description": "Vorkath floods the arena with acid pools, then fires dragonfire at your position every tick until the phase ends.",
+      "counterplay": "Walk, never run, along a clear line of at least five tiles. Running spawns fresh acid behind you.",
+      "detection": [
+        { "type": "projectile", "id": 1483 },
+        { "type": "animation", "id": 7957 }
+      ],
+      "preview": { "animationId": 7957, "staticFallback": true }
     }
   ],
-  "_note": "SKELETON DATA - IDs and mechanic list unverified. Full curation pass required before launch."
+  "_note": "Replaces the original skeleton data. NPC ids from gameval NpcID (VORKATH_SLEEPING_NOOP/SLEEPING/QUEST/VORKATH, VORKATH_SPAWN); projectile ids from gameval SpotanimID (VORKATH_RANGED_TRAVEL 1477, VORKATH_MAGIC_TRAVEL 1479, VORKATH_AREA_TRAVEL 1481, VORKATH_AREA_SMALL_TRAVEL 1482, VORKATH_ACID_TRAVEL 1483, VORKATH_SPAWN_TRAVEL 1484, VORKATH_AREA_TRAVEL_SMALL 2266); animations from gameval AnimationID (DS2_VORKATH_*). Deliberately omitted: the venomous and prayer-disabling dragonfire variants, which the wiki documents but which have no distinctly named projectile constant. Enable the debug trigger log during a fight to capture their ids, then add them as their own mechanics. See issue #10."
 }
