@@ -25,9 +25,7 @@
       "counterplay": "Step two tiles away as it launches. No dragonfire protection reduces this one.",
       "detection": [
         { "type": "animation", "id": 7960 },
-        { "type": "projectile", "id": 1481 },
-        { "type": "projectile", "id": 1482 },
-        { "type": "projectile", "id": 2266 }
+        { "type": "projectile", "id": 1481 }
       ],
       "preview": { "animationId": 7960, "staticFallback": true }
     },
@@ -70,11 +68,12 @@
       "counterplay": "Walk, never run, along a clear line of at least five tiles. Running spawns fresh acid behind you.",
       "detection": [
         { "type": "projectile", "id": 1483 },
+        { "type": "projectile", "id": 1482 },
         { "type": "animation", "id": 7957 }
       ],
       "preview": { "animationId": 7957, "staticFallback": true }
     }
   ],
-  "_observed": "Trigger ids confirmed against live kills on 2026-08-01. Every projectile below was resolved through gameval SpotanimID rather than guessed: 393 DRAGON_RANGED_FIRE_ATTACK and 1477/1479 (standard rotation), 395 DRAGON_RANGED_ICE_ATTACK (the freeze that precedes the spawn), 1470 DRAGON_RANGED_VENOM_ATTACK, 1471 DRAGON_RANGED_CORRUPTING_ATTACK, 1481/1482 (area dragonfire), 1483 (acid), 1484 (spawn). Animations 7951 and 7957 do fire; an earlier kill missed them only because that fight never went to melee range. Animation 7960 is deadly-dragonfire's wind-up: across two separate fights it fired exactly one second before projectile 1481, so it is now a trigger. Graphics 1466 and 131 are that attack's impact, landing one to two seconds after projectiles 1481 and 1482 respectively in both fights; their gameval names (FIRESURGE_IMPACT, FIREBLAST_IMPACT) are misleading, and they are deliberately NOT triggers because a player casting those spells could produce the same ids. Projectile 146 CRUMBLEUNDEAD_TRAVEL genuinely is the player's, arriving a few seconds after each spawn. Still unassigned: animation 7950 on engage.",
+  "_observed": "Trigger ids confirmed against live kills on 2026-08-01. Every projectile below was resolved through gameval SpotanimID rather than guessed: 393 DRAGON_RANGED_FIRE_ATTACK and 1477/1479 (standard rotation), 395 DRAGON_RANGED_ICE_ATTACK (the freeze that precedes the spawn), 1470 DRAGON_RANGED_VENOM_ATTACK, 1471 DRAGON_RANGED_CORRUPTING_ATTACK, 1481/1482 (area dragonfire), 1483 (acid), 1484 (spawn). Animations 7951 and 7957 do fire; an earlier kill missed them only because that fight never went to melee range. Animation 7960 is deadly-dragonfire's wind-up: across two separate fights it fired exactly one second before projectile 1481, so it is now a trigger. Graphics 1466 and 131 are that attack's impact, landing one to two seconds after projectiles 1481 and 1482 respectively in both fights; their gameval names (FIRESURGE_IMPACT, FIREBLAST_IMPACT) are misleading, and they are deliberately NOT triggers because a player casting those spells could produce the same ids. Projectile 146 CRUMBLEUNDEAD_TRAVEL genuinely is the player's, arriving a few seconds after each spawn. Projectile 1482 belongs to acid-phase, not deadly-dragonfire: in both logged fights it fired one to three seconds AFTER the acid phase began, whereas 1481 and its 7960 wind-up fired well before it. It is the rapid dragonfire that chases you across the acid, which is why deadly-dragonfire was announcing during acid phase instead of on the bomb. Projectile 2266 VORKATH_AREA_TRAVEL_SMALL has never been observed in a live fight and is deliberately not a trigger; deadly-dragonfire is already covered by 7960 and 1481. Still unassigned: animation 7950 on engage.",
   "_note": "Replaces the original skeleton data. NPC ids from gameval NpcID (VORKATH_SLEEPING_NOOP/SLEEPING/QUEST/VORKATH, VORKATH_SPAWN); projectile ids from gameval SpotanimID (VORKATH_RANGED_TRAVEL 1477, VORKATH_MAGIC_TRAVEL 1479, VORKATH_AREA_TRAVEL 1481, VORKATH_AREA_SMALL_TRAVEL 1482, VORKATH_ACID_TRAVEL 1483, VORKATH_SPAWN_TRAVEL 1484, VORKATH_AREA_TRAVEL_SMALL 2266); animations from gameval AnimationID (DS2_VORKATH_*). Deliberately omitted: the venomous and prayer-disabling dragonfire variants, which the wiki documents but which have no distinctly named projectile constant. Enable the debug trigger log during a fight to capture their ids, then add them as their own mechanics. See issue #10."
 }
