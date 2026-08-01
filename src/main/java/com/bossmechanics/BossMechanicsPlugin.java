@@ -191,10 +191,11 @@ public class BossMechanicsPlugin extends Plugin
 		{
 			announce(discovery);
 		}
-		if (sourceIndex != null)
-		{
-			logIfUnmatched(TriggerType.PROJECTILE, projectile.getId(), sourceIndex);
-		}
+		// Deliberately not gated on sourceIndex: boss projectiles frequently report no
+		// source actor, and gating the log on one made every Vorkath projectile invisible
+		// to curation. Matching already falls back to boss-presence here, so the log does too.
+		logUnmatchedNearBoss(TriggerType.PROJECTILE, projectile.getId(),
+			sourceIndex == null ? null : detectionEngine.trackedBossId(sourceIndex));
 	}
 
 	@Subscribe
@@ -205,6 +206,7 @@ public class BossMechanicsPlugin extends Plugin
 		{
 			announce(discovery);
 		}
+		logUnmatchedNearBoss(TriggerType.GRAPHIC, graphicId, null);
 	}
 
 	// The correct load trigger (docs/DECISIONS.md D18): fires whenever the profile key changes,
@@ -280,6 +282,29 @@ public class BossMechanicsPlugin extends Plugin
 		}
 
 		String bossId = detectionEngine.trackedBossId(npcIndex);
+		if (bossId == null || detectionEngine.isKnownTrigger(type, triggerId))
+		{
+			return;
+		}
+
+		if (loggedUnmatched.add(type + ":" + triggerId))
+		{
+			log.info("Unmatched {} id {} from {}", type, triggerId, bossId);
+		}
+	}
+
+	/**
+	 * Same as {@link #logIfUnmatched} for events that carry no reliable source actor.
+	 * Falls back to "some boss is on screen", which is the same gate matching uses.
+	 */
+	private void logUnmatchedNearBoss(TriggerType type, int triggerId, String knownBossId)
+	{
+		if (!config.logUnmatchedTriggers() || triggerId <= 0)
+		{
+			return;
+		}
+
+		String bossId = knownBossId != null ? knownBossId : detectionEngine.anyTrackedBossId();
 		if (bossId == null || detectionEngine.isKnownTrigger(type, triggerId))
 		{
 			return;

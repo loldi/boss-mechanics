@@ -12,7 +12,8 @@
       "detection": [
         { "type": "projectile", "id": 1477 },
         { "type": "projectile", "id": 1479 },
-        { "type": "animation", "id": 7951 }
+        { "type": "animation", "id": 7951 },
+        { "type": "animation", "id": 7952 }
       ],
       "preview": { "animationId": 7952, "staticFallback": false }
     },
@@ -51,5 +52,6 @@
       "preview": { "animationId": 7957, "staticFallback": true }
     }
   ],
+  "_observed": "From a live kill on 2026-08-01, Vorkath played animations 7950 (on engage), 7952 (ranged attack, now claimed by standard-attacks), 7948 (idle), 7960 (once mid-fight, likely a special attack launch) and 7949 (death). Notably 7951 and 7957 never fired, so DS2_VORKATH_ATTACK_MELEE and DS2_VORKATH_ACID are not what the live boss uses for melee and the acid phase; they are kept only as harmless extra trigger ids. 7960 is left unassigned until a projectile id can be correlated with it by timestamp.",
   "_note": "Replaces the original skeleton data. NPC ids from gameval NpcID (VORKATH_SLEEPING_NOOP/SLEEPING/QUEST/VORKATH, VORKATH_SPAWN); projectile ids from gameval SpotanimID (VORKATH_RANGED_TRAVEL 1477, VORKATH_MAGIC_TRAVEL 1479, VORKATH_AREA_TRAVEL 1481, VORKATH_AREA_SMALL_TRAVEL 1482, VORKATH_ACID_TRAVEL 1483, VORKATH_SPAWN_TRAVEL 1484, VORKATH_AREA_TRAVEL_SMALL 2266); animations from gameval AnimationID (DS2_VORKATH_*). Deliberately omitted: the venomous and prayer-disabling dragonfire variants, which the wiki documents but which have no distinctly named projectile constant. Enable the debug trigger log during a fight to capture their ids, then add them as their own mechanics. See issue #10."
 }

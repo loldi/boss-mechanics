@@ -142,6 +142,12 @@ public class DetectionEngine
 		return presence.get(npcIndex);
 	}
 
+	/** Any tracked boss on screen. Projectiles and graphics often report no source actor, so this is the only gate available for them. */
+	public String anyTrackedBossId()
+	{
+		return presence.isEmpty() ? null : presence.values().iterator().next();
+	}
+
 	private List<Discovery> matchNpcSpawn(int npcId)
 	{
 		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent());
