@@ -191,11 +191,14 @@ public class BossMechanicsPlugin extends Plugin
 		{
 			announce(discovery);
 		}
-		// Deliberately not gated on sourceIndex: boss projectiles frequently report no
-		// source actor, and gating the log on one made every Vorkath projectile invisible
-		// to curation. Matching already falls back to boss-presence here, so the log does too.
-		logUnmatchedNearBoss(TriggerType.PROJECTILE, projectile.getId(),
-			sourceIndex == null ? null : detectionEngine.trackedBossId(sourceIndex));
+		// A projectile with a non-NPC source is the player's own, and logging it as the
+		// boss's sent Crumble Undead and Fire Surge into the curation log labelled
+		// "from vorkath". Only a tracked NPC source, or genuinely no source, is worth logging.
+		if (source == null || sourceIndex != null)
+		{
+			logUnmatchedNearBoss(TriggerType.PROJECTILE, projectile.getId(),
+				sourceIndex == null ? null : detectionEngine.trackedBossId(sourceIndex));
+		}
 	}
 
 	@Subscribe
