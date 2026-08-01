@@ -276,5 +276,34 @@ public class CollectionLogButton
 			button.getOriginalX(), button.getOriginalY(),
 			button.getRelativeX(), button.getRelativeY(),
 			children == null ? 0 : children.length);
+
+		// The anchor is a bare 50x25 layer in the cache: spriteId -1, no stored children.
+		// Its icon is built at runtime by a CS2 script, so the only way to learn the icon's
+		// sprite and true size (which ours should match) is to read it from a live client.
+		logIconChildren("CA static", anchor.getChildren());
+		logIconChildren("CA dynamic", anchor.getDynamicChildren());
+		log.info("  CA anchor spriteId={} type={}", anchor.getSpriteId(), anchor.getType());
+	}
+
+	private void logIconChildren(String label, Widget[] children)
+	{
+		if (children == null || children.length == 0)
+		{
+			log.info("  {}: none", label);
+			return;
+		}
+
+		for (Widget child : children)
+		{
+			if (child == null)
+			{
+				continue;
+			}
+			log.info("  {}: type={} sprite={} size={}x{} original={}x{} pos=({},{})",
+				label, child.getType(), child.getSpriteId(),
+				child.getWidth(), child.getHeight(),
+				child.getOriginalWidth(), child.getOriginalHeight(),
+				child.getRelativeX(), child.getRelativeY());
+		}
 	}
 }
