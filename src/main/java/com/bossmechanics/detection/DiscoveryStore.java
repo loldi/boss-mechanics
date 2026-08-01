@@ -16,6 +16,9 @@ public interface DiscoveryStore
 	/** Called once per genuinely new discovery; never for a repeat. */
 	void addDiscovered(String bossId, String mechanicId);
 
+	/** Forgets every discovery for one boss, so its mechanics can be found again. */
+	void clearDiscovered(String bossId);
+
 	/** Backs {@link DiscoveryState}'s no-arg constructor: nothing to load, nothing to write. */
 	DiscoveryStore NOOP = new DiscoveryStore()
 	{
@@ -27,6 +30,11 @@ public interface DiscoveryStore
 
 		@Override
 		public void addDiscovered(String bossId, String mechanicId)
+		{
+		}
+
+		@Override
+		public void clearDiscovered(String bossId)
 		{
 		}
 	};

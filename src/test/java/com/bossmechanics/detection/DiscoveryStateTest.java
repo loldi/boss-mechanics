@@ -97,6 +97,26 @@ public class DiscoveryStateTest
 		assertEquals(2, storeBacked.discoveredCount(boss));
 	}
 
+	@Test
+	public void clearDiscoveredForgetsOneBossAndSurvivesReload()
+	{
+		FakeDiscoveryStore store = new FakeDiscoveryStore();
+		DiscoveryState state = new DiscoveryState(store);
+		state.markDiscovered("vorkath", "acid-phase");
+		state.markDiscovered("vorkath", "zombified-spawn");
+		state.markDiscovered("abyssal-sire", "miasma-pools");
+
+		assertEquals(2, state.clearDiscovered("vorkath"));
+
+		assertTrue(!state.isDiscovered("vorkath", "acid-phase"));
+		assertTrue(state.isDiscovered("abyssal-sire", "miasma-pools"));
+
+		// The store must have been cleared too, or a reload would resurrect them.
+		state.reload();
+		assertTrue(!state.isDiscovered("vorkath", "acid-phase"));
+		assertTrue(state.isDiscovered("abyssal-sire", "miasma-pools"));
+	}
+
 	private static Mechanic mechanic(String id)
 	{
 		return new Mechanic(id, id, "desc", "counterplay", null, Collections.emptyList(), null, null);
@@ -120,6 +140,12 @@ public class DiscoveryStateTest
 			// keep agreeing with a drifted DiscoveryState and hide the breakage.
 			writes.add(DiscoveryState.key(bossId, mechanicId));
 			data.add(DiscoveryState.key(bossId, mechanicId));
+		}
+
+		@Override
+		public void clearDiscovered(String bossId)
+		{
+			data.removeIf(entry -> entry.startsWith(bossId + ":"));
 		}
 	}
 }
