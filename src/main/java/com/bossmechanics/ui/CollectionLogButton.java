@@ -181,10 +181,15 @@ public class CollectionLogButton
 		currentBoss = bossIndex == null ? null : bossIndex.forPageTitle(title);
 
 		button.setHidden(currentBoss == null);
-		// Absolute coordinates, which is the default position mode for a child we created.
-		// If the diagnostics below report a non-zero xPositionMode on the anchor, this math
-		// is against the wrong frame of reference and needs revisiting.
-		button.setOriginalX(anchor.getOriginalX() - anchor.getWidth() - GAP);
+
+		// Read out of the cache (group 621 child 21): the Combat Achievements button is
+		// x=0 y=0 w=50 h=25 with xPositionMode 2, i.e. right-aligned. Its x is measured
+		// from the RIGHT edge, so a larger x sits further LEFT on screen. We match its
+		// position mode and add its width, which places us just left of it. Subtracting,
+		// as absolute-left coordinates would require, sends the button off the far side.
+		button.setXPositionMode(anchor.getXPositionMode());
+		button.setYPositionMode(anchor.getYPositionMode());
+		button.setOriginalX(anchor.getOriginalX() + anchor.getWidth() + GAP);
 		button.setOriginalY(anchor.getOriginalY());
 		button.revalidate();
 
