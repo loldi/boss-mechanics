@@ -38,6 +38,7 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -223,6 +224,42 @@ public class BossMechanicsPlugin extends Plugin
 	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
 		discoveryState.reload();
+	}
+
+	/**
+	 * The config panel has no button widget in this client version, so "Clear discoveries"
+	 * is a checkbox that performs its action and immediately unticks itself. Setting it back
+	 * re-enters here with "false", which falls through harmlessly.
+	 */
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (!BossMechanicsConfig.GROUP.equals(event.getGroup())
+			|| !"clearDiscoveries".equals(event.getKey())
+			|| !"true".equals(event.getNewValue()))
+		{
+			return;
+		}
+
+		int forgotten = 0;
+		for (Boss boss : bosses)
+		{
+			forgotten += discoveryState.clearDiscovered(boss.getId());
+		}
+
+		configManager.setConfiguration(BossMechanicsConfig.GROUP, "clearDiscoveries", false);
+		log.info("Cleared {} discovered mechanic(s)", forgotten);
+
+		chatMessageManager.queue(QueuedMessage.builder()
+			.type(ChatMessageType.GAMEMESSAGE)
+			.runeLiteFormattedMessage(new ChatMessageBuilder()
+				.append(ChatColorType.NORMAL)
+				.append("Boss Mechanics: forgot ")
+				.append(MECHANIC_NAME_COLOR, String.valueOf(forgotten))
+				.append(ChatColorType.NORMAL)
+				.append(" discovered mechanic(s).")
+				.build())
+			.build());
 	}
 
 	@Subscribe

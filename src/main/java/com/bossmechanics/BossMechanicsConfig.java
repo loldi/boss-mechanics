@@ -24,6 +24,17 @@ public interface BossMechanicsConfig extends Config
 	// RS-profile keys, not exposed here as config items.
 
 	@ConfigItem(
+		keyName = "clearDiscoveries",
+		name = "Clear discoveries",
+		description = "Forget every discovered mechanic for this character so they can be found again. Unticks itself once done",
+		position = 3
+	)
+	default boolean clearDiscoveries()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "logUnmatchedTriggers",
 		name = "Log boss trigger ids",
 		description = "Curation aid: log every animation, projectile and graphic id a tracked boss produces, and which mechanic claims it. Each id logs once per session",

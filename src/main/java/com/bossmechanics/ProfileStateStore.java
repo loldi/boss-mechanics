@@ -60,6 +60,18 @@ public class ProfileStateStore implements DiscoveryStore
 		configManager.setRSProfileConfiguration(BossMechanicsConfig.GROUP, key, toCsv(current));
 	}
 
+	@Override
+	public void clearDiscovered(String bossId)
+	{
+		configManager.unsetRSProfileConfiguration(BossMechanicsConfig.GROUP, discoveredKey(bossId));
+	}
+
+	/** Every boss this store was built for, so callers can clear all of them. */
+	public Collection<String> bossIds()
+	{
+		return bossIds;
+	}
+
 	public boolean isRevealed(String bossId)
 	{
 		return configManager.getRSProfileConfiguration(BossMechanicsConfig.GROUP, revealedKey(bossId)) != null;
