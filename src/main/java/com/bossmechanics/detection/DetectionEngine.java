@@ -136,6 +136,32 @@ public class DetectionEngine
 		return byId != null && byId.containsKey(triggerId);
 	}
 
+	/**
+	 * Mechanic ids claiming this trigger, or null if none do. Curation needs the claimant,
+	 * not just whether one exists: two attacks sharing an id is exactly how a mechanic ends
+	 * up labelled as the wrong move.
+	 */
+	public String claimedBy(TriggerType type, int triggerId)
+	{
+		Map<Integer, List<Discovery>> byId = triggerIndex.get(type);
+		List<Discovery> claimants = byId == null ? null : byId.get(triggerId);
+		if (claimants == null || claimants.isEmpty())
+		{
+			return null;
+		}
+
+		StringBuilder names = new StringBuilder();
+		for (Discovery claimant : claimants)
+		{
+			if (names.length() > 0)
+			{
+				names.append(", ");
+			}
+			names.append(claimant.getMechanic().getId());
+		}
+		return names.toString();
+	}
+
 	/** Boss id of a tracked NPC index, or null if that index isn't a boss we follow. */
 	public String trackedBossId(int npcIndex)
 	{

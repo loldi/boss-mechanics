@@ -25,8 +25,8 @@ public interface BossMechanicsConfig extends Config
 
 	@ConfigItem(
 		keyName = "logUnmatchedTriggers",
-		name = "Log unmatched boss triggers",
-		description = "Curation aid: log animation, projectile and graphic ids a tracked boss produces that no curated mechanic claims. Each id logs once per session",
+		name = "Log boss trigger ids",
+		description = "Curation aid: log every animation, projectile and graphic id a tracked boss produces, and which mechanic claims it. Each id logs once per session",
 		position = 2
 	)
 	default boolean logUnmatchedTriggers()

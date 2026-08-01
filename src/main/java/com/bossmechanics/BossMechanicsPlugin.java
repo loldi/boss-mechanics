@@ -258,9 +258,15 @@ public class BossMechanicsPlugin extends Plugin
 			return;
 		}
 
+		// Named boss rather than a generic "Boss", and the mechanic name in the highlight
+		// colour (red by default) so the line doesn't blend into combat spam.
 		String message = new ChatMessageBuilder()
 			.append(ChatColorType.NORMAL)
-			.append("Boss mechanic discovered: " + discovery.getMechanic().getName() + ".")
+			.append(discovery.getBoss().getName() + " mechanic discovered: ")
+			.append(ChatColorType.HIGHLIGHT)
+			.append(discovery.getMechanic().getName())
+			.append(ChatColorType.NORMAL)
+			.append(".")
 			.build();
 
 		chatMessageManager.queue(QueuedMessage.builder()
@@ -269,50 +275,43 @@ public class BossMechanicsPlugin extends Plugin
 			.build());
 	}
 
-	/**
-	 * Curation aid: reports ids a tracked boss produced that no curated mechanic claims,
-	 * which is how the mechanics the wiki describes but the cache constants don't name
-	 * get their trigger ids. Deduped per session because these events fire every cycle.
-	 */
+	/** Curation aid for events that name their source actor. */
 	private void logIfUnmatched(TriggerType type, int triggerId, int npcIndex)
 	{
-		if (!config.logUnmatchedTriggers() || triggerId <= 0)
-		{
-			return;
-		}
-
-		String bossId = detectionEngine.trackedBossId(npcIndex);
-		if (bossId == null || detectionEngine.isKnownTrigger(type, triggerId))
-		{
-			return;
-		}
-
-		if (loggedUnmatched.add(type + ":" + triggerId))
-		{
-			log.info("Unmatched {} id {} from {}", type, triggerId, bossId);
-		}
+		logTrigger(type, triggerId, detectionEngine.trackedBossId(npcIndex));
 	}
 
 	/**
-	 * Same as {@link #logIfUnmatched} for events that carry no reliable source actor.
-	 * Falls back to "some boss is on screen", which is the same gate matching uses.
+	 * Same, for events that carry no reliable source actor. Falls back to "some boss is
+	 * on screen", which is the same gate matching uses for them.
 	 */
 	private void logUnmatchedNearBoss(TriggerType type, int triggerId, String knownBossId)
 	{
-		if (!config.logUnmatchedTriggers() || triggerId <= 0)
+		logTrigger(type, triggerId, knownBossId != null ? knownBossId : detectionEngine.anyTrackedBossId());
+	}
+
+	/**
+	 * Reports every distinct trigger id a tracked boss produces, claimed or not, deduped
+	 * per session because these events fire every cycle.
+	 *
+	 * Logging only the unclaimed ids hid the case curation most needs to see: two different
+	 * attacks sharing one id, which silently labels a mechanic as the wrong move. Naming the
+	 * claimant makes that visible.
+	 */
+	private void logTrigger(TriggerType type, int triggerId, String bossId)
+	{
+		if (!config.logUnmatchedTriggers() || triggerId <= 0 || bossId == null)
 		{
 			return;
 		}
 
-		String bossId = knownBossId != null ? knownBossId : detectionEngine.anyTrackedBossId();
-		if (bossId == null || detectionEngine.isKnownTrigger(type, triggerId))
+		if (!loggedUnmatched.add(type + ":" + triggerId))
 		{
 			return;
 		}
 
-		if (loggedUnmatched.add(type + ":" + triggerId))
-		{
-			log.info("Unmatched {} id {} from {}", type, triggerId, bossId);
-		}
+		String claimant = detectionEngine.claimedBy(type, triggerId);
+		log.info("Trigger {} id {} from {} -> {}", type, triggerId, bossId,
+			claimant == null ? "UNCLAIMED" : claimant);
 	}
 }
