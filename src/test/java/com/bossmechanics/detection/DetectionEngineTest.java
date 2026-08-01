@@ -211,6 +211,28 @@ public class DetectionEngineTest
 	}
 
 	@Test
+	public void claimedByNamesEveryMechanicSharingATriggerId()
+	{
+		// Two mechanics on one id is the case curation must be able to see: it means one
+		// of them is labelled as the wrong move.
+		Mechanic first = mechanic("first", "First",
+			Collections.singletonList(trigger("animation", MIASMA_ANIMATION)));
+		Mechanic second = mechanic("second", "Second",
+			Collections.singletonList(trigger("animation", MIASMA_ANIMATION)));
+		Boss shared = new Boss("shared", "Shared", Collections.singletonList(SIRE_AWAKE),
+			"https://oldschool.runescape.wiki/w/Abyssal_Sire/Strategies",
+			Arrays.asList(first, second));
+
+		DetectionEngine sharedEngine = new DetectionEngine(
+			Collections.singletonList(shared), state);
+
+		String claimants = sharedEngine.claimedBy(TriggerType.ANIMATION, MIASMA_ANIMATION);
+		assertTrue(claimants.contains("first"));
+		assertTrue(claimants.contains("second"));
+		assertEquals(null, sharedEngine.claimedBy(TriggerType.ANIMATION, 9999));
+	}
+
+	@Test
 	public void trackedBossIdReportsPresenceAndClearsOnDespawn()
 	{
 		assertEquals(null, engine.trackedBossId(1));
