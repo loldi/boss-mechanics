@@ -33,11 +33,37 @@ import net.runelite.client.eventbus.Subscribe;
 public class CollectionLogButton
 {
 	/**
-	 * A pair of crossed swords. Chosen as the closest stock "combat/boss" glyph to the
-	 * Combat Achievements trophy it sits beside; it is a plain cache sprite, so swapping it
-	 * later is a one-line change.
+	 * The Combat Achievements button's own frame, read off a live client: a nine-slice
+	 * border over a stretched background fill, with a small icon centred on top. Reusing
+	 * Jagex's sprites rather than approximating them is what makes ours read as a sibling
+	 * of that button instead of something bolted on beside it.
+	 *
+	 * Sizes are the values that button resolves to at runtime, not the sprites' natural
+	 * sizes; the client stretches several of them.
 	 */
-	private static final int BUTTON_SPRITE = SpriteID.ICON_SWORDS;
+	private static final int SPRITE_BACKGROUND = 297;
+	private static final int SPRITE_CORNER_TL = 913;
+	private static final int SPRITE_CORNER_TR = 914;
+	private static final int SPRITE_CORNER_BL = 915;
+	private static final int SPRITE_CORNER_BR = 916;
+	private static final int SPRITE_EDGE_LEFT = 917;
+	private static final int SPRITE_EDGE_TOP = 918;
+	private static final int SPRITE_EDGE_RIGHT = 919;
+	private static final int SPRITE_EDGE_BOTTOM = 920;
+
+	/**
+	 * Stands in for the Combat Achievements trophy (sprite 3389, 18x17). The cache ships no
+	 * "boss mechanics" glyph, so this is the least-wrong stock icon until a custom sprite is
+	 * bundled as a plugin resource. Only this line changes when that happens.
+	 */
+	private static final int SPRITE_ICON = SpriteID.RAIDS_CHALLENGE_ICON;
+
+	private static final int BUTTON_WIDTH = 50;
+	private static final int BUTTON_HEIGHT = 25;
+	private static final int ICON_WIDTH = 18;
+	private static final int ICON_HEIGHT = 17;
+	private static final int ICON_X = 16;
+	private static final int ICON_Y = 3;
 
 	/** Horizontal breathing room between our button and the Combat Achievements one. */
 	private static final int GAP = 4;
@@ -167,14 +193,14 @@ public class CollectionLogButton
 
 		if (!stillAttached(parent))
 		{
-			button = parent.createChild(-1, WidgetType.GRAPHIC);
-			button.setSpriteId(BUTTON_SPRITE);
-			button.setOriginalWidth(anchor.getWidth());
-			button.setOriginalHeight(anchor.getHeight());
+			button = parent.createChild(-1, WidgetType.LAYER);
+			button.setOriginalWidth(BUTTON_WIDTH);
+			button.setOriginalHeight(BUTTON_HEIGHT);
 			button.setAction(0, "Boss Mechanics");
 			button.setNoClickThrough(true);
 			button.setHasListener(true);
 			button.setOnOpListener((JavaScriptCallback) e -> open());
+			buildFrame(button);
 		}
 
 		String title = pageTitle();
@@ -197,6 +223,41 @@ public class CollectionLogButton
 		parent.revalidate();
 
 		logDiagnostics(title, anchor, parent);
+	}
+
+	/**
+	 * Rebuilds the Combat Achievements button's own construction inside our layer: the
+	 * background fill first, then the nine-slice border over it, then the icon on top.
+	 * Order matters, since later children draw above earlier ones.
+	 */
+	private void buildFrame(Widget layer)
+	{
+		sprite(layer, SPRITE_BACKGROUND, 1, 1, BUTTON_WIDTH - 2, BUTTON_HEIGHT - 2);
+
+		sprite(layer, SPRITE_CORNER_TL, 0, 0, 9, 9);
+		sprite(layer, SPRITE_CORNER_TR, 41, 0, 9, 9);
+		sprite(layer, SPRITE_CORNER_BL, 0, 16, 9, 9);
+		sprite(layer, SPRITE_CORNER_BR, 41, 16, 9, 9);
+		sprite(layer, SPRITE_EDGE_LEFT, 0, 9, 9, 7);
+		sprite(layer, SPRITE_EDGE_RIGHT, 41, 9, 9, 7);
+		sprite(layer, SPRITE_EDGE_TOP, 9, 0, 32, 9);
+		sprite(layer, SPRITE_EDGE_BOTTOM, 9, 16, 32, 9);
+
+		sprite(layer, SPRITE_ICON, ICON_X, ICON_Y, ICON_WIDTH, ICON_HEIGHT);
+	}
+
+	private void sprite(Widget layer, int spriteId, int x, int y, int width, int height)
+	{
+		Widget part = layer.createChild(-1, WidgetType.GRAPHIC);
+		part.setSpriteId(spriteId);
+		part.setOriginalX(x);
+		part.setOriginalY(y);
+		part.setOriginalWidth(width);
+		part.setOriginalHeight(height);
+		// Several of these sprites are smaller than the area they cover; the client stretches
+		// them to the widget's size, which is how the border scales on Jagex's own button.
+		part.setSpriteTiling(false);
+		part.revalidate();
 	}
 
 	private String pageTitle()
