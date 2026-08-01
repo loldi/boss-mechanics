@@ -53,6 +53,21 @@ public class DiscoveryState
 		discovered.addAll(store.loadDiscovered());
 	}
 
+	/**
+	 * Forgets every discovery for one boss, in memory and in the store, so its mechanics
+	 * announce again next time they're witnessed.
+	 *
+	 * @return how many were forgotten
+	 */
+	public int clearDiscovered(String bossId)
+	{
+		String prefix = bossId + ":";
+		int before = discovered.size();
+		discovered.removeIf(entry -> entry.startsWith(prefix));
+		store.clearDiscovered(bossId);
+		return before - discovered.size();
+	}
+
 	/** @return how many of {@code boss}'s current mechanics are discovered; stale/removed ids in the store are never counted. */
 	public int discoveredCount(Boss boss)
 	{
