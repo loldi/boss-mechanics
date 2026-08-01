@@ -2,12 +2,14 @@ package com.bossmechanics;
 
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.BossDataLoader;
+import com.bossmechanics.data.BossPageIndex;
 import com.bossmechanics.data.LoadResult;
 import com.bossmechanics.detection.DetectionEngine;
 import com.bossmechanics.detection.Discovery;
 import com.bossmechanics.data.TriggerType;
 import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.spike.SireWidgetSpike;
+import com.bossmechanics.ui.CollectionLogButton;
 import com.google.inject.Provides;
 import java.awt.Color;
 import java.util.ArrayList;
@@ -75,6 +77,9 @@ public class BossMechanicsPlugin extends Plugin
 	@Inject
 	private BossDataLoader bossDataLoader;
 
+	@Inject
+	private CollectionLogButton collectionLogButton;
+
 	private List<Boss> bosses = Collections.emptyList();
 	private DiscoveryState discoveryState;
 	private DetectionEngine detectionEngine;
@@ -120,7 +125,10 @@ public class BossMechanicsPlugin extends Plugin
 		// so presence has to be seeded from what's already there.
 		clientThread.invokeLater(this::seedPresence);
 
-		// TODO: inject Boss Mechanics button into the collection log on WidgetLoaded
+		collectionLogButton.setBossIndex(new BossPageIndex(bosses));
+		collectionLogButton.setOnOpen(this::openBossMechanics);
+		eventBus.register(collectionLogButton);
+		collectionLogButton.onPluginStart();
 
 		// Issue #1 spike (delete-or-promote): see com.bossmechanics.spike.SireWidgetSpike
 		eventBus.register(sireWidgetSpike);
@@ -131,7 +139,9 @@ public class BossMechanicsPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		log.info("Boss Mechanics stopped");
-		// TODO: remove injected button, close our interface if open
+
+		collectionLogButton.onPluginStop();
+		eventBus.unregister(collectionLogButton);
 
 		sireWidgetSpike.onPluginStop();
 		eventBus.unregister(sireWidgetSpike);
@@ -292,6 +302,31 @@ public class BossMechanicsPlugin extends Plugin
 		{
 			announce(discovery);
 		}
+	}
+
+	/**
+	 * What the injected collection log button does, until the real interface lands (issue #5),
+	 * which replaces this method and touches nothing else. Reporting live progress is the point:
+	 * it exercises the whole chain in one click (page detected, title matched to a boss, boss's
+	 * persisted discoveries counted).
+	 *
+	 * Runs on the client thread, via the widget's op listener.
+	 */
+	private void openBossMechanics(Boss boss)
+	{
+		log.info("Boss Mechanics button clicked: {}", boss.getId());
+
+		String progress = discoveryState.discoveredCount(boss) + "/" + boss.getMechanics().size();
+		chatMessageManager.queue(QueuedMessage.builder()
+			.type(ChatMessageType.GAMEMESSAGE)
+			.runeLiteFormattedMessage(new ChatMessageBuilder()
+				.append(ChatColorType.NORMAL)
+				.append("Boss Mechanics: " + boss.getName() + ", ")
+				.append(MECHANIC_NAME_COLOR, progress)
+				.append(ChatColorType.NORMAL)
+				.append(" mechanics discovered.")
+				.build())
+			.build());
 	}
 
 	private void announce(Discovery discovery)
