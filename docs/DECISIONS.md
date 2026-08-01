@@ -104,9 +104,34 @@ so new decisions are appended here rather than inserted in a themed section.
     read-modify-write needs a lock or a client-thread hop. Interface consumption of this
     state (View All button, progress bar rendering) is #5's, not built here.
 
+19. **Collection log button injection (issue #4).** The hook is `ScriptPostFired` for
+    `ScriptID.COLLECTION_DRAW_LIST` (2731), which is how RuneLite core's
+    `ChatCommandsPlugin` reads the collection log. `WidgetLoaded` on group 621 was
+    rejected as the primary hook: it fires once when the log opens, not on tab switch,
+    boss selection or search click. The button is parented to
+    `InterfaceID.Collection.COMBAT_ACHIEVEMENTS`'s own parent, which sidesteps D14's
+    parent-picking problem entirely: a sibling that visibly draws proves that layer
+    draws, so no size heuristic is needed. No anchor means no button. Gating on the
+    collection-log tab varbit was rejected because bosses do not all live under the Boss
+    tab (TzTok-Jad is under Minigames); the page-title lookup *is* the tab filter. That
+    lookup is `BossPageIndex`: normalized (colour tags stripped, whitespace collapsed,
+    case folded) but otherwise exact against `Boss.name`, and a page we can't match
+    silently gets no button. Deliberately no `collectionLogPages` alias array in the
+    schema: `BossPageIndex` is the seam if a page title ever disagrees with the display
+    name. Teardown is `setHidden(true)` plus dropping the reference: there is no
+    single-child delete, and `deleteAllChildren()` would destroy Jagex's own children.
+    Duplicate prevention is an identity scan of `parent.getDynamicChildren()` rather than
+    a `button != null` check, because a Jagex rebuild of the header drops our child
+    without telling us; the scan self-heals in both directions and keeps this to one
+    dynamic child per collection log open. The click is a `Consumer<Boss>` supplied by the
+    plugin, so the real interface (#5) replaces one lambda and not this class.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
   Curate it last.
 - UX feel of revealed-vs-discovered needs playtesting (decision 10 is provisional).
-- Exact sprite for the injected button — pick from cache during UI build.
+- ~~Exact sprite for the injected button.~~ **RESOLVED (issue #4):**
+  `net.runelite.api.gameval.SpriteID.ICON_SWORDS` (3029), a pair of crossed swords, as the
+  closest stock combat glyph to the Combat Achievements trophy it sits beside. One
+  constant, so swapping it after seeing it in game is a one-line change.

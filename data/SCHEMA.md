@@ -20,7 +20,7 @@ CC BY-SA 3.0, so we paraphrase and attribute, never copy).
 | Field | Type | Notes |
 |---|---|---|
 | `id` | string | kebab-case slug, matches filename (`abyssal-sire`) |
-| `name` | string | Display name, matches collection log page name |
+| `name` | string | Display name. **Load-bearing**: it is matched against the collection log page title to decide whether this boss gets a Boss Mechanics button, so a name that doesn't match the page means no button, silently. Matching ignores case, surrounding whitespace and colour tags, but is otherwise exact. |
 | `npcIds` | int[] | All NPC IDs for this boss (forms/phases) — used to know we're "in the fight" |
 | `wikiUrl` | string | Boss strategy page used for research |
 | `mechanics` | Mechanic[] | Ordered as they should appear in the list |
