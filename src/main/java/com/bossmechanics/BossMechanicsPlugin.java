@@ -9,6 +9,7 @@ import com.bossmechanics.data.TriggerType;
 import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.spike.SireWidgetSpike;
 import com.google.inject.Provides;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -80,6 +81,8 @@ public class BossMechanicsPlugin extends Plugin
 	// Ids already reported by the unmatched-trigger log, so a projectile in flight
 	// doesn't reprint every cycle.
 	private final Set<String> loggedUnmatched = new HashSet<>();
+
+	private static final Color MECHANIC_NAME_COLOR = new Color(0xCC0000);
 
 	// A plugin field, not a local, so #5's reveal UI can reach isRevealed/setRevealed.
 	private ProfileStateStore profileStateStore;
@@ -261,13 +264,13 @@ public class BossMechanicsPlugin extends Plugin
 			return;
 		}
 
-		// Named boss rather than a generic "Boss", and the mechanic name in the highlight
-		// colour (red by default) so the line doesn't blend into combat spam.
+		// Explicit red on the mechanic name. ChatColorType.HIGHLIGHT was tried first, but it
+		// resolves to the player's configured highlight colour, which rendered the whole
+		// line flat white in game and defeated the point of making it stand out.
 		String message = new ChatMessageBuilder()
 			.append(ChatColorType.NORMAL)
 			.append(discovery.getBoss().getName() + " mechanic discovered: ")
-			.append(ChatColorType.HIGHLIGHT)
-			.append(discovery.getMechanic().getName())
+			.append(MECHANIC_NAME_COLOR, discovery.getMechanic().getName())
 			.append(ChatColorType.NORMAL)
 			.append(".")
 			.build();
@@ -276,6 +279,10 @@ public class BossMechanicsPlugin extends Plugin
 			.type(ChatMessageType.GAMEMESSAGE)
 			.runeLiteFormattedMessage(message)
 			.build());
+
+		// Discoveries were previously chat-only, so nothing recorded them anywhere a log
+		// could show. Fires at most once per mechanic per character, so it cannot spam.
+		log.info("Discovered {} mechanic: {}", discovery.getBoss().getId(), discovery.getMechanic().getId());
 	}
 
 	/** Curation aid for events that name their source actor. */
