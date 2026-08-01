@@ -10,6 +10,7 @@
       "description": "Vorkath cycles melee, ranged and magic in no fixed order. None of them can be reacted to once launched.",
       "counterplay": "Keep a protection prayer up the whole fight. Pick the style your gear handles worst.",
       "detection": [
+        { "type": "projectile", "id": 393 },
         { "type": "projectile", "id": 1477 },
         { "type": "projectile", "id": 1479 },
         { "type": "animation", "id": 7951 },
@@ -35,10 +36,31 @@
       "description": "Icy breath freezes you in place and drops a zombified spawn across the arena. It walks at you and detonates on arrival.",
       "counterplay": "Cast Crumble Undead to delete it instantly. Anything slower and you wear the explosion.",
       "detection": [
+        { "type": "projectile", "id": 395 },
         { "type": "projectile", "id": 1484 },
         { "type": "npc-spawn", "id": 8063 }
       ],
       "preview": { "animationId": 7960, "staticFallback": true }
+    },
+    {
+      "id": "venomous-dragonfire",
+      "name": "Venomous Dragonfire",
+      "description": "A green dragonfire breath that venoms you through ordinary dragonfire protection.",
+      "counterplay": "Bring extended anti-venom+, or wear a serpentine helm and forget about it.",
+      "detection": [
+        { "type": "projectile", "id": 1470 }
+      ],
+      "preview": { "animationId": 7952, "staticFallback": true }
+    },
+    {
+      "id": "corrupting-dragonfire",
+      "name": "Corrupting Dragonfire",
+      "description": "A white dragonfire breath that switches off every prayer the moment it lands.",
+      "counterplay": "Set quick-prayers and flick them straight back on. Use divine potions, which the drain can't touch.",
+      "detection": [
+        { "type": "projectile", "id": 1471 }
+      ],
+      "preview": { "animationId": 7952, "staticFallback": true }
     },
     {
       "id": "acid-phase",
@@ -52,6 +74,6 @@
       "preview": { "animationId": 7957, "staticFallback": true }
     }
   ],
-  "_observed": "From a live kill on 2026-08-01, Vorkath played animations 7950 (on engage), 7952 (ranged attack, now claimed by standard-attacks), 7948 (idle), 7960 (once mid-fight, likely a special attack launch) and 7949 (death). Notably 7951 and 7957 never fired, so DS2_VORKATH_ATTACK_MELEE and DS2_VORKATH_ACID are not what the live boss uses for melee and the acid phase; they are kept only as harmless extra trigger ids. 7960 is left unassigned until a projectile id can be correlated with it by timestamp.",
+  "_observed": "Trigger ids confirmed against live kills on 2026-08-01. Every projectile below was resolved through gameval SpotanimID rather than guessed: 393 DRAGON_RANGED_FIRE_ATTACK and 1477/1479 (standard rotation), 395 DRAGON_RANGED_ICE_ATTACK (the freeze that precedes the spawn), 1470 DRAGON_RANGED_VENOM_ATTACK, 1471 DRAGON_RANGED_CORRUPTING_ATTACK, 1481/1482 (area dragonfire), 1483 (acid), 1484 (spawn). Animations 7951 and 7957 do fire; an earlier kill missed them only because that fight never went to melee range. Still unassigned: animation 7960, which fires once mid-fight, and animation 7950 on engage. Ids 131 FIREBLAST_IMPACT, 146 CRUMBLEUNDEAD_TRAVEL and 1466 FIRESURGE_IMPACT appeared in the log but are the PLAYER's own spells, not Vorkath's.",
   "_note": "Replaces the original skeleton data. NPC ids from gameval NpcID (VORKATH_SLEEPING_NOOP/SLEEPING/QUEST/VORKATH, VORKATH_SPAWN); projectile ids from gameval SpotanimID (VORKATH_RANGED_TRAVEL 1477, VORKATH_MAGIC_TRAVEL 1479, VORKATH_AREA_TRAVEL 1481, VORKATH_AREA_SMALL_TRAVEL 1482, VORKATH_ACID_TRAVEL 1483, VORKATH_SPAWN_TRAVEL 1484, VORKATH_AREA_TRAVEL_SMALL 2266); animations from gameval AnimationID (DS2_VORKATH_*). Deliberately omitted: the venomous and prayer-disabling dragonfire variants, which the wiki documents but which have no distinctly named projectile constant. Enable the debug trigger log during a fight to capture their ids, then add them as their own mechanics. See issue #10."
 }
