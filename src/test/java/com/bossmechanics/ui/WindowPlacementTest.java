@@ -36,6 +36,17 @@ public class WindowPlacementTest
 	}
 
 	@Test
+	public void roundsAnOddSizeDifferenceTheClientsWay()
+	{
+		// The other cases all have an even (target - window) delta, where halving the difference
+		// and differencing the halves agree. They only disagree on an odd delta, which is what
+		// the implementation's choice of formula exists for, so pin the real behaviour: Java
+		// truncates toward zero, so a negative delta lands a pixel nearer the target's origin.
+		assertEquals(-5, WindowPlacement.origin(0, 501, 0, 512));
+		assertEquals(5, WindowPlacement.origin(0, 21, 0, 10));
+	}
+
+	@Test
 	public void centresOnTheVerticalAxisTheSameWay()
 	{
 		// One function, called twice. 314-tall log, 334-tall window.

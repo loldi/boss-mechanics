@@ -81,7 +81,6 @@ public class BossMechanicsWindow
 
 	/** 621 HEADER_RECT1 child 22 fills the title bar with 0x585040. */
 	private static final int HEADER_COLOR = 0x585040;
-	private static final int TITLE_X = 8;
 
 	/**
 	 * The Combat Achievements progress bar, script 4782, in draw order: an inner border, the
@@ -393,10 +392,14 @@ public class BossMechanicsWindow
 
 		Widgets.filled(header, 0, 0, CONTENT_WIDTH, HEADER_HEIGHT, HEADER_COLOR);
 
+		// Centred across the full header, as the Combat Achievements screen centres its own
+		// title. Spanning the whole band rather than insetting keeps it centred on the window
+		// instead of on the space left over beside the close button.
 		Widget title = Widgets.text(header, view.title(), FontID.BOLD_12, Widgets.WHITE);
-		title.setOriginalX(TITLE_X);
-		title.setOriginalWidth(CONTENT_WIDTH - TITLE_X);
+		title.setOriginalX(0);
+		title.setOriginalWidth(CONTENT_WIDTH);
 		title.setOriginalHeight(HEADER_HEIGHT);
+		title.setXTextAlignment(WidgetTextAlignment.CENTER);
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
 		title.revalidate();
 
