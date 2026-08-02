@@ -1,11 +1,13 @@
 package com.bossmechanics.ui;
 
+import com.bossmechanics.view.Ellipsize;
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.MechanicsView;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import net.runelite.api.FontID;
+import net.runelite.api.FontTypeFace;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetPositionMode;
@@ -35,6 +37,14 @@ final class MechanicsList
 	private static final int ROW_HEIGHT = 22;
 	private static final int NAME_X = 4;
 	private static final int PHASE_INSET = 4;
+
+	/**
+	 * The zone reserved for the phase tag at the row's right end, ellipsis budget included:
+	 * "Phase 1" in PLAIN_12 is ~40px, plus the inset and a 2px gap. The name is fitted into what
+	 * is left of the row rather than given the full width, because two full-width texts on one
+	 * line is exactly how "Respiratory Systems" ran under its tag in game.
+	 */
+	private static final int PHASE_WIDTH = 50;
 	private static final int HEADER_TITLE_X = 2;
 	private static final int REVEAL_WIDTH = 66;
 
@@ -174,13 +184,15 @@ final class MechanicsList
 		wash.setHidden(true);
 		selectionWashes.put(row.getMechanicId(), wash);
 
+		int nameWidth = LIST_WIDTH - NAME_X - (row.getPhase() != null ? PHASE_WIDTH : 0);
 		int resting = row.isLocked() ? Widgets.GREY : Widgets.ORANGE;
 		Widget name = Widgets.text(layer, row.getName(),
 			row.isLocked() ? FontID.PLAIN_12 : FontID.BOLD_12, resting);
 		name.setOriginalX(NAME_X);
-		name.setOriginalWidth(LIST_WIDTH - NAME_X);
+		name.setOriginalWidth(nameWidth);
 		name.setOriginalHeight(ROW_HEIGHT);
 		name.setYTextAlignment(WidgetTextAlignment.CENTER);
+		fitName(name, row.getName(), nameWidth);
 		name.revalidate();
 
 		layer.setOnMouseOverListener((JavaScriptCallback) event -> name.setTextColor(Widgets.ORANGE_HOVER));
@@ -194,11 +206,26 @@ final class MechanicsList
 		}
 	}
 
+	/**
+	 * Replaces the name with its longest fitting prefix + "..." when the row's font says the full
+	 * name overruns {@code maxWidth}. The fitting rule lives in {@link Ellipsize} (tested); this
+	 * only supplies the real font metrics, which is why the null-font fallback just keeps the
+	 * full name — the pre-fix behaviour, not a blank row.
+	 */
+	private static void fitName(Widget name, String fullName, int maxWidth)
+	{
+		FontTypeFace font = name.getFont();
+		if (font != null)
+		{
+			name.setText(Ellipsize.fit(fullName, font::getTextWidth, maxWidth));
+		}
+	}
+
 	private void phase(Widget layer, String text)
 	{
 		Widget widget = Widgets.text(layer, text, FontID.PLAIN_12, Widgets.GREY);
 		widget.setOriginalX(PHASE_INSET);
-		widget.setOriginalWidth(LIST_WIDTH - PHASE_INSET);
+		widget.setOriginalWidth(PHASE_WIDTH - PHASE_INSET);
 		widget.setOriginalHeight(ROW_HEIGHT);
 		widget.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
 		widget.setXTextAlignment(WidgetTextAlignment.RIGHT);
