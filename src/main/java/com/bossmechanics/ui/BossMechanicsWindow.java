@@ -99,15 +99,14 @@ public class BossMechanicsWindow
 	/**
 	 * TEMPORARY DIAGNOSTIC — delete once the first in-game run confirms the window draws.
 	 *
-	 * <p>The FLOATER host (D20) is inferred from the cache, not observed: FLOATER is a later
-	 * sibling of MAINMODAL in all six top-level layouts, so it *should* draw over the collection
-	 * log. This is the issue #1 spike's move, which is the cheapest way to tell three failures
-	 * apart in a single run:
+	 * <p>The first host (FLOATER) drew behind the collection log; the window now hosts on
+	 * UI_HIGHLIGHTS, a root the client draws after GAMEFRAME. This is the issue #1 spike's move,
+	 * which is the cheapest way to tell three failures apart in a single run:
 	 *
 	 * <ul>
 	 * <li>full window draws, no magenta anywhere — hypothesis holds, delete this block;</li>
-	 * <li>magenta showing through — FLOATER draws, but frame sprites are missing or mispositioned;</li>
-	 * <li>nothing at all — FLOATER does not draw over MAINMODAL; fall back to MAINMODAL.</li>
+	 * <li>magenta showing through — the host draws, but frame sprites are missing or mispositioned;</li>
+	 * <li>window still behind the log — UI_HIGHLIGHTS is not above GAMEFRAME either; try MOUSEOVER.</li>
 	 * </ul>
 	 *
 	 * <p>It costs nothing while it is right: the nine-slice frame covers this rectangle exactly,
@@ -126,7 +125,7 @@ public class BossMechanicsWindow
 	private KeyManager keyManager;
 
 	/**
-	 * Our one dynamic child of the FLOATER. Kept across a close (hidden, emptied) rather than
+	 * Our one dynamic child of the host component. Kept across a close (hidden, emptied) rather than
 	 * recreated, so repeatedly opening and closing the window cannot pile up abandoned hidden
 	 * layers on a component nothing else ever tears down. Dropped without being touched on the
 	 * transitions that destroy the interface tree, and re-checked by identity before reuse
@@ -173,7 +172,7 @@ public class BossMechanicsWindow
 
 	public void onPluginStart()
 	{
-		// Deliberately keeps any existing root. Nothing rebuilds the FLOATER, so dropping the
+		// Deliberately keeps any existing root. Nothing rebuilds the host, so dropping the
 		// reference here would strand one hidden layer per plugin restart; the identity scan
 		// in stillAttached() makes reusing a stale reference safe.
 		preview = null;
@@ -191,10 +190,10 @@ public class BossMechanicsWindow
 	 */
 	public void open(Boss boss, MechanicsView view)
 	{
-		Widget floater = floater();
-		if (floater == null)
+		Widget host = host();
+		if (host == null)
 		{
-			log.warn("Boss Mechanics: no top-level FLOATER for layout {}, window not opened",
+			log.warn("Boss Mechanics: no known window host for layout {}, window not opened",
 				client.getTopLevelInterfaceId());
 			return;
 		}
@@ -203,9 +202,9 @@ public class BossMechanicsWindow
 		this.windowOpen = true;
 		this.selectedMechanicId = view.getRows().isEmpty() ? null : view.getRows().get(0).getMechanicId();
 
-		if (!stillAttached(floater))
+		if (!stillAttached(host))
 		{
-			root = floater.createChild(-1, WidgetType.LAYER);
+			root = host.createChild(-1, WidgetType.LAYER);
 		}
 		else
 		{
@@ -236,13 +235,13 @@ public class BossMechanicsWindow
 
 		root.revalidate();
 		// D14: a child computes nothing on its own; the parent layer runs the layout pass.
-		floater.revalidate();
+		host.revalidate();
 
 		logHostChains();
 		registerEscape();
 
-		log.debug("Boss Mechanics: opened for {} on floater {} ({}x{}), root {}x{} at ({},{})",
-			boss.getId(), floater.getId(), floater.getWidth(), floater.getHeight(),
+		log.debug("Boss Mechanics: opened for {} on host {} ({}x{}), root {}x{} at ({},{})",
+			boss.getId(), host.getId(), host.getWidth(), host.getHeight(),
 			root.getWidth(), root.getHeight(), root.getRelativeX(), root.getRelativeY());
 
 		if (selectedMechanicId != null && onMechanicSelected != null)
@@ -297,9 +296,9 @@ public class BossMechanicsWindow
 		}
 	}
 
-	private Widget floater()
+	private Widget host()
 	{
-		int componentId = TopLevelFloater.componentId(client.getTopLevelInterfaceId());
+		int componentId = WindowHost.componentId(client.getTopLevelInterfaceId());
 		return componentId == -1 ? null : client.getWidget(componentId);
 	}
 
@@ -315,9 +314,9 @@ public class BossMechanicsWindow
 	{
 		logChain("collection log", client.getWidget(InterfaceID.Collection.UNIVERSE));
 		logChain("our root", root);
-		log.info("Host diag: topLevel={} floaterId={}",
+		log.info("Host diag: topLevel={} hostId={}",
 			client.getTopLevelInterfaceId(),
-			TopLevelFloater.componentId(client.getTopLevelInterfaceId()));
+			WindowHost.componentId(client.getTopLevelInterfaceId()));
 
 		Widget[] roots = client.getWidgetRoots();
 		if (roots != null)
@@ -355,14 +354,14 @@ public class BossMechanicsWindow
 	}
 
 	/** @see CollectionLogButton#stillAttached(Widget) — same self-healing identity scan. */
-	private boolean stillAttached(Widget floater)
+	private boolean stillAttached(Widget host)
 	{
 		if (root == null)
 		{
 			return false;
 		}
 
-		Widget[] children = floater.getDynamicChildren();
+		Widget[] children = host.getDynamicChildren();
 		if (children == null)
 		{
 			return false;
