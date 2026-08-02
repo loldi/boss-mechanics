@@ -238,6 +238,7 @@ public class BossMechanicsWindow
 		// D14: a child computes nothing on its own; the parent layer runs the layout pass.
 		floater.revalidate();
 
+		logHostChains();
 		registerEscape();
 
 		log.debug("Boss Mechanics: opened for {} on floater {} ({}x{}), root {}x{} at ({},{})",
@@ -300,6 +301,57 @@ public class BossMechanicsWindow
 	{
 		int componentId = TopLevelFloater.componentId(client.getTopLevelInterfaceId());
 		return componentId == -1 ? null : client.getWidget(componentId);
+	}
+
+	/**
+	 * TEMPORARY DIAGNOSTIC — delete once the host layer is settled.
+	 *
+	 * <p>The window drew *behind* the collection log, so FLOATER being a later sibling of
+	 * MAINMODAL in the cache does not mean it draws later. This reports where the log actually
+	 * lives at runtime and where we put ourselves, so the correct host can be picked from
+	 * evidence instead of another inference.
+	 */
+	private void logHostChains()
+	{
+		logChain("collection log", client.getWidget(InterfaceID.Collection.UNIVERSE));
+		logChain("our root", root);
+		log.info("Host diag: topLevel={} floaterId={}",
+			client.getTopLevelInterfaceId(),
+			TopLevelFloater.componentId(client.getTopLevelInterfaceId()));
+
+		Widget[] roots = client.getWidgetRoots();
+		if (roots != null)
+		{
+			StringBuilder order = new StringBuilder();
+			for (Widget widgetRoot : roots)
+			{
+				if (widgetRoot != null)
+				{
+					order.append(widgetRoot.getId()).append('(').append(widgetRoot.getId() >>> 16).append(") ");
+				}
+			}
+			log.info("Host diag: widget roots in draw order: {}", order);
+		}
+	}
+
+	private void logChain(String label, Widget widget)
+	{
+		if (widget == null)
+		{
+			log.info("Host diag: {} is null", label);
+			return;
+		}
+
+		StringBuilder chain = new StringBuilder();
+		for (Widget node = widget; node != null; node = node.getParent())
+		{
+			chain.append(node.getId())
+				.append("[g").append(node.getId() >>> 16)
+				.append(",c").append(node.getId() & 0xFFFF)
+				.append(",i").append(node.getIndex())
+				.append("] <- ");
+		}
+		log.info("Host diag: {} chain: {}", label, chain);
 	}
 
 	/** @see CollectionLogButton#stillAttached(Widget) — same self-healing identity scan. */
