@@ -130,7 +130,7 @@ public class BossMechanicsWindow
 	 * recreated, so repeatedly opening and closing the window cannot pile up abandoned hidden
 	 * layers on a component nothing else ever tears down. Dropped without being touched on the
 	 * transitions that destroy the interface tree, and re-checked by identity before reuse
-	 * (D19 rule 8), so a stale reference can never be drawn into.
+	 * (D19: identity scan, never a null check), so a stale reference can never be drawn into.
 	 */
 	private Widget root;
 
@@ -139,6 +139,13 @@ public class BossMechanicsWindow
 
 	private MechanicsView view;
 	private String selectedMechanicId;
+
+	/**
+	 * Whether the window is currently showing. Read from the AWT thread by the Escape
+	 * listener, which cannot call {@link Widget#isHidden()} because that getter asserts it
+	 * is on the client thread.
+	 */
+	private volatile boolean windowOpen;
 
 	private BiConsumer<String, Boolean> onRevealToggled;
 	private Consumer<String> onMechanicSelected;
@@ -166,8 +173,11 @@ public class BossMechanicsWindow
 
 	public void onPluginStart()
 	{
-		root = null;
+		// Deliberately keeps any existing root. Nothing rebuilds the FLOATER, so dropping the
+		// reference here would strand one hidden layer per plugin restart; the identity scan
+		// in stillAttached() makes reusing a stale reference safe.
 		preview = null;
+		windowOpen = false;
 	}
 
 	public void onPluginStop()
@@ -190,6 +200,7 @@ public class BossMechanicsWindow
 		}
 
 		this.view = view;
+		this.windowOpen = true;
 		this.selectedMechanicId = view.getRows().isEmpty() ? null : view.getRows().get(0).getMechanicId();
 
 		if (!stillAttached(floater))
@@ -241,10 +252,11 @@ public class BossMechanicsWindow
 
 	/**
 	 * Hide and empty, never delete. There is no single-child delete, and the reference is kept
-	 * so the next open reuses this layer rather than leaking another one (D19 rule 7).
+	 * so the next open reuses this layer rather than leaking another one (D19: hide, never deleteAllChildren on a component we do not own).
 	 */
 	public void close()
 	{
+		windowOpen = false;
 		unregisterEscape();
 		preview = null;
 		view = null;
@@ -498,7 +510,10 @@ public class BossMechanicsWindow
 		@Override
 		public void keyPressed(KeyEvent event)
 		{
-			if (event.getKeyCode() == KeyEvent.VK_ESCAPE && root != null && !root.isHidden())
+			// Deliberately a plain field rather than root.isHidden(): that getter asserts it is
+			// on the client thread, and this runs on AWT, so reading it here threw and Escape
+			// never reached the close below.
+			if (event.getKeyCode() == KeyEvent.VK_ESCAPE && windowOpen)
 			{
 				event.consume();
 				clientThread.invoke(BossMechanicsWindow.this::close);

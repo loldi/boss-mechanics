@@ -6,7 +6,7 @@ import net.runelite.api.widgets.WidgetType;
 
 /**
  * The handful of widget shapes the Boss Mechanics window is made of, and the colours it draws
- * them in. Every one of these ends in {@code revalidate()}, because a freshly created child that
+ * them in. Most of these end in {@code revalidate()}; {@link #text} does not, so revalidate it yourself, because a freshly created child that
  * is never revalidated is built, unhidden and invisible (docs/DECISIONS.md D14).
  *
  * <p>Deliberately not shared with {@link CollectionLogButton}: sharing would mean restructuring
