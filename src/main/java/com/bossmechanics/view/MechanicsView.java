@@ -44,7 +44,8 @@ public class MechanicsView
 				locked ? "" : mechanic.getDescription(),
 				locked ? "" : mechanic.getCounterplay(),
 				// FORK, resolved: a locked row shows no phase tag, so revealing delivers something.
-				locked ? null : mechanic.getPhase()));
+				locked ? null : mechanic.getPhase(),
+				PreviewSpec.of(mechanic, boss.getNpcIds(), locked)));
 		}
 
 		return new MechanicsView(boss.getId(), boss.getName(), revealed, Collections.unmodifiableList(rows));

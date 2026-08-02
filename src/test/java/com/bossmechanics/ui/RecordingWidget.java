@@ -29,6 +29,7 @@ final class RecordingWidget implements InvocationHandler
 	private final List<String> allCalls;
 	private final List<Widget> children = new ArrayList<>();
 	private final Map<String, Object> listeners = new HashMap<>();
+	private final Map<String, Object[]> lastArgs = new HashMap<>();
 
 	private RecordingWidget(List<String> allCalls)
 	{
@@ -66,6 +67,16 @@ final class RecordingWidget implements InvocationHandler
 		return handlerOf(widget).listeners.get(setterName);
 	}
 
+	/**
+	 * The args of the most recent call to {@code methodName} on this widget, or null if it was
+	 * never called. Additive alongside {@link #listenerOf}/{@link #callsOf}: those tests are
+	 * name-only and stay untouched by this separate map.
+	 */
+	static Object[] lastArgsOf(Widget widget, String methodName)
+	{
+		return handlerOf(widget).lastArgs.get(methodName);
+	}
+
 	/** A harmless stand-in for a return type we don't need to model precisely. */
 	static Object defaultFor(Class<?> type)
 	{
@@ -95,6 +106,7 @@ final class RecordingWidget implements InvocationHandler
 		String name = method.getName();
 		calls.add(name);
 		allCalls.add(name);
+		lastArgs.put(name, args);
 
 		// Every listener setter is a varargs Object..., so the single formal parameter Proxy
 		// hands us is itself the caller's varargs array — the callback is its first element.

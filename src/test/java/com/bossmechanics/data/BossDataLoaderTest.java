@@ -122,6 +122,24 @@ public class BossDataLoaderTest
 		assertTrue(errorContaining(result, "id"));
 	}
 
+	/**
+	 * Issue #6, docs/DECISIONS.md D23: an absent animationId with staticFallback false (or
+	 * absent) has nothing for the model box to play, so it is caught here rather than at runtime.
+	 */
+	@Test
+	public void missingAnimationIdWithoutStaticFallbackIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"staticFallback\": false }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "zombified-spawn"));
+		assertTrue(errorContaining(result, "animationId"));
+	}
+
 	@Test
 	public void malformedJsonYieldsErrorNotException()
 	{

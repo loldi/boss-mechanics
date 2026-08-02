@@ -57,9 +57,10 @@ themselves, or the trigger will false-positive.
 
 | Field | Type | Notes |
 |---|---|---|
-| `animationId` | int? | Animation played on the boss model in the viewer |
+| `animationId` | int? | Animation played on the boss model in the viewer. **Ignored when `staticFallback` is true** — a static pose always wins, even if this is also set. Required when `staticFallback` is false (or absent); the loader rejects a mechanic with neither. |
 | `npcId` | int? | Which NPC model to show (defaults to first of `npcIds`) |
-| `staticFallback` | bool | true when the body animation alone doesn't read (projectile/AoE mechanics) and a static illustration should be used instead. Defaults to `false` when the field is absent. |
+| `staticFallback` | bool | true when the body animation alone doesn't read (projectile/AoE mechanics) and a static model pose should be shown instead of a looping animation. Defaults to `false` when the field is absent. |
+| `zoom` | int? | Model widget zoom. Defaults to 3000 (spike-validated for a large boss) when absent. |
 
 ## Style rules
 
