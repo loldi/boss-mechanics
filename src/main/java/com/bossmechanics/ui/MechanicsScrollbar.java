@@ -17,6 +17,14 @@ import net.runelite.api.widgets.Widget;
  *
  * <p>Consequence: the thumb indicates position but is not draggable. The arrows and the mouse
  * wheel do the scrolling, which is what people use anyway.
+ *
+ * <p><b>{@code Widget.revalidateScroll()} is forbidden on this list, permanently (docs/DECISIONS.md
+ * D22).</b> It indexes the STATIC group array of the host's top-level interface, but bounds that
+ * indexing with the DYNAMIC widget's own flat-array child-index watermark — an upstream RuneLite
+ * mixin bug. Once a rebuild's watermark passes the group's own component count it throws
+ * {@code ArrayIndexOutOfBoundsException} and aborts {@code open()} mid-build (client.log,
+ * 2026-08-02 09:07:30), which is provably reachable even on a clean first open for any boss with
+ * enough mechanics. {@code setScrollHeight}/{@code setScrollY} are unaffected and stay.
  */
 final class MechanicsScrollbar
 {
@@ -64,7 +72,6 @@ final class MechanicsScrollbar
 	void build()
 	{
 		list.setScrollHeight(contentHeight);
-		list.revalidateScroll();
 		list.setScrollY(0);
 		listenForWheel(list);
 
@@ -114,7 +121,6 @@ final class MechanicsScrollbar
 		}
 
 		list.setScrollY(target);
-		list.revalidateScroll();
 		positionThumb(target);
 	}
 

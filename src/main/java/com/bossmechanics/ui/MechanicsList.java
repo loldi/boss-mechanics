@@ -80,7 +80,8 @@ final class MechanicsList
 			wash.getValue().setHidden(!wash.getKey().equals(mechanicId));
 			wash.getValue().revalidate();
 		}
-		// D14: the child computes nothing on its own; the parent runs the layout pass.
+		// D22 correction of D14: each wash already revalidated itself above; this only relays out
+		// the column against its own parent, which never changes size from a selection change.
 		column.revalidate();
 	}
 
