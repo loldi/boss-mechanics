@@ -26,8 +26,9 @@ progress bar across the top, then a scrollable list of moves on the left where
 undiscovered ones read `???`, and the selected move's description and counterplay
 on the right, dimmed until you have found it. A reversible "View All" sits above
 the list and remembers itself per character, and a WIKI button opens the boss's
-wiki page. The box where the animated preview goes is still
-empty; that's issue #6. See
+wiki page. Selecting a mechanic plays its animation, looping, on the boss model
+above its description; a `staticFallback` mechanic shows a static pose instead,
+and a locked "???" row shows nothing. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 

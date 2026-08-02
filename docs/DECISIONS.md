@@ -340,6 +340,50 @@ so new decisions are appended here rather than inserted in a themed section.
       fields by reflection. Each keeps to one assertion, deliberately, so neither ossifies the
       exact build order into a contract beyond the one invariant it exists to protect.
 
+23. **The animated preview pane, promoting the issue #1 spike (issue #6).** Selecting a mechanic
+    plays its animation, looping, on the boss model in the 291x110 model box; the issue #1 spike
+    (D14) is deleted, along with its six dev-facing config items and plugin wiring.
+
+    - **`PreviewSpec`, a fourth `view` package member, resolves mechanic -> (npcId, animationId,
+      zoom, visible) once**, so `com.bossmechanics.ui` decides nothing about what a locked or
+      `staticFallback` mechanic's preview looks like, the same seam `MechanicsView` and
+      `Selection` already keep for everything else. `MechanicRow` carries it as a non-null field.
+    - **FORK, resolved (Option A): a static pose always wins over a present `animationId` when
+      `staticFallback` is true**, and a missing `animationId` always falls back to a static pose
+      (never a crash) regardless of `staticFallback`. A locked row resolves to `PreviewSpec.hidden()`
+      unconditionally, so a "???" row can never leak a mechanic through the model.
+    - **`data/Preview` gains an optional `zoom`**, defaulting to 3000 (the spike-validated value)
+      when absent. A new validator rule catches `staticFallback:false` (or absent) with no
+      `animationId` at curation time rather than letting it silently render a static pose in game.
+    - **Vorkath's previews now name `npcId: 8061` explicitly.** `npcIds[0]` for Vorkath is 8058
+      (`VORKATH_SLEEPING_NOOP`), which `PreviewSpec`'s default-to-`npcIds[0]` rule would otherwise
+      render instead of the boss the mechanics belong to. Abyssal Sire needed no change: its
+      per-mechanic `npcId`s were already curated (D19's tentacle/respiratory/scion child npcs).
+    - **`MechanicsDetail` owns one `MODEL` widget, created once in `build()` and mutated by every
+      `show()`** (`setModelId` / `setAnimationId` / `setModelZoom` / `setHidden`, then
+      `revalidate()`), never recreated. This is D22's rebuild-leak lesson applied deliberately: a
+      fresh `MODEL` child per selection would both glitch the animation mid-play and pile up the
+      same way the whole window used to. It is created between the model-box fill and the dim,
+      which must stay last so it still covers the model along with the text. Rotation is fixed at
+      0/0/0, the values the spike validated; both axes must stay within 0-2047 or the client
+      crashes, which a constant zero trivially satisfies.
+    - **npc -> model id is resolved by a lambda the window supplies**, `models[0]` from
+      `client.getNpcDefinition(npcId).getModels()`, warning once per npc on a null/empty models
+      array or on more than one model (D14's "verify this per boss" note; no launch boss has
+      tripped it). This is the one client-API touchpoint issue #6 needed, and it stays isolated to
+      `BossMechanicsWindow`, keeping `MechanicsDetail` itself just a widget mutator.
+    - **`previewContainer()` and `MechanicsDetail.modelBox()` are deleted.** Nothing outside
+      `MechanicsDetail` needs a handle on the model widget now that `MechanicsDetail` renders into
+      it directly instead of handing it to a caller.
+    - Pinned with two single-assertion `RecordingWidget`-based tests, in the D22 style: `show()`
+      called twice with different unlocked rows creates zero new children anywhere in the tree
+      (mutation, not recreation), and `show()` on a locked row hides the model widget. The second
+      needed `RecordingWidget.lastArgsOf(widget, methodName)`, an additive per-widget last-call-args
+      map alongside the existing name-only `calls()`/`listenerOf()`, so a test can tell the model
+      widget's own `setHidden` call apart from the dim's.
+    - One-shot animations (a death animation, say) still play once and then vanish per D14;
+      curation prefers looping ids, and re-triggering a one-shot is explicitly out of scope here.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
