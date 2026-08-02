@@ -77,6 +77,24 @@ public class MechanicsViewTest
 		assertEquals("Phase 2", row.getPhase());
 	}
 
+	/** Issue #6, docs/DECISIONS.md D23: the row copies the preview spec, it never computes one. */
+	@Test
+	public void lockedRowsPreviewIsHiddenAndUnlockedRowsPreviewMatchesTheMechanic()
+	{
+		Boss sire = bundled("abyssal-sire");
+
+		MechanicsView lockedView = MechanicsView.of(sire, new DiscoveryState(), false);
+		assertFalse(lockedView.getRows().get(0).getPreview().isVisible());
+
+		DiscoveryState state = new DiscoveryState();
+		state.markDiscovered(sire.getId(), sire.getMechanics().get(0).getId());
+		MechanicsView view = MechanicsView.of(sire, state, false);
+		MechanicRow row = view.getRows().get(0);
+		Mechanic mechanic = sire.getMechanics().get(0);
+
+		assertEquals(PreviewSpec.of(mechanic, sire.getNpcIds(), false), row.getPreview());
+	}
+
 	@Test
 	public void titleNamesTheBoss()
 	{
