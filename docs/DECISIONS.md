@@ -384,6 +384,59 @@ so new decisions are appended here rather than inserted in a themed section.
     - One-shot animations (a death animation, say) still play once and then vanish per D14;
       curation prefers looping ids, and re-triggering a one-shot is explicitly out of scope here.
 
+24. **Hard client crash from D23's single mutated model widget, found in the in-game pass of
+    issue #6 (PR #43); corrects D23 for the animation axis specifically.** `client.log`,
+    2026-08-02 18:29:45: `ArrayIndexOutOfBoundsException: Index 48 out of bounds for length 30`
+    inside the client's widget-draw loop (injected client 1.12.33, `ga.rt` line 761 — the inline
+    `while (widget.frameCycle > seq.frameLengths[widget.frame])` animation advance). Reproduced by
+    selecting a long animation, letting it play a few seconds, then a shorter one: e.g. Sire
+    minion-surge (7096, 60 frames) or apocalypse (7098, 67 frames) followed by miasma-pools (4531,
+    30 frames) — the cache's own frame counts prove the counter outruns the shorter sequence.
+
+    - **The engine fact, verified from injected-client bytecode: the animation frame counter lives
+      on the widget, and `Widget.setAnimationId` never resets it.** The widget constructor
+      (`createChild`) is the only thing that zeroes it; there is no RuneLite API that does. D23's
+      "one MODEL widget, created once, mutated by every `show()`" therefore corrupts the counter
+      the moment two different-length animations are shown on it in sequence — a code lifecycle
+      bug, not a data bug. All Sire forms sharing model 29477 and all Vorkath forms sharing 35023
+      made this an eventual certainty at launch, not an edge case: every future boss only adds more
+      crash pairs. **D23's rationale still holds everywhere else** — mutating `setModelId` /
+      `setModelZoom` / `setHidden` on a widget whose animation id is unchanged remains fine and is
+      exactly what the fix below still does; only *swapping the sequence* on a live widget is
+      forbidden, the same register as D22's `revalidateScroll()` ban.
+    - **Fix: a pool of MODEL widgets keyed by animation id** (`PreviewSpec.NO_ANIMATION` included,
+      for static-fallback poses), one child of the model box `LAYER`, created lazily on first use.
+      A pool widget's `setAnimationId` is called exactly once, at creation, and never again;
+      `show()` gets-or-creates the widget for the spec's animation id, hides whichever pool widget
+      was previously visible, then mutates only `setModelId`/`setModelZoom`/`setHidden` on the new
+      one. The pool is bounded by the distinct animation count for one boss (single digits in
+      practice), and lives on the `MechanicsDetail` instance, which `BossMechanicsWindow` discards
+      and recreates — widgets included — on every rebuild (teardown, boss switch, "View All"
+      flip), so a stale pool entry can never outlive the widget it points at.
+    - **FORK, resolved by Andrew: the POOL variant.** Re-selecting a mechanic whose animation was
+      already shown reuses that pool widget and resumes wherever its frame counter currently sits —
+      it does not restart the loop from frame 0. The rejected alternative, recreate-on-change
+      (a fresh widget every time the *selection* changes, even back to an animation shown before),
+      would side-step needing a pool at all but re-glitches the animation on every click, the exact
+      symptom D23 built the single-widget mutation to avoid; resuming mid-loop is invisible for a
+      looping animation and was judged an acceptable trade for a crash fix.
+    - **Upstream `runelite-api` gap, noted for Plugin Hub review (#15):** there is no
+      `Widget.resetAnimation()` or equivalent next to `setAnimationId`. If one is ever added
+      upstream, the pool could collapse back to D23's single-widget shape; until then the pool is
+      the sanctioned pattern for any widget that plays more than one animation id over its life.
+    - Pinned by replacing `MechanicsDetailPreviewTest`'s
+      `selectingADifferentMechanicMutatesTheModelRatherThanRebuildingIt`, which had pinned the bug
+      (it asserted zero `createChild` calls across two *different* animations — exactly the
+      corrupting sequence). Two tests took its place:
+      `aModelWidgetNeverPlaysTwoDifferentAnimationsAcrossItsLifetime` walks every widget in the tree
+      and asserts none ever receives `setAnimationId` with two distinct values, and
+      `reselectingAMechanicWhoseAnimationWasAlreadyShownCreatesNoNewChildren` asserts the pool still
+      does not grow without bound when the same animation id comes back around. Both needed
+      `RecordingWidget.allArgsOf(widget, methodName)`, an additive per-widget all-calls-with-args
+      log alongside the existing `lastArgsOf`, because telling "set once" apart from "set twice,
+      same value" from "set twice, different values" needs the full call history, not just the most
+      recent call. `lockedRowHidesTheModelWidget` is unchanged.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

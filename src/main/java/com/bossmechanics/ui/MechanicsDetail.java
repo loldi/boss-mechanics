@@ -2,6 +2,8 @@ package com.bossmechanics.ui;
 
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.IntUnaryOperator;
 import net.runelite.api.FontID;
 import net.runelite.api.widgets.JavaScriptCallback;
@@ -15,10 +17,24 @@ import net.runelite.api.widgets.WidgetType;
  * then the selected mechanic's name, description and counterplay, with a dim laid over the lot
  * while the selection is locked.
  *
- * <p><b>Everything here is built once and then mutated.</b> {@link #show} rewrites text and the
- * one model widget, and never deletes a child: a {@code deleteAllChildren()} here would kill the
- * model mid-animation every time the player clicked a different row. Only the window's own root
- * is ever emptied (D19).
+ * <p><b>Text is built once and then mutated.</b> {@link #show} rewrites the name, description and
+ * counterplay text in place and never deletes a child: a {@code deleteAllChildren()} here would
+ * blow away whichever animation is currently playing every time the player clicked a different
+ * row. Only the window's own root is ever emptied (D19).
+ *
+ * <p><b>The model widget is a pool keyed by animation id, not a single mutated widget
+ * (docs/DECISIONS.md D24).</b> The client keeps a MODEL widget's animation frame counter on the
+ * widget itself, and the only thing that ever zeroes it is widget creation ({@code createChild});
+ * {@code Widget.setAnimationId} never resets it, and there is no RuneLite API that does. Swapping
+ * a live widget from a long sequence to a shorter one therefore leaves the frame counter past the
+ * new sequence's frame count, and the client's own draw loop crashes hard
+ * ({@code ArrayIndexOutOfBoundsException}) on the very next frame — this is exactly what issue #6
+ * (PR #43) hit in game. So each pool widget's animation id is set exactly once, at creation, and
+ * {@link #showModel} only ever mutates {@code setModelId}/{@code setModelZoom}/{@code setHidden}
+ * on it afterward. The pool is bounded by the distinct animation count for one boss (single
+ * digits in practice) and lives on this instance; {@link BossMechanicsWindow} discards and
+ * recreates the whole {@code MechanicsDetail} (widgets included) on every rebuild, so a stale pool
+ * entry can never outlive the widget it points at.
  */
 final class MechanicsDetail
 {
@@ -63,7 +79,19 @@ final class MechanicsDetail
 	private final IntUnaryOperator modelForNpc;
 	private final Runnable onWikiOpened;
 
-	private Widget model;
+	/** The LAYER every pool widget is created under (D19: nested dynamic children need a LAYER). */
+	private Widget modelBox;
+
+	/**
+	 * One MODEL widget per distinct animation id ({@link PreviewSpec#NO_ANIMATION} included, for
+	 * static-fallback poses), created lazily on first use. Never cleared out from under a live
+	 * widget — see the class doc for why this map's lifetime is safe.
+	 */
+	private final Map<Integer, Widget> modelPool = new HashMap<>();
+
+	/** The pool widget the previous {@link #show} left on screen, or null if none is. */
+	private Widget visibleModel;
+
 	private Widget name;
 	private Widget description;
 	private Widget counterplay;
@@ -94,23 +122,12 @@ final class MechanicsDetail
 		// nested dynamic children are only known to render under one (D19). The border is a
 		// sibling drawn afterwards, so the model can never overdraw its own frame.
 		int height = column.getOriginalHeight();
-		Widget modelBox = Widgets.layer(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
+		modelBox = Widgets.layer(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
 		Widgets.filled(modelBox, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, MODEL_FILL);
 
-		// Created once, here, and mutated by every show() rather than recreated (issue #6): a
-		// fresh MODEL widget per selection would glitch mid-play and pile up like the D22 leak.
-		model = modelBox.createChild(-1, WidgetType.MODEL);
-		model.setModelType(WidgetModelType.MODEL);
-		// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes must
-		// stay within 0-2047 or the client crashes, which a constant zero trivially satisfies.
-		model.setRotationX(0);
-		model.setRotationY(0);
-		model.setRotationZ(0);
-		model.setOriginalX(0);
-		model.setOriginalY(0);
-		model.setOriginalWidth(COLUMN_WIDTH);
-		model.setOriginalHeight(MODEL_HEIGHT);
-		model.revalidate();
+		// Pool widgets are created lazily, per distinct animation id, the first time show() needs
+		// one (D24) — not here. Creating one eagerly would mean an animation id of NO_ANIMATION
+		// with no spec ever asking for it, which is harmless but pointless.
 
 		Widgets.outline(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, MODEL_BORDER);
 
@@ -129,7 +146,8 @@ final class MechanicsDetail
 
 	/**
 	 * Swaps in a different mechanic's text and preview. Mutates in place and revalidates each
-	 * widget and the column, which is what keeps the one model widget playing without a rebuild.
+	 * widget and the column, which is what keeps whichever pool widget is currently visible
+	 * playing without a rebuild.
 	 *
 	 * @param row null when there is nothing to show (a boss with no mechanics), which blanks the
 	 *     panel and hides the model rather than leaving the previous mechanic's stranded
@@ -151,28 +169,77 @@ final class MechanicsDetail
 	}
 
 	/**
-	 * Mutates the one persistent model widget rather than recreating it (issue #6): swaps model
-	 * id, animation and zoom, then hides it outright for a locked row or an npc this client has
-	 * no model for, so a locked mechanic can never leak through the preview.
+	 * Gets or creates the pool widget for this spec's animation id (D24) and mutates only
+	 * {@code setModelId}/{@code setModelZoom}/{@code setHidden} on it — never {@code
+	 * setAnimationId}, which is set exactly once, at creation, in {@link #poolWidgetFor}. Hides
+	 * whatever pool widget was previously visible first, so at most one is ever shown at a time;
+	 * hides outright for a locked row or an npc this client has no model for, so a locked
+	 * mechanic can never leak through the preview.
 	 */
 	private void showModel(PreviewSpec preview)
 	{
 		// Hidden specs carry a sentinel npc id, so resolving a model for one is at best a wasted
-		// cache lookup and at worst a spurious no-model warning. Hide and stop.
+		// cache lookup and at worst a spurious no-model warning. Hide whatever was visible and stop.
 		if (!preview.isVisible())
 		{
-			model.setHidden(true);
-			model.revalidate();
+			hideVisibleModel();
 			return;
+		}
+
+		Widget widget = poolWidgetFor(preview.getAnimationId());
+
+		if (visibleModel != null && visibleModel != widget)
+		{
+			visibleModel.setHidden(true);
+			visibleModel.revalidate();
 		}
 
 		int modelId = modelForNpc.applyAsInt(preview.getNpcId());
 
-		model.setModelId(modelId);
-		model.setAnimationId(preview.getAnimationId());
-		model.setModelZoom(preview.getZoom());
-		model.setHidden(modelId == UNKNOWN_MODEL);
-		model.revalidate();
+		widget.setModelId(modelId);
+		widget.setModelZoom(preview.getZoom());
+		widget.setHidden(modelId == UNKNOWN_MODEL);
+		widget.revalidate();
+
+		visibleModel = widget;
+	}
+
+	private void hideVisibleModel()
+	{
+		if (visibleModel != null)
+		{
+			visibleModel.setHidden(true);
+			visibleModel.revalidate();
+			visibleModel = null;
+		}
+	}
+
+	/**
+	 * The pool entry for {@code animationId}, creating it on first use. A freshly created MODEL
+	 * widget's frame counter starts at zero (D24), so {@code setAnimationId} is called here, once,
+	 * and never again for this widget's lifetime — that invariant is the entire fix.
+	 */
+	private Widget poolWidgetFor(int animationId)
+	{
+		return modelPool.computeIfAbsent(animationId, this::createPoolWidget);
+	}
+
+	private Widget createPoolWidget(int animationId)
+	{
+		Widget widget = modelBox.createChild(-1, WidgetType.MODEL);
+		widget.setModelType(WidgetModelType.MODEL);
+		// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes must
+		// stay within 0-2047 or the client crashes, which a constant zero trivially satisfies.
+		widget.setRotationX(0);
+		widget.setRotationY(0);
+		widget.setRotationZ(0);
+		widget.setOriginalX(0);
+		widget.setOriginalY(0);
+		widget.setOriginalWidth(COLUMN_WIDTH);
+		widget.setOriginalHeight(MODEL_HEIGHT);
+		widget.setAnimationId(animationId);
+		widget.revalidate();
+		return widget;
 	}
 
 	private void set(Widget widget, String content)

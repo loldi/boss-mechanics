@@ -30,6 +30,7 @@ final class RecordingWidget implements InvocationHandler
 	private final List<Widget> children = new ArrayList<>();
 	private final Map<String, Object> listeners = new HashMap<>();
 	private final Map<String, Object[]> lastArgs = new HashMap<>();
+	private final Map<String, List<Object[]>> allArgs = new HashMap<>();
 
 	private RecordingWidget(List<String> allCalls)
 	{
@@ -77,6 +78,17 @@ final class RecordingWidget implements InvocationHandler
 		return handlerOf(widget).lastArgs.get(methodName);
 	}
 
+	/**
+	 * Every call to {@code methodName} on this widget, in order, args included. Additive alongside
+	 * {@link #lastArgsOf}: that map only ever keeps the most recent call, which cannot tell "this
+	 * widget's animation was set to X once" apart from "...set to X, then later to Y" — exactly the
+	 * distinction the pool-widget lifetime invariant needs.
+	 */
+	static List<Object[]> allArgsOf(Widget widget, String methodName)
+	{
+		return handlerOf(widget).allArgs.getOrDefault(methodName, new ArrayList<>());
+	}
+
 	/** A harmless stand-in for a return type we don't need to model precisely. */
 	static Object defaultFor(Class<?> type)
 	{
@@ -107,6 +119,7 @@ final class RecordingWidget implements InvocationHandler
 		calls.add(name);
 		allCalls.add(name);
 		lastArgs.put(name, args);
+		allArgs.computeIfAbsent(name, key -> new ArrayList<>()).add(args);
 
 		// Every listener setter is a varargs Object..., so the single formal parameter Proxy
 		// hands us is itself the caller's varargs array — the callback is its first element.
