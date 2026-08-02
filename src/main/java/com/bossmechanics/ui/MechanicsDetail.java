@@ -157,13 +157,21 @@ final class MechanicsDetail
 	 */
 	private void showModel(PreviewSpec preview)
 	{
+		// Hidden specs carry a sentinel npc id, so resolving a model for one is at best a wasted
+		// cache lookup and at worst a spurious no-model warning. Hide and stop.
+		if (!preview.isVisible())
+		{
+			model.setHidden(true);
+			model.revalidate();
+			return;
+		}
+
 		int modelId = modelForNpc.applyAsInt(preview.getNpcId());
-		boolean visible = preview.isVisible() && modelId != UNKNOWN_MODEL;
 
 		model.setModelId(modelId);
 		model.setAnimationId(preview.getAnimationId());
 		model.setModelZoom(preview.getZoom());
-		model.setHidden(!visible);
+		model.setHidden(modelId == UNKNOWN_MODEL);
 		model.revalidate();
 	}
 

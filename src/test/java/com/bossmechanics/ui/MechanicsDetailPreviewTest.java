@@ -45,6 +45,9 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(header, column, npcId -> npcId * 10, () -> { });
 		detail.build();
 
+		// An unlocked row first, so the model widget is identifiable below by its setModelId
+		// call; a locked spec never resolves a model at all, it only hides.
+		detail.show(unlockedRow("m1", 1, 500));
 		detail.show(lockedRow());
 
 		Widget model = findModelWidget(column);
