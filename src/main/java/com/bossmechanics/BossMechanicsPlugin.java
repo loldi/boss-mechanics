@@ -46,6 +46,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.util.LinkBrowser;
 
 @Slf4j
 @PluginDescriptor(
@@ -136,6 +137,7 @@ public class BossMechanicsPlugin extends Plugin
 		collectionLogButton.onPluginStart();
 
 		bossMechanicsWindow.setOnRevealToggled(this::setRevealed);
+		bossMechanicsWindow.setOnWikiOpened(this::openWiki);
 		bossMechanicsWindow.setOnMechanicSelected(mechanicId -> log.debug("Mechanic selected: {}", mechanicId));
 		eventBus.register(bossMechanicsWindow);
 		bossMechanicsWindow.onPluginStart();
@@ -345,6 +347,20 @@ public class BossMechanicsPlugin extends Plugin
 		if (boss != null)
 		{
 			bossMechanicsWindow.open(boss, viewFor(boss));
+		}
+	}
+
+	/**
+	 * The window's WIKI button. The URL open lives here rather than in the window because
+	 * {@code com.bossmechanics.ui} is meant to be RuneLite *interface* code only, and
+	 * {@code LinkBrowser} is a desktop-integration utility.
+	 */
+	private void openWiki(String bossId)
+	{
+		Boss boss = bossById(bossId);
+		if (boss != null)
+		{
+			LinkBrowser.browse(boss.getWikiUrl());
 		}
 	}
 

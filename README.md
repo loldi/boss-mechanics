@@ -20,10 +20,13 @@ tracks which mechanics your client has witnessed, announcing each one in chat
 the first time. Discovery (and reveal) state now persists per character via
 RuneLite's profile config, replacing wholesale on character switch. Opening the
 collection log on a supported boss now puts a Boss Mechanics button in the header
-next to Combat Achievements, and clicking it opens the Boss Mechanics window over
-the log: a "Mechanics Discovered" progress bar, a scrollable list where
-undiscovered moves read `???`, and a reversible "View All" that remembers itself
-per character. The right-hand pane where the animated preview goes is still
+next to Combat Achievements, and clicking it opens the Boss Mechanics screen over
+the log, shaped like the Combat Achievements boss screen: a "Mechanics Discovered"
+progress bar across the top, then a scrollable list of moves on the left where
+undiscovered ones read `???`, and the selected move's description and counterplay
+on the right, dimmed until you have found it. A reversible "View All" sits above
+the list and remembers itself per character, and a WIKI button opens the boss's
+wiki page. The box where the animated preview goes is still
 empty; that's issue #6. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.

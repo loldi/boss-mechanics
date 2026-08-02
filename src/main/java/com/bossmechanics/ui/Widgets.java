@@ -23,8 +23,53 @@ final class Widgets
 	/** RuneLite opacity is inverted: 0 is fully opaque, 255 is invisible. */
 	private static final int OPAQUE = 0;
 
+	/**
+	 * The Combat Achievements button's own nine-slice frame. Duplicated from
+	 * {@link CollectionLogButton} on purpose: sharing it means restructuring that class, which is
+	 * a follow-up once the animated preview (#6) lands.
+	 */
+	private static final int SPRITE_BACKGROUND = 297;
+	private static final int SPRITE_CORNER_TL = 913;
+	private static final int SPRITE_CORNER_TR = 914;
+	private static final int SPRITE_CORNER_BL = 915;
+	private static final int SPRITE_CORNER_BR = 916;
+	private static final int SPRITE_EDGE_LEFT = 917;
+	private static final int SPRITE_EDGE_TOP = 918;
+	private static final int SPRITE_EDGE_RIGHT = 919;
+	private static final int SPRITE_EDGE_BOTTOM = 920;
+
+	/**
+	 * Frame thickness. The corner sprites are 9x9 so the corners are fixed; the edge sprites are
+	 * 3px thick naturally and get stretched to this, exactly as the Combat Achievements button
+	 * does at 50x25. If the border reads too heavy at window scale, this is the one number to tune.
+	 */
+	static final int FRAME = 9;
+
 	private Widgets()
 	{
+	}
+
+	/**
+	 * The Combat Achievements button's construction at window scale: background fill first, then
+	 * the nine-slice border over it. Later children draw above earlier ones, so order matters.
+	 */
+	static void frame(Widget parent, int width, int height)
+	{
+		int right = width - FRAME;
+		int bottom = height - FRAME;
+		int innerWidth = width - (2 * FRAME);
+		int innerHeight = height - (2 * FRAME);
+
+		sprite(parent, SPRITE_BACKGROUND, 1, 1, width - 2, height - 2, false);
+
+		sprite(parent, SPRITE_CORNER_TL, 0, 0, FRAME, FRAME, false);
+		sprite(parent, SPRITE_CORNER_TR, right, 0, FRAME, FRAME, false);
+		sprite(parent, SPRITE_CORNER_BL, 0, bottom, FRAME, FRAME, false);
+		sprite(parent, SPRITE_CORNER_BR, right, bottom, FRAME, FRAME, false);
+		sprite(parent, SPRITE_EDGE_LEFT, 0, FRAME, FRAME, innerHeight, false);
+		sprite(parent, SPRITE_EDGE_RIGHT, right, FRAME, FRAME, innerHeight, false);
+		sprite(parent, SPRITE_EDGE_TOP, FRAME, 0, innerWidth, FRAME, false);
+		sprite(parent, SPRITE_EDGE_BOTTOM, FRAME, bottom, innerWidth, FRAME, false);
 	}
 
 	static Widget layer(Widget parent, int x, int y, int width, int height)
