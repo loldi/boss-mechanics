@@ -145,6 +145,59 @@ so new decisions are appended here rather than inserted in a themed section.
       unrelated (SAVE, LOAD, WORLDSWITCHER_FILTER), so a custom sprite bundled as a plugin
       resource is the eventual answer; `SPRITE_ICON` is the single constant to change.
 
+20. **Boss Mechanics window (issue #5).** The window is a 500x314 panel (the collection log's own
+    UNIVERSE size, 621 child 88) hosted on the **top-level FLOATER**, not on anything inside the
+    collection log, which is what keeps D3 intact. FLOATER is a later sibling of MAINMODAL under
+    the same parent in all six top-level layouts (548, 161, 164, 165, 601, 80), so it draws on
+    top of the log, and it is `w=0 h=0` with both size modes MINUS in all six, so it always
+    resolves to full parent size and cannot clip a child to nothing. `TopLevelFloater` is the
+    lookup, and it is unit tested, a useful correction to `CollectionLogButton`'s claim that
+    nothing in `ui` is testable. `client.openInterface` was rejected (it needs a real cache group
+    we cannot add, and no class in client-1.12.33 calls it); parenting into the log's own tree was
+    rejected outright as a D3 violation.
+
+    - **`com.bossmechanics.view` is a third RuneLite-free package.** `MechanicsView.of(boss,
+      state, revealed)` resolves every row's final strings up front, so the interface positions
+      rectangles and copies text and decides nothing. **The D10 invariant lives here**:
+      `discoveredCount()` counts rows where `discovered`, and `locked` is the separate
+      `!discovered && !revealed`. The interface never counts anything, so "View All" physically
+      cannot inflate the progress bar.
+    - **The progress bar is the Combat Achievements bar, script 4782**, rebuilt as its five
+      children in draw order: inner border rectangle `0x474645`, empty track (sprite 3392, 1x27,
+      tiled), fill (sprite 3391, tiled) at `done * (w-4) / total`, centred shadowed PLAIN_12
+      label, outer border rectangle `0x0E0E0C`. Rectangle colours go through `setTextColor`.
+    - **The scrollbar is built by hand, not by `runScript(31, ...)`.** Disassembling the injected
+      client's `createChild` shows a dynamic child's `id` field is copied straight from its
+      parent, so `Widget.getId()` on anything in our tree returns the FLOATER's component id.
+      Handing that to Jagex's script 31 (or to `ScriptID.UPDATE_SCROLLBAR`) would make their
+      script delete and rebuild the FLOATER's children, destroying our own window root. **No
+      dynamic widget of ours can be addressed by a clientscript that takes a component id**,
+      which is worth remembering for #6. The cache's own scrollbar sprites are reused (track 792, thumb
+      789/790/791, arrows 773/788, all 16 wide), the arrows and the mouse wheel scroll, and the
+      thumb indicates position without being draggable. Wheel rotation arrives as
+      `ScriptEvent.getMouseY()`, which is how core RuneLite's bank tag tabs read it.
+    - **Escape is consumed by the window.** One press closes the window, a second closes the
+      collection log, matching nested game interfaces. The key listener is registered only while
+      the window is open. Key events are AWT-thread, so the close hops to the client thread.
+    - **Locked rows show no phase tag**, just `???`. Pure "???" is cleaner and makes the reveal
+      deliver something.
+    - **"View All" persists** per boss per character through `ProfileStateStore` (D18), because
+      D10 calls reveal a reading mode rather than a momentary peek. Recorded here since D10 is
+      still provisional. The write happens in a widget op listener, which is the client thread,
+      which is the condition D18 named as necessary for that store's read-modify-write.
+    - Teardown hides the root and empties it, but keeps the reference so reopening reuses the one
+      dynamic child instead of stranding a hidden layer on the FLOATER every time; the reference
+      is still dropped untouched on the transitions that destroy the interface tree, and
+      re-checked by identity scan before reuse (D19).
+    - The nine-slice frame is duplicated from `CollectionLogButton` on purpose. Sharing it means
+      restructuring that class, which is a follow-up once #6 lands.
+    - **Not yet confirmed in game.** The FLOATER's z-order and runtime size are inferred from the
+      cache, so the window ships with a temporary opaque magenta backdrop behind the frame: a
+      healthy window hides it completely, magenta showing through means the sprites are wrong,
+      and nothing at all means the FLOATER does not draw and the fallback is MAINMODAL. Row
+      heights are fixed per state (22 locked, 68 discovered) because OSRS text widgets wrap but
+      expose no wrapped height; scroll height is the sum of the actual row heights.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
