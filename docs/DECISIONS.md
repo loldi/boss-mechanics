@@ -211,6 +211,75 @@ so new decisions are appended here rather than inserted in a themed section.
       D3 still holds: it is not the collection log's tree.
       The general lesson, which cost one run to learn: **cache sibling order does not predict
       runtime draw order.** Only `getWidgetRoots()` and a live parent chain do.
+    - **CORRECTED 2026-08-02, second run: two claims above are now wrong (issue #39, D21).**
+      The window drew on top of the collection log, as the host fix intended, but *beside* it
+      rather than over it.
+      (a) The size is no longer the log's own 500x314. It is 512x334, the Combat Achievements
+      screen's size — see D21.
+      (b) The correction above says UI_HIGHLIGHTS "is full parent size", and the layout code
+      quietly turned that into "so `ABSOLUTE_CENTER` lands on the log". It does not.
+      **UI_HIGHLIGHTS (161 c98) has parent `-1`: it is a root spanning the whole client canvas.**
+      The collection log (621 c88, `ABSOLUTE_CENTER` on both axes) is centred inside `161 c15`,
+      which is `250x165` with both size modes **MINUS** at `ABSOLUTE(0,0)` — the parent's width
+      minus the 250-wide sidebar and its height minus the 165-tall chatbox. So the log's centre is
+      `((W-250)/2, (H-165)/2)` while the host's centre is `(W/2, H/2)`, and our window landed
+      **125px right and 82px below** the log.
+      The delta is **not** a constant to hardcode: fixed mode (548) nests the log differently and
+      has a different one. `WindowPlacement` therefore measures the log's real on-screen rectangle
+      when the window opens (summing `getRelativeX/Y` up the parent chain, never
+      `getCanvasLocation()`, per D14) and computes an ABSOLUTE origin per axis, which is unit
+      tested. A `ClientTick` handler recomputes it so a client resize keeps the window on the log,
+      writing only when the answer changed.
+      The lesson to file next to the draw-order one: **a root's coordinate space is not the
+      coordinate space of the thing you are trying to cover.**
+
+21. **The Combat Achievements boss screen shape (issue #39).** The window is now 512x334 and
+    covers the collection log instead of sitting beside it. That size is not arbitrary: 717 c0 is
+    512x334, which is exactly the **fixed-mode viewport** (548 c10 is 512x334 at `(4,4)`). The
+    Combat Achievements boss screen is reached from the collection log the same way ours is, fully
+    covers it, and already has the two-column layout the original spec described, so it is the
+    reference rather than a fresh design.
+
+    - **D3 explicitly STANDS and is not being reversed.** Embedding into the collection log's item
+      pane was reconsidered and **rejected on the record**: that pane is only **280x202**, so a
+      200-wide list would leave 76px for the model preview. Combat Achievements is not drawn in the
+      item pane either — it is its own screen. We still touch nothing inside group 621 but the one
+      injected button.
+    - **717's own inner offsets are the layout source**, scaled to our 494x316 content box (a
+      512x334 outer with the nine-slice `FRAME` of 9). Measured from the content origin: title bar
+      to y 39; progress bar y 39, height 33, `CONTENT_WIDTH - 18` wide and centred (717 c3, size
+      mode MINUS 18); column header bands y 75, height 23; columns y 98 with a 6px bottom margin,
+      so height 212. Left column 190 wide at x 6 (717 c6), right column 291 wide at x 6 measured
+      from the **right** (717 c13, 277 wide against their narrower 480 frame). Column headers are
+      BOLD_12 (font 496) in `0xFF981F`, which is already `Widgets.ORANGE`.
+    - **Rows collapse to one line, 22 tall.** The detail moved to the right column, so a row is a
+      name plus a right-aligned phase tag (omitted when locked, per D20's resolved fork), every row
+      is the same height, and the scroll maths stops depending on unmeasurable wrapped text.
+    - **Selection lives in the window, resolved by `com.bossmechanics.view.Selection`.** The window
+      rebuilds itself wholesale on every "View All" flip, so the selection survives as an id, not a
+      reference: keep it if the id is still on the list *and* the boss is the same (mechanic ids are
+      only unique within a boss), otherwise take the first row. `MechanicsView` is untouched, and so
+      are its 12 tests — selection is the window's state, not the view model's.
+    - **A locked selection keeps the right column populated and dims it**, so the panel never
+      reflows. The dim is a `RECTANGLE`, filled, `0x000000`, `setOpacity(150)` over the whole
+      291x212 column body, created last so it covers the box, the text and whatever #6 later draws.
+      This is script 4808's own idiom for a locked Combat Achievements entry
+      (`cc_setfill` / `cc_setcolour 0` / `cc_settrans 150`). Opacity is INVERTED: 150 is
+      translucent, not nearly-solid.
+    - **The burger menu is DROPPED (fork, resolved).** In Combat Achievements it is a real menu with
+      real entries; we have none, so shipping the glyph would promise something that does not exist.
+      The second list tab and the book/globe buttons are dropped for the same reason.
+    - **WIKI is cache sprites 2420 (resting) and 2421 (hover)**, both 40x14 and both literally
+      reading "WIKI", right-aligned in the right column's header band. **The URL is opened
+      plugin-side**: `BossMechanicsWindow.setOnWikiOpened(Consumer<String> bossId)` reports the
+      click and `BossMechanicsPlugin.openWiki` calls `LinkBrowser.browse(boss.getWikiUrl())`, so
+      `com.bossmechanics.ui` stays RuneLite-*interface* code and never imports a desktop-integration
+      utility. Same seam as `setOnRevealToggled` and `setOnMechanicSelected`.
+    - `previewContainer()` now hands #6 the **291x110 model box** at the top of the right column,
+      and it is a LAYER rather than the border rectangle, because nested dynamic children are only
+      known to render under a LAYER (D19). It stays valid across a selection change because the
+      right column **mutates its text in place and never calls `deleteAllChildren()`** — only the
+      window's own root is ever emptied.
 
 ## Open questions
 
