@@ -113,7 +113,7 @@ final class Widgets
 		return part;
 	}
 
-	/** A solid block. Colour goes through setTextColor, as SireWidgetSpike's backdrop proved. */
+	/** A solid block. Colour goes through setTextColor, as the issue #1 spike proved. */
 	static Widget filled(Widget parent, int x, int y, int width, int height, int color)
 	{
 		Widget block = rectangle(parent, x, y, width, height, color);

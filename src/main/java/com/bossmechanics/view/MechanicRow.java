@@ -24,4 +24,6 @@ public class MechanicRow
 	String counterplay;
 	/** null when locked, and when the mechanic has no phase. */
 	String phase;
+	/** Never null; {@code hidden()} when locked (docs/DECISIONS.md D23, issue #6). */
+	PreviewSpec preview;
 }
