@@ -281,6 +281,65 @@ so new decisions are appended here rather than inserted in a themed section.
       right column **mutates its text in place and never calls `deleteAllChildren()`** — only the
       window's own root is ever emptied.
 
+22. **Three in-game bugs found playtesting PR #40's implementation of #39: first-open bar
+    misplacement, a "View All" rebuild that loses the right column and scrollbar, and the fix
+    both bugs share depends on.** Reproduced in `client.log`, 2026-08-02 09:07:30 (View All),
+    09:29:01 and 09:29:04 (plain open): `MechanicsScrollbar.build()` throwing
+    `ArrayIndexOutOfBoundsException: Index 99 out of bounds for length 99` inside
+    `Widget.revalidateScroll()`, verified against the injected client's bytecode (1.12.33).
+
+    - **`revalidate()` is immediate and self-only; it never recurses into children.** It lays out
+      the receiver, right then, against its parent's *current* computed width/height. The three
+      comments in `BossMechanicsWindow` and `MechanicsList` claiming "the parent layer runs the
+      layout pass" were wrong, and cost the first bug: `open()` built every child of a fresh root
+      (frame, header, progress bar, columns) *before* the root's own `revalidate()` ran, so every
+      `ABSOLUTE_CENTER` and `ABSOLUTE_RIGHT` child computed its position against a 0x0 root — the
+      progress bar rendered off the left edge, and the WIKI header band was off-window too, just
+      unnoticed because it clips invisibly. A client resize fixed it permanently only because the
+      client's own resize handler does a real recursive layout pass, which `Widget.revalidate()`
+      does not. **Fix: lay out the root immediately after `place()`, before any child is built.**
+    - **Dynamic children live flat on the static host component, not on their nominal parent, so
+      `deleteAllChildren()` is a no-op on a nested dynamic widget.** `createChild` appends every
+      dynamic child — ours or anyone else's under the same host — into the host's own flat array,
+      linking the tree via `childIndex` fields rather than real parent/child storage.
+      `root.deleteAllChildren()` only ever nulled `root`'s own (always-empty) array. Every rebuild
+      — "View All", a boss switch while open, a close and reopen — therefore appended a full new
+      copy of the window (~70 widgets) onto the host's array without ever freeing the old one
+      (O(n²) growth). Once the flat indices reached the host interface's own component count
+      (99 for `161:98`, our `UI_HIGHLIGHTS`), `revalidateScroll()` indexed past it and threw,
+      aborting `open()` mid-build: the list's rows exist (built first), but the scrollbar, wheel
+      listeners, `MechanicsDetail`, `root.revalidate()` and `select()` never run — which is why the
+      right column and scrollbar vanished on the first rebuild and stayed gone on every one after.
+      **Fix: a surgical delete.** `BossMechanicsWindow.deleteChildrenOf(host, root)` walks
+      `root`'s own subtree via recursive `getDynamicChildren()`, then nulls exactly those
+      identities out of `host.getChildren()` — the mixin returns the client's own live array, and
+      nulling an entry by identity is what the client's own `cc_deleteall` does. `root` itself is
+      never nulled (it is reused, not recreated, on the next open — D20), and nothing outside our
+      subtree is ever at risk, because nothing outside it can be identity-equal to one of our
+      widgets. The freed slots are reused by `createChild`'s append-after-last-non-null scan, so
+      the array stops growing without bound.
+    - **`Widget.revalidateScroll()` is forbidden on our tree, permanently.** Disassembly shows it
+      indexes the STATIC group array of the host's top-level interface, but bounds that indexing
+      with the DYNAMIC widget's own flat-array child-index watermark — an upstream RuneLite mixin
+      bug, not something curation or geometry can avoid. It would have thrown even on a clean
+      first open for any boss with roughly 15+ mechanics, so it had to go regardless of the leak
+      fix above. `MechanicsScrollbar.build()` and `scrollBy()` no longer call it; `setScrollHeight`
+      and `setScrollY` are unaffected and stay, since scrolling worked in game before #40 while
+      `revalidateScroll()` provably touched none of our widgets.
+    - **Third symptom, resolved as a non-fix.** The collection log itself is movable/resizable in
+      some clients; the window is not, by design. The real Combat Achievements boss screen is also
+      fixed-size (D21), and the window already re-centres over the log every tick via `place()`
+      (D20), so a client resize keeps it correctly placed. No code change.
+    - Pinned with two `Proxy`-backed tests rather than a live client, because neither bug depends
+      on real widget geometry, only on which methods get called and in what order:
+      `MechanicsScrollbarTest` asserts `revalidateScroll` is never called, from either the build or
+      the wheel scroll it wires up; `BossMechanicsWindowLayoutTest` asserts a fresh root's
+      `revalidate()` call precedes its first `createChild()`. Both use `java.lang.reflect.Proxy`
+      implementations of `Widget` (and, for the window test, `Client`) that record method names
+      rather than model real layout, and inject the fakes into `BossMechanicsWindow`'s `@Inject`
+      fields by reflection. Each keeps to one assertion, deliberately, so neither ossifies the
+      exact build order into a contract beyond the one invariant it exists to protect.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
