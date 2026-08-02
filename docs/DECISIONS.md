@@ -126,6 +126,25 @@ so new decisions are appended here rather than inserted in a themed section.
     dynamic child per collection log open. The click is a `Consumer<Boss>` supplied by the
     plugin, so the real interface (#5) replaces one lambda and not this class.
 
+    **Confirmed in game 2026-08-01, and load-bearing for #5:**
+    - Interface geometry can be read offline. The cache is at
+      `~/.runelite/jagexcache/oldschool/LIVE` and `net.runelite:cache` parses it, so any
+      interface's component sizes, position modes and sprites can be dumped without a
+      client. This found the right-aligned position mode below before it cost a test run.
+    - The Combat Achievements button uses `xPositionMode 2`, so x is measured from the
+      **right** edge and a larger x sits further **left**. Absolute-left maths sends a
+      widget off the opposite side of the screen.
+    - What that button looks like is not in the cache: it is a bare 50x25 layer whose
+      children are built at runtime. It is a nine-slice frame (corners 913/914/915/916,
+      edges 917/919 and 918/920) over a stretched background fill (297), with an 18x17
+      icon at (16,3). Our button reuses all nine frame sprites, so only the glyph differs.
+    - **Nested dynamic children render.** Our button is a dynamic `LAYER` whose own
+      dynamic `GRAPHIC` children draw correctly. #5's window can therefore be built as a
+      tree rather than as a flat pile of siblings with computed offsets.
+    - The cache ships no boss-mechanics glyph. Every sprite that fits 18x17 is something
+      unrelated (SAVE, LOAD, WORLDSWITCHER_FILTER), so a custom sprite bundled as a plugin
+      resource is the eventual answer; `SPRITE_ICON` is the single constant to change.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
