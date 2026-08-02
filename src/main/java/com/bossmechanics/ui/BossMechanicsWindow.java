@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.GameState;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.WidgetClosed;
@@ -95,6 +96,9 @@ public class BossMechanicsWindow
 	private static final int SPRITE_PROGRESS_FILL = 3391;
 	private static final int SPRITE_PROGRESS_TRACK = 3392;
 
+	/** {@link #modelForNpc}'s result when the npc has no cache model to preview (issue #6). */
+	private static final int NO_MODEL = -1;
+
 	@Inject
 	private Client client;
 
@@ -139,6 +143,9 @@ public class BossMechanicsWindow
 	private final KeyListener escapeListener = new EscapeToClose();
 	private boolean escapeListenerRegistered;
 
+	/** Npc ids already logged by {@link #modelForNpc}, so a fight-length session logs once. */
+	private final Set<Integer> warnedModelIds = new HashSet<>();
+
 	/** What "View All" / "Hide All" does: persist the new reveal state and rebuild (D18, D20). */
 	public void setOnRevealToggled(BiConsumer<String, Boolean> onRevealToggled)
 	{
@@ -159,16 +166,6 @@ public class BossMechanicsWindow
 	public void setOnWikiOpened(Consumer<String> onWikiOpened)
 	{
 		this.onWikiOpened = onWikiOpened;
-	}
-
-	/**
-	 * The empty box #6 fills: the 291x110 model box at the top of the right-hand column. Null
-	 * while the window is closed. Stays valid across a selection change, because the right column
-	 * mutates its text in place rather than rebuilding.
-	 */
-	public Widget previewContainer()
-	{
-		return mechanicsDetail == null ? null : mechanicsDetail.modelBox();
 	}
 
 	public void onPluginStart()
@@ -537,8 +534,36 @@ public class BossMechanicsWindow
 		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal);
 		mechanicsList.build();
 
-		mechanicsDetail = new MechanicsDetail(detailHeader, detail, this::openWiki);
+		mechanicsDetail = new MechanicsDetail(detailHeader, detail, this::modelForNpc, this::openWiki);
 		mechanicsDetail.build();
+	}
+
+	/**
+	 * Resolves an npc id to the cache model id the animated preview renders (issue #6). Warns
+	 * once per npc: the npc has no model at all, or (docs/DECISIONS.md D14's "verify this per
+	 * boss" note) it has more than one and only {@code models[0]} is ever shown.
+	 */
+	private int modelForNpc(int npcId)
+	{
+		NPCComposition definition = client.getNpcDefinition(npcId);
+		int[] models = definition == null ? null : definition.getModels();
+
+		if (models == null || models.length == 0)
+		{
+			if (warnedModelIds.add(npcId))
+			{
+				log.warn("Boss Mechanics: npc {} has no model to preview", npcId);
+			}
+			return NO_MODEL;
+		}
+
+		if (models.length > 1 && warnedModelIds.add(npcId))
+		{
+			log.warn("Boss Mechanics: npc {} has {} models; the preview shows only models[0]",
+				npcId, models.length);
+		}
+
+		return models[0];
 	}
 
 	/** @param fromRight measures x from the parent's right edge, which is how 717 places c5/c13. */

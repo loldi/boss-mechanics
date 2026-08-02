@@ -1,20 +1,24 @@
 package com.bossmechanics.ui;
 
 import com.bossmechanics.view.MechanicRow;
+import com.bossmechanics.view.PreviewSpec;
+import java.util.function.IntUnaryOperator;
 import net.runelite.api.FontID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.api.widgets.WidgetPositionMode;
+import net.runelite.api.widgets.WidgetType;
 
 /**
- * The window's right-hand column: a WIKI button in the header band, then the model box #6 will
- * render into, then the selected mechanic's name, description and counterplay, with a dim laid
- * over the lot while the selection is locked.
+ * The window's right-hand column: a WIKI button in the header band, the animated model box (#6),
+ * then the selected mechanic's name, description and counterplay, with a dim laid over the lot
+ * while the selection is locked.
  *
- * <p><b>Everything here is built once and then mutated.</b> {@link #show} rewrites text and never
- * deletes a child, because {@link #modelBox()} is the handle issue #6 holds onto — a
- * {@code deleteAllChildren()} here would invalidate it every time the player clicked a different
- * row. Only the window's own root is ever emptied (D19).
+ * <p><b>Everything here is built once and then mutated.</b> {@link #show} rewrites text and the
+ * one model widget, and never deletes a child: a {@code deleteAllChildren()} here would kill the
+ * model mid-animation every time the player clicked a different row. Only the window's own root
+ * is ever emptied (D19).
  */
 final class MechanicsDetail
 {
@@ -24,6 +28,9 @@ final class MechanicsDetail
 	private static final int MODEL_HEIGHT = 110;
 	private static final int MODEL_FILL = 0x0E0E0C;
 	private static final int MODEL_BORDER = 0x474645;
+
+	/** {@link IntUnaryOperator#applyAsInt} result meaning "no model resolved for this npc". */
+	private static final int UNKNOWN_MODEL = -1;
 
 	private static final int NAME_Y = 116;
 	private static final int NAME_HEIGHT = 15;
@@ -53,9 +60,10 @@ final class MechanicsDetail
 
 	private final Widget header;
 	private final Widget column;
+	private final IntUnaryOperator modelForNpc;
 	private final Runnable onWikiOpened;
 
-	private Widget modelBox;
+	private Widget model;
 	private Widget name;
 	private Widget description;
 	private Widget counterplay;
@@ -64,13 +72,17 @@ final class MechanicsDetail
 	/**
 	 * @param header the 291-wide header band layer, already positioned and sized
 	 * @param column the 291-wide column layer below it, already positioned
+	 * @param modelForNpc resolves an npc id to the cache model id to render ({@link #UNKNOWN_MODEL}
+	 *     if none); supplied as a lambda so this package never imports
+	 *     {@code client.getNpcDefinition()}
 	 * @param onWikiOpened fired when the WIKI button is clicked; opening the URL is the plugin's
 	 *     job, so this package never imports {@code LinkBrowser}
 	 */
-	MechanicsDetail(Widget header, Widget column, Runnable onWikiOpened)
+	MechanicsDetail(Widget header, Widget column, IntUnaryOperator modelForNpc, Runnable onWikiOpened)
 	{
 		this.header = header;
 		this.column = column;
+		this.modelForNpc = modelForNpc;
 		this.onWikiOpened = onWikiOpened;
 	}
 
@@ -78,19 +90,35 @@ final class MechanicsDetail
 	{
 		wikiButton();
 
-		// A LAYER, not the RECTANGLE itself: #6 parents a model widget into this, and nested
-		// dynamic children are only known to render under a LAYER (D19). The border is a sibling
-		// drawn afterwards, so the model can never overdraw its own frame.
+		// A LAYER, not the RECTANGLE itself: the model needs a LAYER parent to render, since
+		// nested dynamic children are only known to render under one (D19). The border is a
+		// sibling drawn afterwards, so the model can never overdraw its own frame.
 		int height = column.getOriginalHeight();
-		modelBox = Widgets.layer(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
+		Widget modelBox = Widgets.layer(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
 		Widgets.filled(modelBox, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, MODEL_FILL);
+
+		// Created once, here, and mutated by every show() rather than recreated (issue #6): a
+		// fresh MODEL widget per selection would glitch mid-play and pile up like the D22 leak.
+		model = modelBox.createChild(-1, WidgetType.MODEL);
+		model.setModelType(WidgetModelType.MODEL);
+		// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes must
+		// stay within 0-2047 or the client crashes, which a constant zero trivially satisfies.
+		model.setRotationX(0);
+		model.setRotationY(0);
+		model.setRotationZ(0);
+		model.setOriginalX(0);
+		model.setOriginalY(0);
+		model.setOriginalWidth(COLUMN_WIDTH);
+		model.setOriginalHeight(MODEL_HEIGHT);
+		model.revalidate();
+
 		Widgets.outline(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, MODEL_BORDER);
 
 		name = text("", FontID.BOLD_12, Widgets.ORANGE, NAME_Y, NAME_HEIGHT);
 		description = text("", FontID.PLAIN_12, Widgets.WHITE, DESCRIPTION_Y, DESCRIPTION_HEIGHT);
 		counterplay = text("", FontID.PLAIN_12, Widgets.ORANGE, COUNTERPLAY_Y, COUNTERPLAY_HEIGHT);
 
-		// Last, so it covers the box, the text and whatever #6 eventually draws in between.
+		// Last, so it covers the box, the model and the text.
 		dim = Widgets.filled(column, 0, 0, COLUMN_WIDTH, height, 0x000000);
 		dim.setOpacity(DIM_OPACITY);
 		dim.setHidden(true);
@@ -99,18 +127,12 @@ final class MechanicsDetail
 		column.revalidate();
 	}
 
-	/** The empty box #6 renders the animated preview into. Null until {@link #build()} has run. */
-	Widget modelBox()
-	{
-		return modelBox;
-	}
-
 	/**
-	 * Swaps in a different mechanic's text. Mutates in place and revalidates each widget and the
-	 * column, which is what keeps {@link #modelBox()} valid across a selection change.
+	 * Swaps in a different mechanic's text and preview. Mutates in place and revalidates each
+	 * widget and the column, which is what keeps the one model widget playing without a rebuild.
 	 *
 	 * @param row null when there is nothing to show (a boss with no mechanics), which blanks the
-	 *     panel rather than leaving the previous mechanic's text stranded
+	 *     panel and hides the model rather than leaving the previous mechanic's stranded
 	 */
 	void show(MechanicRow row)
 	{
@@ -120,10 +142,29 @@ final class MechanicsDetail
 		set(description, row == null ? "" : row.getDescription());
 		set(counterplay, row == null ? "" : row.getCounterplay());
 
+		showModel(row == null ? PreviewSpec.hidden() : row.getPreview());
+
 		dim.setHidden(row == null || !row.isLocked());
 		dim.revalidate();
 
 		column.revalidate();
+	}
+
+	/**
+	 * Mutates the one persistent model widget rather than recreating it (issue #6): swaps model
+	 * id, animation and zoom, then hides it outright for a locked row or an npc this client has
+	 * no model for, so a locked mechanic can never leak through the preview.
+	 */
+	private void showModel(PreviewSpec preview)
+	{
+		int modelId = modelForNpc.applyAsInt(preview.getNpcId());
+		boolean visible = preview.isVisible() && modelId != UNKNOWN_MODEL;
+
+		model.setModelId(modelId);
+		model.setAnimationId(preview.getAnimationId());
+		model.setModelZoom(preview.getZoom());
+		model.setHidden(!visible);
+		model.revalidate();
 	}
 
 	private void set(Widget widget, String content)
