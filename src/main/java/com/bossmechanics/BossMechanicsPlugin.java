@@ -8,7 +8,6 @@ import com.bossmechanics.detection.DetectionEngine;
 import com.bossmechanics.detection.Discovery;
 import com.bossmechanics.data.TriggerType;
 import com.bossmechanics.detection.DiscoveryState;
-import com.bossmechanics.spike.SireWidgetSpike;
 import com.bossmechanics.ui.BossMechanicsWindow;
 import com.bossmechanics.ui.CollectionLogButton;
 import com.bossmechanics.view.MechanicsView;
@@ -75,9 +74,6 @@ public class BossMechanicsPlugin extends Plugin
 	private ConfigManager configManager;
 
 	@Inject
-	private SireWidgetSpike sireWidgetSpike;
-
-	@Inject
 	private BossDataLoader bossDataLoader;
 
 	@Inject
@@ -141,10 +137,6 @@ public class BossMechanicsPlugin extends Plugin
 		bossMechanicsWindow.setOnMechanicSelected(mechanicId -> log.debug("Mechanic selected: {}", mechanicId));
 		eventBus.register(bossMechanicsWindow);
 		bossMechanicsWindow.onPluginStart();
-
-		// Issue #1 spike (delete-or-promote): see com.bossmechanics.spike.SireWidgetSpike
-		eventBus.register(sireWidgetSpike);
-		sireWidgetSpike.onPluginStart();
 	}
 
 	@Override
@@ -157,9 +149,6 @@ public class BossMechanicsPlugin extends Plugin
 
 		bossMechanicsWindow.onPluginStop();
 		eventBus.unregister(bossMechanicsWindow);
-
-		sireWidgetSpike.onPluginStop();
-		eventBus.unregister(sireWidgetSpike);
 	}
 
 	@Provides
