@@ -4,6 +4,8 @@ import com.bossmechanics.data.Boss;
 import com.bossmechanics.view.MechanicsView;
 import com.bossmechanics.view.Selection;
 import java.awt.event.KeyEvent;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.inject.Inject;
@@ -210,7 +212,10 @@ public class BossMechanicsWindow
 		}
 		else
 		{
-			root.deleteAllChildren();
+			// Surgical, not deleteAllChildren() (D22, Bug B): root is a nested dynamic widget, so
+			// deleteAllChildren() only nulls its own (always-empty) array and is a no-op here — the
+			// real children live flat on host. See deleteChildrenOf() for the idiom that works.
+			deleteChildrenOf(host, root);
 		}
 
 		root.setOriginalWidth(WINDOW_WIDTH);
@@ -223,14 +228,17 @@ public class BossMechanicsWindow
 
 		place(host);
 
+		// D22 correction of D14: revalidate() lays out only the receiver, immediately, against
+		// its parent's *current* computed size — it never recurses into children. A fresh root's
+		// computed size is 0x0 until this runs, so it must run before any ABSOLUTE_CENTER or
+		// ABSOLUTE_RIGHT child is built against it (client.log, 2026-08-02 09:29:01, 09:29:04).
+		root.revalidate();
+		host.revalidate();
+
 		Widgets.frame(root, WINDOW_WIDTH, WINDOW_HEIGHT);
 		header(root, view);
 		progressBar(root, view);
 		columns(root, view);
-
-		root.revalidate();
-		// D14: a child computes nothing on its own; the parent layer runs the layout pass.
-		host.revalidate();
 
 		registerEscape();
 
@@ -260,8 +268,15 @@ public class BossMechanicsWindow
 		if (root != null)
 		{
 			root.setHidden(true);
-			// Legal here in a way it is not on Jagex's components: every child is ours.
-			root.deleteAllChildren();
+
+			Widget host = host();
+			if (host != null)
+			{
+				// Not root.deleteAllChildren() (D22, Bug B): that is a no-op on a nested dynamic
+				// widget. Legal to mutate host's array here in a way it is not for Jagex's own
+				// components, because every entry this removes is one of ours, by identity.
+				deleteChildrenOf(host, root);
+			}
 		}
 	}
 
@@ -357,8 +372,10 @@ public class BossMechanicsWindow
 			return;
 		}
 
+		// D22 correction of D14: this only relays root out against host, and only root's own
+		// origin moved, not its size or any child's geometry relative to it, so no child of root
+		// needs re-laying-out here.
 		root.revalidate();
-		// D14: the child computes nothing on its own; the parent layer runs the layout pass.
 		host.revalidate();
 	}
 
@@ -384,6 +401,63 @@ public class BossMechanicsWindow
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * The surgical rebuild-time delete (D22, Bug B): {@code root.deleteAllChildren()} only nulls
+	 * the receiver's own child array, which is always empty for a nested dynamic widget — every
+	 * child {@code createChild} ever built lives flat on the static host component instead, linked
+	 * by childIndex, not by parentage. Rebuilding without freeing them appended a full new copy on
+	 * every "View All" flip or reopen (~70 widgets, O(n^2)), and once the flat indices reached the
+	 * host interface's own component count, {@code MechanicsScrollbar}'s (now-deleted)
+	 * {@code revalidateScroll()} call indexed past it and crashed (client.log, 2026-08-02 09:07:30).
+	 *
+	 * <p>{@code host.getChildren()} returns the client's own live array, so nulling one of its
+	 * entries by identity is what the client's own {@code cc_deleteall} does, and the freed slot is
+	 * reused by {@code createChild}'s append-after-last-non-null scan. This only ever nulls
+	 * identities collected from {@code root}'s own subtree: {@code root} itself is never touched
+	 * (it survives to be reused on the next open), and nothing that isn't ours is ever at risk,
+	 * because nothing outside our subtree can be {@code contains}-equal to one of our widgets.
+	 */
+	private static void deleteChildrenOf(Widget host, Widget root)
+	{
+		Set<Widget> subtree = new HashSet<>();
+		collectDynamicDescendants(root, subtree);
+		if (subtree.isEmpty())
+		{
+			return;
+		}
+
+		Widget[] hostChildren = host.getChildren();
+		if (hostChildren == null)
+		{
+			return;
+		}
+
+		for (int i = 0; i < hostChildren.length; i++)
+		{
+			if (subtree.contains(hostChildren[i]))
+			{
+				hostChildren[i] = null;
+			}
+		}
+	}
+
+	private static void collectDynamicDescendants(Widget widget, Set<Widget> into)
+	{
+		Widget[] children = widget.getDynamicChildren();
+		if (children == null)
+		{
+			return;
+		}
+
+		for (Widget child : children)
+		{
+			if (child != null && into.add(child))
+			{
+				collectDynamicDescendants(child, into);
+			}
+		}
 	}
 
 	private void header(Widget parent, MechanicsView view)
