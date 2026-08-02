@@ -2,6 +2,7 @@ package com.bossmechanics.ui;
 
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.view.MechanicsView;
+import com.bossmechanics.view.Selection;
 import java.awt.event.KeyEvent;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -26,15 +27,21 @@ import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.KeyManager;
 
 /**
- * The Boss Mechanics window: a 500x314 native-styled panel drawn over the collection log
- * (docs/DECISIONS.md D3, D20).
+ * The Boss Mechanics window: a 512x334 native-styled screen drawn <b>over</b> the collection log,
+ * shaped like the Combat Achievements boss screen it is reached the same way as
+ * (docs/DECISIONS.md D3, D20, D21).
+ *
+ * <p>This class owns the shell — the frame, the title bar, the progress bar, the four column
+ * layers and the selection — and hands each column to {@link MechanicsList} and
+ * {@link MechanicsDetail}.
  *
  * <p>Deliberately dumb, like {@link CollectionLogButton}. It positions rectangles and copies
  * strings; every decision that could be wrong about what a mechanic *says* was already made in
- * {@link MechanicsView}, which is unit tested. In particular nothing here counts discoveries.
+ * {@link MechanicsView} and {@link Selection}, both unit tested. In particular nothing here counts
+ * discoveries.
  *
- * <p>Every geometry constant below was dumped from the real cache (collection log group 621 and
- * Combat Achievements script 4782), not eyeballed.
+ * <p>Every geometry constant below was dumped from the real cache (Combat Achievements group 717
+ * and script 4782, collection log group 621), not eyeballed.
  */
 @Slf4j
 public class BossMechanicsWindow
@@ -47,21 +54,6 @@ public class BossMechanicsWindow
 	private static final int WINDOW_WIDTH = 512;
 	private static final int WINDOW_HEIGHT = 334;
 
-	/**
-	 * The Combat Achievements button's own nine-slice frame, reused whole. Duplicated from
-	 * {@link CollectionLogButton} on purpose: sharing it means restructuring that class, which
-	 * is a follow-up once the animated preview (#6) lands, not a change to make here.
-	 */
-	private static final int SPRITE_BACKGROUND = 297;
-	private static final int SPRITE_CORNER_TL = 913;
-	private static final int SPRITE_CORNER_TR = 914;
-	private static final int SPRITE_CORNER_BL = 915;
-	private static final int SPRITE_CORNER_BR = 916;
-	private static final int SPRITE_EDGE_LEFT = 917;
-	private static final int SPRITE_EDGE_TOP = 918;
-	private static final int SPRITE_EDGE_RIGHT = 919;
-	private static final int SPRITE_EDGE_BOTTOM = 920;
-
 	/** Collection log close button, script 2240: 26x23 at (2,6) from the right, sprites 535/536. */
 	private static final int SPRITE_CLOSE = 535;
 	private static final int SPRITE_CLOSE_HOVER = 536;
@@ -70,20 +62,24 @@ public class BossMechanicsWindow
 	private static final int CLOSE_X = 2;
 	private static final int CLOSE_Y = 6;
 
-	/**
-	 * Frame thickness. The corner sprites are 9x9 so the corners are fixed; the edge sprites are
-	 * 3px thick naturally and get stretched to this, exactly as the Combat Achievements button
-	 * does at 50x25. If the border reads too heavy at window scale, this is the one number to
-	 * tune.
-	 */
-	private static final int FRAME = 9;
-	private static final int CONTENT_X = FRAME;
-	private static final int CONTENT_Y = FRAME;
-	private static final int CONTENT_WIDTH = WINDOW_WIDTH - (2 * FRAME);
-	private static final int CONTENT_HEIGHT = WINDOW_HEIGHT - (2 * FRAME);
+	private static final int CONTENT_X = Widgets.FRAME;
+	private static final int CONTENT_Y = Widgets.FRAME;
+	private static final int CONTENT_WIDTH = WINDOW_WIDTH - (2 * Widgets.FRAME);
+	private static final int CONTENT_HEIGHT = WINDOW_HEIGHT - (2 * Widgets.FRAME);
 
-	/** 621 HEADER child 19 is 46 tall and full width; HEADER_RECT1 child 22 fills it with 0x585040. */
-	private static final int HEADER_HEIGHT = 46;
+	/**
+	 * 717's bands, measured from the content origin: the title bar runs to y 39, the progress bar
+	 * sits on it, the column headers start at 75 and the columns themselves at 98. Their bottom
+	 * margin is 6, which is what fixes the column height rather than a MINUS mode.
+	 */
+	private static final int HEADER_HEIGHT = 39;
+	private static final int COLUMN_HEADER_Y = 75;
+	private static final int COLUMN_HEADER_HEIGHT = 23;
+	private static final int COLUMN_Y = 98;
+	private static final int COLUMN_INSET = 6;
+	private static final int COLUMN_HEIGHT = CONTENT_HEIGHT - COLUMN_Y - COLUMN_INSET;
+
+	/** 621 HEADER_RECT1 child 22 fills the title bar with 0x585040. */
 	private static final int HEADER_COLOR = 0x585040;
 	private static final int TITLE_X = 8;
 
@@ -97,9 +93,6 @@ public class BossMechanicsWindow
 	private static final int PROGRESS_OUTER_BORDER = 0x0E0E0C;
 	private static final int SPRITE_PROGRESS_FILL = 3391;
 	private static final int SPRITE_PROGRESS_TRACK = 3392;
-
-	private static final int GAP = 4;
-	private static final int REVEAL_WIDTH = 66;
 
 	@Inject
 	private Client client;
@@ -119,11 +112,17 @@ public class BossMechanicsWindow
 	 */
 	private Widget root;
 
-	/** #6's hook. Null while the window is closed. */
-	private Widget preview;
+	private MechanicsList mechanicsList;
+	private MechanicsDetail mechanicsDetail;
 
 	private MechanicsView view;
 	private String selectedMechanicId;
+
+	/**
+	 * The boss the selection above belongs to. Held separately because the id alone cannot say
+	 * whether it is still relevant: two bosses can use the same mechanic id.
+	 */
+	private String previousBossId;
 
 	/**
 	 * Whether the window is currently showing. Read from the AWT thread by the Escape
@@ -134,6 +133,7 @@ public class BossMechanicsWindow
 
 	private BiConsumer<String, Boolean> onRevealToggled;
 	private Consumer<String> onMechanicSelected;
+	private Consumer<String> onWikiOpened;
 
 	private final KeyListener escapeListener = new EscapeToClose();
 	private boolean escapeListenerRegistered;
@@ -150,10 +150,24 @@ public class BossMechanicsWindow
 		this.onMechanicSelected = onMechanicSelected;
 	}
 
-	/** The empty right-hand pane #6 fills. Null while the window is closed. */
+	/**
+	 * Fires with the open boss's id when the WIKI button is clicked. Opening the URL is the
+	 * plugin's job, deliberately: keeping {@code LinkBrowser} out of this package keeps
+	 * {@code ui} a RuneLite-interface-only package.
+	 */
+	public void setOnWikiOpened(Consumer<String> onWikiOpened)
+	{
+		this.onWikiOpened = onWikiOpened;
+	}
+
+	/**
+	 * The empty box #6 fills: the 291x110 model box at the top of the right-hand column. Null
+	 * while the window is closed. Stays valid across a selection change, because the right column
+	 * mutates its text in place rather than rebuilding.
+	 */
 	public Widget previewContainer()
 	{
-		return preview;
+		return mechanicsDetail == null ? null : mechanicsDetail.modelBox();
 	}
 
 	public void onPluginStart()
@@ -161,7 +175,8 @@ public class BossMechanicsWindow
 		// Deliberately keeps any existing root. Nothing rebuilds the host, so dropping the
 		// reference here would strand one hidden layer per plugin restart; the identity scan
 		// in stillAttached() makes reusing a stale reference safe.
-		preview = null;
+		mechanicsList = null;
+		mechanicsDetail = null;
 		windowOpen = false;
 	}
 
@@ -184,9 +199,11 @@ public class BossMechanicsWindow
 			return;
 		}
 
+		// Resolved before the rebuild, so a "View All" flip keeps the row the player was reading.
+		this.selectedMechanicId = Selection.resolve(view, previousBossId, selectedMechanicId);
+		this.previousBossId = view.getBossId();
 		this.view = view;
 		this.windowOpen = true;
-		this.selectedMechanicId = view.getRows().isEmpty() ? null : view.getRows().get(0).getMechanicId();
 
 		if (!stillAttached(host))
 		{
@@ -206,13 +223,11 @@ public class BossMechanicsWindow
 		root.setHidden(false);
 
 		place(host);
-		log.debug("Boss Mechanics: window origin on host is ({},{})",
-			root.getOriginalX(), root.getOriginalY());
 
-		frame(root);
+		Widgets.frame(root, WINDOW_WIDTH, WINDOW_HEIGHT);
 		header(root, view);
 		progressBar(root, view);
-		body(root, view);
+		columns(root, view);
 
 		root.revalidate();
 		// D14: a child computes nothing on its own; the parent layer runs the layout pass.
@@ -220,14 +235,13 @@ public class BossMechanicsWindow
 
 		registerEscape();
 
-		log.debug("Boss Mechanics: opened for {} on host {} ({}x{}), root {}x{} at ({},{})",
+		// The two origins are the whole of the "beside the log, not over it" fix, so they are worth
+		// one line: if the window is ever off again, this says whether the maths or the host moved.
+		log.debug("Boss Mechanics: opened for {} on host {} ({}x{}), {}x{} at origin ({},{})",
 			boss.getId(), host.getId(), host.getWidth(), host.getHeight(),
-			root.getWidth(), root.getHeight(), root.getRelativeX(), root.getRelativeY());
+			root.getWidth(), root.getHeight(), root.getOriginalX(), root.getOriginalY());
 
-		if (selectedMechanicId != null && onMechanicSelected != null)
-		{
-			onMechanicSelected.accept(selectedMechanicId);
-		}
+		select(selectedMechanicId);
 	}
 
 	/**
@@ -238,9 +252,11 @@ public class BossMechanicsWindow
 	{
 		windowOpen = false;
 		unregisterEscape();
-		preview = null;
+		mechanicsList = null;
+		mechanicsDetail = null;
 		view = null;
-		selectedMechanicId = null;
+		// selectedMechanicId and previousBossId deliberately survive: reopening the same boss's
+		// screen puts you back on the row you were reading, and Selection resets it for any other.
 
 		if (root != null)
 		{
@@ -269,10 +285,11 @@ public class BossMechanicsWindow
 			// The interface tree is torn down on these transitions, so the reference is already
 			// invalid. Drop it without touching it, but still give the key listener back.
 			unregisterEscape();
+			windowOpen = false;
 			root = null;
-			preview = null;
+			mechanicsList = null;
+			mechanicsDetail = null;
 			view = null;
-			selectedMechanicId = null;
 		}
 	}
 
@@ -370,29 +387,6 @@ public class BossMechanicsWindow
 		return false;
 	}
 
-	/**
-	 * The Combat Achievements button's construction at window scale: background fill first, then
-	 * the nine-slice border over it. Later children draw above earlier ones, so order matters.
-	 */
-	private void frame(Widget parent)
-	{
-		int right = WINDOW_WIDTH - FRAME;
-		int bottom = WINDOW_HEIGHT - FRAME;
-		int innerWidth = WINDOW_WIDTH - (2 * FRAME);
-		int innerHeight = WINDOW_HEIGHT - (2 * FRAME);
-
-		Widgets.sprite(parent, SPRITE_BACKGROUND, 1, 1, WINDOW_WIDTH - 2, WINDOW_HEIGHT - 2, false);
-
-		Widgets.sprite(parent, SPRITE_CORNER_TL, 0, 0, FRAME, FRAME, false);
-		Widgets.sprite(parent, SPRITE_CORNER_TR, right, 0, FRAME, FRAME, false);
-		Widgets.sprite(parent, SPRITE_CORNER_BL, 0, bottom, FRAME, FRAME, false);
-		Widgets.sprite(parent, SPRITE_CORNER_BR, right, bottom, FRAME, FRAME, false);
-		Widgets.sprite(parent, SPRITE_EDGE_LEFT, 0, FRAME, FRAME, innerHeight, false);
-		Widgets.sprite(parent, SPRITE_EDGE_RIGHT, right, FRAME, FRAME, innerHeight, false);
-		Widgets.sprite(parent, SPRITE_EDGE_TOP, FRAME, 0, innerWidth, FRAME, false);
-		Widgets.sprite(parent, SPRITE_EDGE_BOTTOM, FRAME, bottom, innerWidth, FRAME, false);
-	}
-
 	private void header(Widget parent, MechanicsView view)
 	{
 		Widget header = Widgets.layer(parent, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, HEADER_HEIGHT);
@@ -406,32 +400,7 @@ public class BossMechanicsWindow
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
 		title.revalidate();
 
-		revealButton(header, view);
 		closeButton(header);
-	}
-
-	/**
-	 * "View All" / "Hide All". The label comes from the view model, and the op listener only
-	 * reports the flip; persisting it and rebuilding is the plugin's, which is what keeps the
-	 * reveal state out of this class entirely.
-	 */
-	private void revealButton(Widget header, MechanicsView view)
-	{
-		Widget toggle = Widgets.text(header, view.revealActionLabel(), FontID.PLAIN_12, Widgets.ORANGE);
-		toggle.setOriginalX(CLOSE_X + CLOSE_WIDTH + GAP);
-		toggle.setOriginalY(CLOSE_Y);
-		toggle.setOriginalWidth(REVEAL_WIDTH);
-		toggle.setOriginalHeight(CLOSE_HEIGHT);
-		toggle.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
-		toggle.setXTextAlignment(WidgetTextAlignment.RIGHT);
-		toggle.setYTextAlignment(WidgetTextAlignment.CENTER);
-		toggle.setAction(0, view.revealActionLabel());
-		toggle.setNoClickThrough(true);
-		toggle.setHasListener(true);
-		toggle.setOnOpListener((JavaScriptCallback) event -> toggleReveal());
-		toggle.setOnMouseOverListener((JavaScriptCallback) event -> toggle.setTextColor(Widgets.ORANGE_HOVER));
-		toggle.setOnMouseLeaveListener((JavaScriptCallback) event -> toggle.setTextColor(Widgets.ORANGE));
-		toggle.revalidate();
 	}
 
 	private void toggleReveal()
@@ -450,7 +419,7 @@ public class BossMechanicsWindow
 	private void progressBar(Widget parent, MechanicsView view)
 	{
 		int width = CONTENT_WIDTH - 18;
-		Widget bar = Widgets.layer(parent, 0, CONTENT_Y + HEADER_HEIGHT + GAP, width, PROGRESS_HEIGHT);
+		Widget bar = Widgets.layer(parent, 0, CONTENT_Y + HEADER_HEIGHT, width, PROGRESS_HEIGHT);
 		bar.setXPositionMode(WidgetPositionMode.ABSOLUTE_CENTER);
 		bar.revalidate();
 
@@ -473,28 +442,69 @@ public class BossMechanicsWindow
 		Widgets.outline(bar, 0, 0, width, 31, PROGRESS_OUTER_BORDER);
 	}
 
-	/** The mechanics list on the left, and the empty preview pane #6 fills on the right. */
-	private void body(Widget parent, MechanicsView view)
+	/**
+	 * 717's two columns and their two header bands: the mechanics list on the left, the selected
+	 * mechanic's detail on the right. Four sibling layers rather than two nested ones, because
+	 * that is how the Combat Achievements screen is built and it keeps each header band's
+	 * right-aligned button measured from its own column's edge.
+	 */
+	private void columns(Widget parent, MechanicsView view)
 	{
-		int top = CONTENT_Y + HEADER_HEIGHT + GAP + PROGRESS_HEIGHT + GAP;
-		int height = CONTENT_Y + CONTENT_HEIGHT - top;
+		Widget listHeader = band(parent, COLUMN_HEADER_Y, MechanicsList.COLUMN_WIDTH,
+			COLUMN_HEADER_HEIGHT, false);
+		Widget list = band(parent, COLUMN_Y, MechanicsList.COLUMN_WIDTH, COLUMN_HEIGHT, false);
+		Widget detailHeader = band(parent, COLUMN_HEADER_Y, MechanicsDetail.COLUMN_WIDTH,
+			COLUMN_HEADER_HEIGHT, true);
+		Widget detail = band(parent, COLUMN_Y, MechanicsDetail.COLUMN_WIDTH, COLUMN_HEIGHT, true);
 
-		Widget column = Widgets.layer(parent, CONTENT_X, top, MechanicsList.COLUMN_WIDTH, height);
-		MechanicsList.build(column, height, view, this::select);
+		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal);
+		mechanicsList.build();
 
-		int width = CONTENT_WIDTH - MechanicsList.COLUMN_WIDTH - GAP;
-		preview = Widgets.layer(parent, FRAME, top, width, height);
-		preview.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
-		preview.revalidate();
+		mechanicsDetail = new MechanicsDetail(detailHeader, detail, this::openWiki);
+		mechanicsDetail.build();
 	}
 
-	/** #6's hook. The first row is selected on open, so the preview is never empty by default. */
+	/** @param fromRight measures x from the parent's right edge, which is how 717 places c5/c13. */
+	private Widget band(Widget parent, int y, int width, int height, boolean fromRight)
+	{
+		Widget layer = Widgets.layer(parent, CONTENT_X + COLUMN_INSET, CONTENT_Y + y, width, height);
+		if (fromRight)
+		{
+			layer.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
+			layer.revalidate();
+		}
+		return layer;
+	}
+
+	/**
+	 * Moves the selection. Repaints the left column's highlight and the right column's text, then
+	 * tells #6, which is the only part of this that leaves the window.
+	 */
 	private void select(String mechanicId)
 	{
 		selectedMechanicId = mechanicId;
-		if (onMechanicSelected != null)
+
+		if (mechanicsList != null)
+		{
+			mechanicsList.highlight(mechanicId);
+		}
+		if (mechanicsDetail != null && view != null)
+		{
+			mechanicsDetail.show(Selection.rowFor(view, mechanicId));
+		}
+
+		if (mechanicId != null && onMechanicSelected != null)
 		{
 			onMechanicSelected.accept(mechanicId);
+		}
+	}
+
+	/** The WIKI button. The plugin owns the URL open, so this package stays LinkBrowser-free. */
+	private void openWiki()
+	{
+		if (view != null && onWikiOpened != null)
+		{
+			onWikiOpened.accept(view.getBossId());
 		}
 	}
 
