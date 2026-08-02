@@ -146,8 +146,9 @@ so new decisions are appended here rather than inserted in a themed section.
       resource is the eventual answer; `SPRITE_ICON` is the single constant to change.
 
 20. **Boss Mechanics window (issue #5).** The window is a 500x314 panel (the collection log's own
-    UNIVERSE size, 621 child 88) hosted on the **top-level FLOATER**, not on anything inside the
-    collection log, which is what keeps D3 intact. FLOATER is a later sibling of MAINMODAL under
+    UNIVERSE size, 621 child 88) hosted on a **top-level root the client draws after GAMEFRAME**
+    (see the correction at the end of this decision), not on anything inside the collection log,
+    which is what keeps D3 intact. The first attempt used FLOATER, a later sibling of MAINMODAL under
     the same parent in all six top-level layouts (548, 161, 164, 165, 601, 80), so it draws on
     top of the log, and it is `w=0 h=0` with both size modes MINUS in all six, so it always
     resolves to full parent size and cannot clip a child to nothing. `TopLevelFloater` is the
@@ -191,12 +192,25 @@ so new decisions are appended here rather than inserted in a themed section.
       re-checked by identity scan before reuse (D19).
     - The nine-slice frame is duplicated from `CollectionLogButton` on purpose. Sharing it means
       restructuring that class, which is a follow-up once #6 lands.
-    - **Not yet confirmed in game.** The FLOATER's z-order and runtime size are inferred from the
-      cache, so the window ships with a temporary opaque magenta backdrop behind the frame: a
-      healthy window hides it completely, magenta showing through means the sprites are wrong,
-      and nothing at all means the FLOATER does not draw and the fallback is MAINMODAL. Row
-      heights are fixed per state (22 locked, 68 discovered) because OSRS text widgets wrap but
-      expose no wrapped height; scroll height is the sum of the actual row heights.
+    - Row heights are fixed per state (22 locked, 68 discovered) because OSRS text widgets wrap
+      but expose no wrapped height; scroll height is the sum of the actual row heights.
+    - **CORRECTED IN GAME 2026-08-02: the host is UI_HIGHLIGHTS, not FLOATER.** The magenta
+      backdrop earned its keep on the first run: the window drew *behind* the collection log.
+      The cache reasoning above was wrong in a way only the runtime tree reveals. The log's
+      actual parent chain is
+      `GAMEFRAME(c34) <- c94 <- c15 <- FLOATER(c18) <- 621:c87 <- 621:c88`, i.e. **the
+      collection log is opened onto FLOATER itself**, and FLOATER is nested inside GAMEFRAME
+      rather than being its sibling. A dynamic child of FLOATER therefore sits under the
+      interface node opened onto it.
+      The client's actual root draw order was `c0, GAMEFRAME(c34), c35, c36, MOUSEOVER(c37),
+      UI_HIGHLIGHTS(c98)`. Anything under a root after GAMEFRAME draws over the whole collection
+      log. Of those, c35 is the 300-wide sidebar and c36 is 1x1, so neither can hold a 500x314
+      window; MOUSEOVER and UI_HIGHLIGHTS are both full parent size. **UI_HIGHLIGHTS is drawn
+      last and only carries occasional highlight overlays, whereas MOUSEOVER backs hover
+      rendering**, so UI_HIGHLIGHTS is the one to squat. It exists in all six top-level layouts.
+      D3 still holds: it is not the collection log's tree.
+      The general lesson, which cost one run to learn: **cache sibling order does not predict
+      runtime draw order.** Only `getWidgetRoots()` and a live parent chain do.
 
 ## Open questions
 
