@@ -84,6 +84,111 @@ public class MechanicsViewTest
 			MechanicsView.of(testBoss(), new DiscoveryState(), false).title());
 	}
 
+	// --- docs/DECISIONS.md D10: revealed and discovered are two different things. ---
+
+	@Test
+	public void revealUnlocksTextButNotDiscovery()
+	{
+		MechanicsView view = MechanicsView.of(testBoss(), new DiscoveryState(), true);
+
+		for (MechanicRow row : view.getRows())
+		{
+			assertFalse("reveal must unlock the text", row.isLocked());
+			assertFalse("reveal must not fake a discovery", row.isDiscovered());
+		}
+		assertEquals(0, view.discoveredCount());
+	}
+
+	@Test
+	public void progressCountsGenuineDiscoveriesInBothToggleStates()
+	{
+		Boss sire = bundled("abyssal-sire");
+		DiscoveryState state = new DiscoveryState();
+		state.markDiscovered("abyssal-sire", "miasma-pools");
+		state.markDiscovered("abyssal-sire", "spawn-summon");
+		state.markDiscovered("abyssal-sire", "apocalypse");
+
+		assertEquals(3, MechanicsView.of(sire, state, false).discoveredCount());
+		assertEquals(3, MechanicsView.of(sire, state, true).discoveredCount());
+		assertEquals(9, MechanicsView.of(sire, state, true).totalCount());
+	}
+
+	/**
+	 * Pins the view to {@link DiscoveryState#discoveredCount(Boss)} rather than re-implementing
+	 * the count, so the two can never drift into disagreeing about the same boss.
+	 */
+	@Test
+	public void discoveredCountAgreesWithDiscoveryState()
+	{
+		Boss sire = bundled("abyssal-sire");
+		DiscoveryState state = new DiscoveryState();
+		state.markDiscovered("abyssal-sire", "scions");
+		state.markDiscovered("abyssal-sire", "melee-combo");
+		// A stale id, as a store from an older schema would hold: counted by neither.
+		state.markDiscovered("abyssal-sire", "removed-mechanic");
+
+		assertEquals(state.discoveredCount(sire), MechanicsView.of(sire, state, false).discoveredCount());
+		assertEquals(state.discoveredCount(sire), MechanicsView.of(sire, state, true).discoveredCount());
+	}
+
+	@Test
+	public void progressLabelReadsMechanicsDiscoveredNOverM()
+	{
+		DiscoveryState state = new DiscoveryState();
+		state.markDiscovered("test-boss", "m1");
+
+		assertEquals("Mechanics Discovered: 1/3",
+			MechanicsView.of(testBoss(), state, true).progressLabel());
+	}
+
+	@Test
+	public void progressFillWidthIsZeroAtNoneAndTrackAtAll()
+	{
+		assertEquals(0, MechanicsView.of(testBoss(), new DiscoveryState(), true).progressFillWidth(100));
+
+		DiscoveryState all = new DiscoveryState();
+		all.markDiscovered("test-boss", "m1");
+		all.markDiscovered("test-boss", "m2");
+		all.markDiscovered("test-boss", "m3");
+
+		assertEquals(100, MechanicsView.of(testBoss(), all, false).progressFillWidth(100));
+	}
+
+	@Test
+	public void progressFillWidthNeverExceedsTrack()
+	{
+		DiscoveryState state = new DiscoveryState();
+		state.markDiscovered("test-boss", "m1");
+		state.markDiscovered("test-boss", "m2");
+
+		MechanicsView view = MechanicsView.of(testBoss(), state, false);
+
+		assertEquals(66, view.progressFillWidth(100));
+		assertTrue(view.progressFillWidth(7) <= 7);
+		// A zero-width or negative track must not produce a negative fill the client would reject.
+		assertEquals(0, view.progressFillWidth(0));
+		assertEquals(0, view.progressFillWidth(-5));
+	}
+
+	/** A boss with no mechanics must not divide by zero. */
+	@Test
+	public void emptyBossHasNoProgressAndNoFill()
+	{
+		Boss empty = new Boss("empty", "Empty", Collections.singletonList(1), "https://example.com",
+			Collections.emptyList());
+		MechanicsView view = MechanicsView.of(empty, new DiscoveryState(), false);
+
+		assertEquals("Mechanics Discovered: 0/0", view.progressLabel());
+		assertEquals(0, view.progressFillWidth(100));
+	}
+
+	@Test
+	public void revealActionLabelOffersTheOppositeOfTheCurrentState()
+	{
+		assertEquals("View All", MechanicsView.of(testBoss(), new DiscoveryState(), false).revealActionLabel());
+		assertEquals("Hide All", MechanicsView.of(testBoss(), new DiscoveryState(), true).revealActionLabel());
+	}
+
 	/** The 3-mechanic fixture: m1 has no phase, m2 and m3 do. */
 	private static Boss testBoss()
 	{

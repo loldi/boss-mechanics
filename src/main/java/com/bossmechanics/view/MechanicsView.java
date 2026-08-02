@@ -54,4 +54,54 @@ public class MechanicsView
 	{
 		return "Boss Mechanics - " + bossName;
 	}
+
+	/**
+	 * Genuine discoveries only. Counts rows where {@code discovered}, never rows where
+	 * {@code !locked}, which is the whole of D10: revealing changes what you can read and
+	 * nothing about what you have earned.
+	 */
+	public int discoveredCount()
+	{
+		int count = 0;
+		for (MechanicRow row : rows)
+		{
+			if (row.isDiscovered())
+			{
+				count++;
+			}
+		}
+		return count;
+	}
+
+	public int totalCount()
+	{
+		return rows.size();
+	}
+
+	public String progressLabel()
+	{
+		return "Mechanics Discovered: " + discoveredCount() + "/" + totalCount();
+	}
+
+	public String revealActionLabel()
+	{
+		return revealed ? "Hide All" : "View All";
+	}
+
+	/**
+	 * How many pixels of a {@code trackWidth}-wide bar are filled, the same
+	 * {@code done * width / total} scale the Combat Achievements bar uses (script 4782).
+	 * Clamped at both ends so a zero-mechanic boss or a track too narrow to have been laid
+	 * out yet can never hand the client a negative width.
+	 */
+	public int progressFillWidth(int trackWidth)
+	{
+		if (trackWidth <= 0 || totalCount() == 0)
+		{
+			return 0;
+		}
+
+		int fill = discoveredCount() * trackWidth / totalCount();
+		return Math.max(0, Math.min(trackWidth, fill));
+	}
 }
