@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.GameState;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.gameval.InterfaceID;
@@ -38,9 +39,13 @@ import net.runelite.client.input.KeyManager;
 @Slf4j
 public class BossMechanicsWindow
 {
-	/** 621 child 88 UNIVERSE: 500x314, centred on both axes. */
-	private static final int WINDOW_WIDTH = 500;
-	private static final int WINDOW_HEIGHT = 314;
+	/**
+	 * The Combat Achievements boss screen, 717 child 0: 512x334, which is the fixed-mode viewport
+	 * size (548 child 10 is 512x334 at (4,4)). It is deliberately larger than the collection log's
+	 * own 500x314 UNIVERSE — the screen covers the log rather than fitting inside it (D21).
+	 */
+	private static final int WINDOW_WIDTH = 512;
+	private static final int WINDOW_HEIGHT = 334;
 
 	/**
 	 * The Combat Achievements button's own nine-slice frame, reused whole. Duplicated from
@@ -196,13 +201,13 @@ public class BossMechanicsWindow
 		root.setOriginalHeight(WINDOW_HEIGHT);
 		root.setWidthMode(WidgetSizeMode.ABSOLUTE);
 		root.setHeightMode(WidgetSizeMode.ABSOLUTE);
-		root.setOriginalX(0);
-		root.setOriginalY(0);
-		root.setXPositionMode(WidgetPositionMode.ABSOLUTE_CENTER);
-		root.setYPositionMode(WidgetPositionMode.ABSOLUTE_CENTER);
 		// Without this the whole window is click-through and every click lands on the game world.
 		root.setNoClickThrough(true);
 		root.setHidden(false);
+
+		place(host);
+		log.debug("Boss Mechanics: window origin on host is ({},{})",
+			root.getOriginalX(), root.getOriginalY());
 
 		frame(root);
 		header(root, view);
@@ -275,6 +280,70 @@ public class BossMechanicsWindow
 	{
 		int componentId = WindowHost.componentId(client.getTopLevelInterfaceId());
 		return componentId == -1 ? null : client.getWidget(componentId);
+	}
+
+	/**
+	 * Sits the root exactly over the collection log. See {@link WindowPlacement} for why
+	 * {@code ABSOLUTE_CENTER} on the host is not the same thing and shipped 125px off.
+	 *
+	 * @return true if anything moved, so callers can skip the revalidate when nothing did
+	 */
+	private boolean place(Widget host)
+	{
+		Widget collectionLog = client.getWidget(InterfaceID.Collection.UNIVERSE);
+		if (collectionLog == null)
+		{
+			// Nothing to cover (the window can outlive a log rebuild for a tick). Centring on the
+			// host is wrong by the sidebar/chatbox delta, but it is on screen and it is temporary.
+			return move(WidgetPositionMode.ABSOLUTE_CENTER, 0, 0);
+		}
+
+		int x = WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, false),
+			collectionLog.getWidth(), WindowPlacement.offsetInRoot(host, false), WINDOW_WIDTH);
+		int y = WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, true),
+			collectionLog.getHeight(), WindowPlacement.offsetInRoot(host, true), WINDOW_HEIGHT);
+
+		return move(WidgetPositionMode.ABSOLUTE_LEFT, x, y);
+	}
+
+	private boolean move(int positionMode, int x, int y)
+	{
+		if (root.getXPositionMode() == positionMode && root.getOriginalX() == x
+			&& root.getOriginalY() == y)
+		{
+			return false;
+		}
+
+		root.setOriginalX(x);
+		root.setOriginalY(y);
+		root.setXPositionMode(positionMode);
+		// ABSOLUTE_LEFT and ABSOLUTE_TOP are both 0, so one mode value serves both axes.
+		root.setYPositionMode(positionMode);
+		return true;
+	}
+
+	/**
+	 * Resizing the client moves the collection log, so the window has to follow it. There is no
+	 * resize event on the event bus, and the log's rectangle is only readable on the client
+	 * thread, so this polls — but it writes nothing unless the answer actually changed.
+	 */
+	@Subscribe
+	public void onClientTick(ClientTick event)
+	{
+		if (!windowOpen || root == null)
+		{
+			return;
+		}
+
+		Widget host = host();
+		if (host == null || !place(host))
+		{
+			return;
+		}
+
+		root.revalidate();
+		// D14: the child computes nothing on its own; the parent layer runs the layout pass.
+		host.revalidate();
 	}
 
 	/** @see CollectionLogButton#stillAttached(Widget) — same self-healing identity scan. */
