@@ -2,7 +2,6 @@ package com.bossmechanics.ui;
 
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.BossPageIndex;
-import java.util.Objects;
 import java.util.function.Consumer;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -83,11 +82,6 @@ public class CollectionLogButton
 	/** The boss whose page is currently drawn, or null if this page isn't one of ours. */
 	private Boss currentBoss;
 
-	// TEMPORARY (issue #4 in-client verification). The diagnostic block below exists only so
-	// the first real run reports the numbers needed to confirm button placement. Delete the
-	// logDiagnostics call, the method, and this field once positioning is confirmed in game.
-	private String lastDiagnosedTitle;
-
 	public void setBossIndex(BossPageIndex bossIndex)
 	{
 		this.bossIndex = bossIndex;
@@ -154,7 +148,6 @@ public class CollectionLogButton
 			}
 			button = null;
 			currentBoss = null;
-			lastDiagnosedTitle = null;
 		}
 	}
 
@@ -168,7 +161,6 @@ public class CollectionLogButton
 			// already invalid. Drop it without touching it.
 			button = null;
 			currentBoss = null;
-			lastDiagnosedTitle = null;
 		}
 	}
 
@@ -222,7 +214,6 @@ public class CollectionLogButton
 		// D14: a child computes nothing on its own; the parent layer runs the layout pass.
 		parent.revalidate();
 
-		logDiagnostics(title, anchor, parent);
 	}
 
 	/**
@@ -307,64 +298,6 @@ public class CollectionLogButton
 		if (currentBoss != null && onOpen != null)
 		{
 			onOpen.accept(currentBoss);
-		}
-	}
-
-	/**
-	 * TEMPORARY (issue #4 in-client verification). Delete this method and its call site once
-	 * button placement is confirmed in game. Deduped on page title so it reports once per page
-	 * visited, not once per redraw.
-	 */
-	private void logDiagnostics(String title, Widget anchor, Widget parent)
-	{
-		if (Objects.equals(title, lastDiagnosedTitle))
-		{
-			return;
-		}
-		lastDiagnosedTitle = title;
-
-		Widget[] children = parent.getDynamicChildren();
-		log.info("Collection log page '{}' -> boss {}", title, currentBoss == null ? "none" : currentBoss.getId());
-		log.info("  CA anchor: parentId={} hidden={} size={}x{} original={}x{} originalPos=({},{}) relativePos=({},{}) xPosMode={} yPosMode={}",
-			anchor.getParentId(), anchor.isHidden(),
-			anchor.getWidth(), anchor.getHeight(),
-			anchor.getOriginalWidth(), anchor.getOriginalHeight(),
-			anchor.getOriginalX(), anchor.getOriginalY(),
-			anchor.getRelativeX(), anchor.getRelativeY(),
-			anchor.getXPositionMode(), anchor.getYPositionMode());
-		log.info("  our button: hidden={} size={}x{} originalPos=({},{}) relativePos=({},{}); parent dynamic children after injection={}",
-			button.isHidden(), button.getWidth(), button.getHeight(),
-			button.getOriginalX(), button.getOriginalY(),
-			button.getRelativeX(), button.getRelativeY(),
-			children == null ? 0 : children.length);
-
-		// The anchor is a bare 50x25 layer in the cache: spriteId -1, no stored children.
-		// Its icon is built at runtime by a CS2 script, so the only way to learn the icon's
-		// sprite and true size (which ours should match) is to read it from a live client.
-		logIconChildren("CA static", anchor.getChildren());
-		logIconChildren("CA dynamic", anchor.getDynamicChildren());
-		log.info("  CA anchor spriteId={} type={}", anchor.getSpriteId(), anchor.getType());
-	}
-
-	private void logIconChildren(String label, Widget[] children)
-	{
-		if (children == null || children.length == 0)
-		{
-			log.info("  {}: none", label);
-			return;
-		}
-
-		for (Widget child : children)
-		{
-			if (child == null)
-			{
-				continue;
-			}
-			log.info("  {}: type={} sprite={} size={}x{} original={}x{} pos=({},{})",
-				label, child.getType(), child.getSpriteId(),
-				child.getWidth(), child.getHeight(),
-				child.getOriginalWidth(), child.getOriginalHeight(),
-				child.getRelativeX(), child.getRelativeY());
 		}
 	}
 }
