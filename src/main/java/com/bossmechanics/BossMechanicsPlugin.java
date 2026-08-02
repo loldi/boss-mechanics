@@ -9,7 +9,9 @@ import com.bossmechanics.detection.Discovery;
 import com.bossmechanics.data.TriggerType;
 import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.spike.SireWidgetSpike;
+import com.bossmechanics.ui.BossMechanicsWindow;
 import com.bossmechanics.ui.CollectionLogButton;
+import com.bossmechanics.view.MechanicsView;
 import com.google.inject.Provides;
 import java.awt.Color;
 import java.util.ArrayList;
@@ -80,6 +82,9 @@ public class BossMechanicsPlugin extends Plugin
 	@Inject
 	private CollectionLogButton collectionLogButton;
 
+	@Inject
+	private BossMechanicsWindow bossMechanicsWindow;
+
 	private List<Boss> bosses = Collections.emptyList();
 	private DiscoveryState discoveryState;
 	private DetectionEngine detectionEngine;
@@ -130,6 +135,11 @@ public class BossMechanicsPlugin extends Plugin
 		eventBus.register(collectionLogButton);
 		collectionLogButton.onPluginStart();
 
+		bossMechanicsWindow.setOnRevealToggled(this::setRevealed);
+		bossMechanicsWindow.setOnMechanicSelected(mechanicId -> log.debug("Mechanic selected: {}", mechanicId));
+		eventBus.register(bossMechanicsWindow);
+		bossMechanicsWindow.onPluginStart();
+
 		// Issue #1 spike (delete-or-promote): see com.bossmechanics.spike.SireWidgetSpike
 		eventBus.register(sireWidgetSpike);
 		sireWidgetSpike.onPluginStart();
@@ -142,6 +152,9 @@ public class BossMechanicsPlugin extends Plugin
 
 		collectionLogButton.onPluginStop();
 		eventBus.unregister(collectionLogButton);
+
+		bossMechanicsWindow.onPluginStop();
+		eventBus.unregister(bossMechanicsWindow);
 
 		sireWidgetSpike.onPluginStop();
 		eventBus.unregister(sireWidgetSpike);
@@ -305,28 +318,51 @@ public class BossMechanicsPlugin extends Plugin
 	}
 
 	/**
-	 * What the injected collection log button does, until the real interface lands (issue #5),
-	 * which replaces this method and touches nothing else. Reporting live progress is the point:
-	 * it exercises the whole chain in one click (page detected, title matched to a boss, boss's
-	 * persisted discoveries counted).
+	 * What the injected collection log button does: resolve this boss's rows and open the window
+	 * (issue #5). This is the swap {@link CollectionLogButton#setOnOpen} was designed for, so it
+	 * is the only thing that changed there.
 	 *
 	 * Runs on the client thread, via the widget's op listener.
 	 */
 	private void openBossMechanics(Boss boss)
 	{
-		log.info("Boss Mechanics button clicked: {}", boss.getId());
+		log.debug("Boss Mechanics button clicked: {}", boss.getId());
+		bossMechanicsWindow.open(boss, viewFor(boss));
+	}
 
-		String progress = discoveryState.discoveredCount(boss) + "/" + boss.getMechanics().size();
-		chatMessageManager.queue(QueuedMessage.builder()
-			.type(ChatMessageType.GAMEMESSAGE)
-			.runeLiteFormattedMessage(new ChatMessageBuilder()
-				.append(ChatColorType.NORMAL)
-				.append("Boss Mechanics: " + boss.getName() + ", ")
-				.append(MECHANIC_NAME_COLOR, progress)
-				.append(ChatColorType.NORMAL)
-				.append(" mechanics discovered.")
-				.build())
-			.build());
+	/**
+	 * "View All" / "Hide All". Persists per boss per character (D18, D20) and rebuilds, so the
+	 * reveal survives closing the window, logging out and switching characters.
+	 *
+	 * Runs on the client thread, via the widget's op listener, which is the condition D18 named
+	 * as necessary for the store's read-modify-write to be safe.
+	 */
+	private void setRevealed(String bossId, boolean revealed)
+	{
+		profileStateStore.setRevealed(bossId, revealed);
+
+		Boss boss = bossById(bossId);
+		if (boss != null)
+		{
+			bossMechanicsWindow.open(boss, viewFor(boss));
+		}
+	}
+
+	private MechanicsView viewFor(Boss boss)
+	{
+		return MechanicsView.of(boss, discoveryState, profileStateStore.isRevealed(boss.getId()));
+	}
+
+	private Boss bossById(String bossId)
+	{
+		for (Boss boss : bosses)
+		{
+			if (boss.getId().equals(bossId))
+			{
+				return boss;
+			}
+		}
+		return null;
 	}
 
 	private void announce(Discovery discovery)
