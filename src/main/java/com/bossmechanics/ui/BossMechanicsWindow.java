@@ -96,25 +96,6 @@ public class BossMechanicsWindow
 	private static final int GAP = 4;
 	private static final int REVEAL_WIDTH = 66;
 
-	/**
-	 * TEMPORARY DIAGNOSTIC — delete once the first in-game run confirms the window draws.
-	 *
-	 * <p>The first host (FLOATER) drew behind the collection log; the window now hosts on
-	 * UI_HIGHLIGHTS, a root the client draws after GAMEFRAME. This is the issue #1 spike's move,
-	 * which is the cheapest way to tell three failures apart in a single run:
-	 *
-	 * <ul>
-	 * <li>full window draws, no magenta anywhere — hypothesis holds, delete this block;</li>
-	 * <li>magenta showing through — the host draws, but frame sprites are missing or mispositioned;</li>
-	 * <li>window still behind the log — UI_HIGHLIGHTS is not above GAMEFRAME either; try MOUSEOVER.</li>
-	 * </ul>
-	 *
-	 * <p>It costs nothing while it is right: the nine-slice frame covers this rectangle exactly,
-	 * so a healthy window shows no magenta at all.
-	 */
-	private static final boolean DIAGNOSTIC_BACKDROP = true;
-	private static final int DIAGNOSTIC_COLOR = 0xFF00FF;
-
 	@Inject
 	private Client client;
 
@@ -223,11 +204,6 @@ public class BossMechanicsWindow
 		root.setNoClickThrough(true);
 		root.setHidden(false);
 
-		if (DIAGNOSTIC_BACKDROP)
-		{
-			diagnosticBackdrop(root);
-		}
-
 		frame(root);
 		header(root, view);
 		progressBar(root, view);
@@ -237,7 +213,6 @@ public class BossMechanicsWindow
 		// D14: a child computes nothing on its own; the parent layer runs the layout pass.
 		host.revalidate();
 
-		logHostChains();
 		registerEscape();
 
 		log.debug("Boss Mechanics: opened for {} on host {} ({}x{}), root {}x{} at ({},{})",
@@ -302,57 +277,6 @@ public class BossMechanicsWindow
 		return componentId == -1 ? null : client.getWidget(componentId);
 	}
 
-	/**
-	 * TEMPORARY DIAGNOSTIC — delete once the host layer is settled.
-	 *
-	 * <p>The window drew *behind* the collection log, so FLOATER being a later sibling of
-	 * MAINMODAL in the cache does not mean it draws later. This reports where the log actually
-	 * lives at runtime and where we put ourselves, so the correct host can be picked from
-	 * evidence instead of another inference.
-	 */
-	private void logHostChains()
-	{
-		logChain("collection log", client.getWidget(InterfaceID.Collection.UNIVERSE));
-		logChain("our root", root);
-		log.info("Host diag: topLevel={} hostId={}",
-			client.getTopLevelInterfaceId(),
-			WindowHost.componentId(client.getTopLevelInterfaceId()));
-
-		Widget[] roots = client.getWidgetRoots();
-		if (roots != null)
-		{
-			StringBuilder order = new StringBuilder();
-			for (Widget widgetRoot : roots)
-			{
-				if (widgetRoot != null)
-				{
-					order.append(widgetRoot.getId()).append('(').append(widgetRoot.getId() >>> 16).append(") ");
-				}
-			}
-			log.info("Host diag: widget roots in draw order: {}", order);
-		}
-	}
-
-	private void logChain(String label, Widget widget)
-	{
-		if (widget == null)
-		{
-			log.info("Host diag: {} is null", label);
-			return;
-		}
-
-		StringBuilder chain = new StringBuilder();
-		for (Widget node = widget; node != null; node = node.getParent())
-		{
-			chain.append(node.getId())
-				.append("[g").append(node.getId() >>> 16)
-				.append(",c").append(node.getId() & 0xFFFF)
-				.append(",i").append(node.getIndex())
-				.append("] <- ");
-		}
-		log.info("Host diag: {} chain: {}", label, chain);
-	}
-
 	/** @see CollectionLogButton#stillAttached(Widget) — same self-healing identity scan. */
 	private boolean stillAttached(Widget host)
 	{
@@ -375,12 +299,6 @@ public class BossMechanicsWindow
 			}
 		}
 		return false;
-	}
-
-	/** See {@link #DIAGNOSTIC_BACKDROP}. First child, so everything else draws over it. */
-	private void diagnosticBackdrop(Widget parent)
-	{
-		Widgets.filled(parent, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, DIAGNOSTIC_COLOR);
 	}
 
 	/**
@@ -498,8 +416,6 @@ public class BossMechanicsWindow
 		int width = CONTENT_WIDTH - MechanicsList.COLUMN_WIDTH - GAP;
 		preview = Widgets.layer(parent, FRAME, top, width, height);
 		preview.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
-		// TEMPORARY: proves the pane is where #6 expects it. Delete when #6 renders into it.
-		Widgets.outline(preview, 0, 0, width, height, Widgets.GREY);
 		preview.revalidate();
 	}
 
