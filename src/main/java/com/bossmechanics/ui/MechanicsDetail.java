@@ -69,17 +69,34 @@ final class MechanicsDetail
 	/** {@link IntUnaryOperator#applyAsInt} result meaning "no model resolved for this npc". */
 	private static final int UNKNOWN_MODEL = -1;
 
-	private static final int NAME_Y = 144;
+	/**
+	 * G1 fix (docs/DECISIONS.md D27): the text area's own section border starts here, one pixel
+	 * above the old {@code NAME_Y}, so the name's top row of glyphs no longer shares a scanline
+	 * with the border's top edge.
+	 */
+	private static final int TEXT_AREA_Y = 140;
+	private static final int TEXT_AREA_HEIGHT = COLUMN_HEIGHT - TEXT_AREA_Y;
+
+	/**
+	 * The section border draws a 2px frame ({@code Widgets.sectionBorder}: a 1px outer line then a
+	 * 1px inner line one pixel in), so the real usable interior is 2px tighter on every edge than
+	 * the raw {@link #TEXT_AREA_Y}/{@link #TEXT_AREA_HEIGHT} box. Package-visible so
+	 * {@code MechanicsDetailPreviewTest} can assert the text block ends inside it, not just inside
+	 * the raw column height.
+	 */
+	static final int TEXT_AREA_INTERIOR_BOTTOM = TEXT_AREA_Y + TEXT_AREA_HEIGHT - 2;
+
+	/** G1 fix (docs/DECISIONS.md D27): every text widget is inset this far from the border. */
+	private static final int TEXT_X = 4;
+	private static final int TEXT_WIDTH = COLUMN_WIDTH - (2 * TEXT_X);
+
+	private static final int NAME_Y = 143;
 	private static final int NAME_HEIGHT = 15;
-	private static final int DESCRIPTION_Y = 161;
+	private static final int DESCRIPTION_Y = 159;
 	private static final int DESCRIPTION_HEIGHT = 36;
-	static final int COUNTERPLAY_Y = 199;
+	static final int COUNTERPLAY_Y = 197;
 	static final int COUNTERPLAY_HEIGHT = 36;
 	private static final int LINE_HEIGHT = 12;
-
-	/** The text block's own section frame starts where the name text does, just below the box. */
-	private static final int TEXT_AREA_Y = NAME_Y;
-	private static final int TEXT_AREA_HEIGHT = COLUMN_HEIGHT - TEXT_AREA_Y;
 
 	/**
 	 * Script 4808's own idiom for a locked Combat Achievements entry: a black fill at
@@ -274,8 +291,9 @@ final class MechanicsDetail
 	private Widget text(String content, int fontId, int color, int y, int height)
 	{
 		Widget widget = Widgets.text(column, content, fontId, color);
+		widget.setOriginalX(TEXT_X);
 		widget.setOriginalY(y);
-		widget.setOriginalWidth(COLUMN_WIDTH);
+		widget.setOriginalWidth(TEXT_WIDTH);
 		widget.setOriginalHeight(height);
 		widget.setLineHeight(LINE_HEIGHT);
 		widget.revalidate();

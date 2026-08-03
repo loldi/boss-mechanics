@@ -90,13 +90,60 @@ public class MechanicsDetailPreviewTest
 	 * pins the new numbers against each other rather than the client: the text block must still
 	 * fit inside the 235-tall column the window now hands this class, with nothing left over to
 	 * silently clip.
+	 *
+	 * <p>Tightened for the G1 text-inset fix (docs/DECISIONS.md D27): the real constraint is the
+	 * text area's own section-border <b>interior</b> (233), two pixels tighter than the column's
+	 * raw height (235), since {@code Widgets.sectionBorder} draws a 2px frame around the block.
 	 */
 	@Test
-	public void textBlockFitsInsideTheColumn()
+	public void textBlockFitsInsideTheSectionBorderInterior()
 	{
-		assertTrue("the text block (name, description, counterplay) must fit inside the "
-				+ "291x235 detail column without overrunning its bottom edge",
-			MechanicsDetail.COUNTERPLAY_Y + MechanicsDetail.COUNTERPLAY_HEIGHT <= MechanicsDetail.COLUMN_HEIGHT);
+		assertTrue("the text block (name, description, counterplay) must end at or before the "
+				+ "text area's own section-border interior, not just the column height, or the "
+				+ "border draws over the last pixels of counterplay (docs/DECISIONS.md D27, G1)",
+			MechanicsDetail.COUNTERPLAY_Y + MechanicsDetail.COUNTERPLAY_HEIGHT
+				<= MechanicsDetail.TEXT_AREA_INTERIOR_BOTTOM);
+	}
+
+	/**
+	 * G1 root cause (docs/DECISIONS.md D27): the name/description/counterplay text widgets used to
+	 * start at x=0, so the text area's own section border (drawn after the text, at x=0 and x=1)
+	 * overdrew the first two glyph columns of every line. Each text widget must now start inset
+	 * from the border.
+	 */
+	@Test
+	public void textWidgetsAreInsetFromTheBorder()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		detail.build();
+
+		List<Widget> textWidgets = widgetsThatCalled(column, "setLineHeight");
+		assertEquals("expected exactly the three text widgets (name, description, counterplay), "
+				+ "identified by their unique setLineHeight call",
+			3, textWidgets.size());
+		for (Widget widget : textWidgets)
+		{
+			int x = ((Integer) RecordingWidget.lastArgsOf(widget, "setOriginalX")[0]).intValue();
+			assertTrue("a text widget must not start at x=0, or the section border's left edge "
+					+ "draws over its first glyph columns (docs/DECISIONS.md D27, G1 fix)",
+				x >= 4);
+		}
+	}
+
+	private static List<Widget> widgetsThatCalled(Widget widget, String methodName)
+	{
+		List<Widget> found = new ArrayList<>();
+		if (RecordingWidget.callsOf(widget).contains(methodName))
+		{
+			found.add(widget);
+		}
+		for (Widget child : RecordingWidget.childrenOf(widget))
+		{
+			found.addAll(widgetsThatCalled(child, methodName));
+		}
+		return found;
 	}
 
 	/**
