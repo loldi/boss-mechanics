@@ -35,7 +35,10 @@
         { "type": "animation", "id": 4531 },
         { "type": "animation", "id": 5367 }
       ],
-      "preview": { "animationId": 4531, "staticFallback": false, "zoom": 4425, "shiftY": 63 }
+      "preview": {
+        "animationId": 4531, "staticFallback": false, "zoom": 4425, "shiftY": 63, "shiftX": -50,
+        "secondary": { "modelId": 29475, "animationId": 7115, "zoom": 1100, "shiftX": 90, "shiftY": 33 }
+      }
     },
     {
       "id": "spawn-summon",
@@ -57,7 +60,10 @@
       "detection": [
         { "type": "npc-spawn", "id": 5918 }
       ],
-      "preview": { "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 61 }
+      "preview": {
+        "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 61, "shiftX": -60,
+        "secondary": { "npcId": 5916, "animationId": 4524, "zoom": 650, "shiftX": 70, "shiftY": 50 }
+      }
     },
     {
       "id": "melee-combo",

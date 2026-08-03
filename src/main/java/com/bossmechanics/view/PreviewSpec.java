@@ -2,6 +2,7 @@ package com.bossmechanics.view;
 
 import com.bossmechanics.data.Mechanic;
 import com.bossmechanics.data.Preview;
+import com.bossmechanics.data.SecondaryPreview;
 import java.util.List;
 import lombok.Value;
 
@@ -46,6 +47,18 @@ public class PreviewSpec
 	 * resolution entirely when this is present.
 	 */
 	String sprite;
+	/**
+	 * Horizontal anchor offset pixels, resolved from {@link Preview#getShiftX()} (docs/
+	 * DECISIONS.md D27); 0 means no correction. Mirrors {@link #shiftY}'s mechanism sideways.
+	 */
+	int shiftX;
+	/**
+	 * A second model shown beside the primary one (docs/DECISIONS.md D27, shape (a)), resolved
+	 * from {@link Preview#getSecondary()}; null means no secondary. {@code com.bossmechanics.ui}
+	 * renders it exactly like the primary (its own modelId/npcId precedence, zoom, shiftX/shiftY),
+	 * just in a second pool slot.
+	 */
+	SecondaryPreviewSpec secondary;
 
 	/**
 	 * FORK, resolved (Option A, docs/DECISIONS.md D23): a static pose always wins over
@@ -72,23 +85,27 @@ public class PreviewSpec
 		String sprite = preview == null ? null : preview.getSprite();
 		if (sprite != null)
 		{
-			return new PreviewSpec(true, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, sprite);
+			return new PreviewSpec(true, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, sprite, 0, null);
 		}
 
 		int npcId = preview != null && preview.getNpcId() != null ? preview.getNpcId() : bossNpcIds.get(0);
 		int zoom = preview != null && preview.getZoom() != null ? preview.getZoom() : DEFAULT_ZOOM;
 		int shiftY = preview != null && preview.getShiftY() != null ? preview.getShiftY() : 0;
+		int shiftX = preview != null && preview.getShiftX() != null ? preview.getShiftX() : 0;
 		Integer modelId = preview == null ? null : preview.getModelId();
 
 		boolean staticFallback = preview != null && preview.isStaticFallback();
 		Integer animationId = preview == null ? null : preview.getAnimationId();
 		int resolvedAnimationId = staticFallback || animationId == null ? NO_ANIMATION : animationId;
 
-		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY, modelId, null);
+		SecondaryPreview secondaryData = preview == null ? null : preview.getSecondary();
+		SecondaryPreviewSpec secondary = secondaryData == null ? null : SecondaryPreviewSpec.of(secondaryData);
+
+		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY, modelId, null, shiftX, secondary);
 	}
 
 	public static PreviewSpec hidden()
 	{
-		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, null);
+		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, null, 0, null);
 	}
 }

@@ -313,7 +313,7 @@ public class DetectionEngineTest
 	static Mechanic mechanic(String id, String name, List<Trigger> detection)
 	{
 		return new Mechanic(id, name, "description", "counterplay", null, detection,
-			new Preview(null, null, false, null, null, null, null), null);
+			new Preview(null, null, false, null, null, null, null, null, null), null);
 	}
 
 	static Trigger trigger(String type, int id)

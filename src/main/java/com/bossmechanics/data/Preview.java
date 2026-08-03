@@ -38,4 +38,18 @@ public class Preview
 	 * distinctly-coloured model to render. Null means "no sprite; resolve the model as usual".
 	 */
 	String sprite;
+	/**
+	 * Horizontal anchor offset, in pixels; null means 0, i.e. centred (docs/DECISIONS.md D27).
+	 * Mirrors {@link #shiftY}'s mechanism but sideways: {@code com.bossmechanics.ui} grows the
+	 * pool widget's rect by twice this amount and shifts its origin, so the model's own centre
+	 * moves without ever losing coverage of the box. Introduced for {@link #secondary}: shifting
+	 * the primary and secondary previews apart is what keeps a two-model row from overlapping.
+	 */
+	Integer shiftX;
+	/**
+	 * A second model shown beside this one (docs/DECISIONS.md D27, secondary models, shape (a)),
+	 * e.g. Miasma Pools' body-plus-pool-effect or Scions' grown-scion-plus-spawn. Null means no
+	 * secondary model; most mechanics have none.
+	 */
+	SecondaryPreview secondary;
 }

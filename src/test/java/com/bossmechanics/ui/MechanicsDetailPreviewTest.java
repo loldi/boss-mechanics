@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
+import com.bossmechanics.view.SecondaryPreviewSpec;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -211,6 +212,118 @@ public class MechanicsDetailPreviewTest
 	}
 
 	/**
+	 * The horizontal anchor correction (docs/DECISIONS.md D27) mirrors shiftY's mechanism
+	 * sideways: width grows by twice the absolute shiftX and x moves the same amount, so the rect
+	 * always still covers the box while its centre moves off to one side.
+	 */
+	@Test
+	public void primaryModelWidgetRectReflectsShiftX()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		int shiftX = -50;
+		detail.show(unlockedRow("m1", 1, 500, 0, shiftX));
+
+		Widget model = findModelWidget(column);
+		assertEquals("width must grow by twice the absolute shiftX",
+			MechanicsDetail.COLUMN_WIDTH + (2 * Math.abs(shiftX)),
+			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalWidth")[0]).intValue());
+		assertEquals("x must move by shiftX minus its own absolute value, so the rect still covers "
+				+ "the box on the side shiftX moved away from",
+			shiftX - Math.abs(shiftX),
+			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Secondary models (docs/DECISIONS.md D27, shape (a)): a curated secondary is a second MODEL
+	 * widget shown alongside the primary, resolved through its own modelId/npcId precedence.
+	 */
+	@Test
+	public void secondaryModelCreatesASecondModelWidget()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
+
+		List<Widget> modelWidgets = widgetsThatCalled(column, "setModelId");
+		assertEquals("expected two MODEL widgets: one for the primary preview, one for the secondary",
+			2, modelWidgets.size());
+		assertTrue("expected one of the two MODEL widgets to carry the secondary's explicit modelId",
+			carriesModelId(modelWidgets, 29475));
+	}
+
+	/** docs/DECISIONS.md D27: re-showing a row whose secondary was already shown creates no new children. */
+	@Test
+	public void reselectingARowWithTheSameSecondaryCreatesNoNewChildren()
+	{
+		List<String> calls = new ArrayList<>();
+		Widget column = RecordingWidget.create(calls);
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
+		long createChildCallsSoFar = countCreateChild(calls);
+
+		detail.show(unlockedRowWithSecondary("m2", 1, 500, secondary));
+
+		assertEquals("re-showing the same secondary animation must reuse its widget, never create "
+				+ "a new one",
+			createChildCallsSoFar, countCreateChild(calls));
+	}
+
+	/** docs/DECISIONS.md D27: a row without a secondary hides whichever one was previously visible. */
+	@Test
+	public void rowWithoutASecondaryHidesThePreviouslyVisibleOne()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
+		detail.show(unlockedRow("m2", 2, 600));
+
+		Widget secondaryWidget = modelWidgetCarrying(column, 29475);
+		assertEquals("a row without a secondary must hide whichever secondary widget was "
+				+ "previously visible",
+			Boolean.TRUE, RecordingWidget.lastArgsOf(secondaryWidget, "setHidden")[0]);
+	}
+
+	private static boolean carriesModelId(List<Widget> widgets, int modelId)
+	{
+		for (Widget widget : widgets)
+		{
+			if (((Integer) RecordingWidget.lastArgsOf(widget, "setModelId")[0]).intValue() == modelId)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static Widget modelWidgetCarrying(Widget column, int modelId)
+	{
+		for (Widget widget : widgetsThatCalled(column, "setModelId"))
+		{
+			if (((Integer) RecordingWidget.lastArgsOf(widget, "setModelId")[0]).intValue() == modelId)
+			{
+				return widget;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Sprite previews (docs/DECISIONS.md D27): a bundled image resolves to a GRAPHIC pool widget
 	 * keyed by its resolved sprite id, and must never touch the npc -> model lookup lambda at all.
 	 */
@@ -361,20 +474,32 @@ public class MechanicsDetailPreviewTest
 
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY)
 	{
+		return unlockedRow(mechanicId, npcId, animationId, shiftY, 0);
+	}
+
+	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY, int shiftX)
+	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null));
 	}
 
 	private static MechanicRow unlockedRowWithModelId(String mechanicId, int modelId, int animationId)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null));
+			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null));
 	}
 
 	private static MechanicRow spriteRow(String mechanicId, String sprite)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite));
+			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null));
+	}
+
+	private static MechanicRow unlockedRowWithSecondary(String mechanicId, int npcId, int animationId,
+		SecondaryPreviewSpec secondary)
+	{
+		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary));
 	}
 
 	private static MechanicRow lockedRow()
