@@ -31,6 +31,13 @@ public class PreviewSpec
 	 * pool widget rect mutation, never a decision of its own.
 	 */
 	int shiftY;
+	/**
+	 * Explicit cache model id (docs/DECISIONS.md D27), resolved from {@link Preview#getModelId()};
+	 * null means "resolve the model from {@link #npcId} instead" (the existing behaviour).
+	 * {@code com.bossmechanics.ui} must use this directly, skipping its npc -> model lookup
+	 * entirely, when present.
+	 */
+	Integer modelId;
 
 	/**
 	 * FORK, resolved (Option A, docs/DECISIONS.md D23): a static pose always wins over
@@ -54,16 +61,17 @@ public class PreviewSpec
 		int npcId = preview != null && preview.getNpcId() != null ? preview.getNpcId() : bossNpcIds.get(0);
 		int zoom = preview != null && preview.getZoom() != null ? preview.getZoom() : DEFAULT_ZOOM;
 		int shiftY = preview != null && preview.getShiftY() != null ? preview.getShiftY() : 0;
+		Integer modelId = preview == null ? null : preview.getModelId();
 
 		boolean staticFallback = preview != null && preview.isStaticFallback();
 		Integer animationId = preview == null ? null : preview.getAnimationId();
 		int resolvedAnimationId = staticFallback || animationId == null ? NO_ANIMATION : animationId;
 
-		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY);
+		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY, modelId);
 	}
 
 	public static PreviewSpec hidden()
 	{
-		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0);
+		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null);
 	}
 }

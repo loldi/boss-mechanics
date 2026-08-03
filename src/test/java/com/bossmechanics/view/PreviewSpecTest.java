@@ -21,7 +21,7 @@ public class PreviewSpecTest
 	@Test
 	public void lockedIsNeverVisible()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null)), BOSS_NPC_IDS, true);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null)), BOSS_NPC_IDS, true);
 
 		assertFalse(spec.isVisible());
 	}
@@ -29,7 +29,7 @@ public class PreviewSpecTest
 	@Test
 	public void npcIdDefaultsToTheBossFirstNpcId()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(111, spec.getNpcId());
 	}
@@ -37,7 +37,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitNpcIdIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, 222, false, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, 222, false, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(222, spec.getNpcId());
 	}
@@ -45,7 +45,7 @@ public class PreviewSpecTest
 	@Test
 	public void staticFallbackWinsOverAPresentAnimationId()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, true, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, true, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(PreviewSpec.NO_ANIMATION, spec.getAnimationId());
 	}
@@ -53,7 +53,7 @@ public class PreviewSpecTest
 	@Test
 	public void missingAnimationIdFallsBackToAStaticPoseInsteadOfCrashing()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(null, null, false, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(null, null, false, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(PreviewSpec.NO_ANIMATION, spec.getAnimationId());
 	}
@@ -61,7 +61,7 @@ public class PreviewSpecTest
 	@Test
 	public void zoomDefaultsTo3000()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(PreviewSpec.DEFAULT_ZOOM, spec.getZoom());
 	}
@@ -69,7 +69,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitZoomIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, 1500, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, 1500, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(1500, spec.getZoom());
 	}
@@ -78,7 +78,7 @@ public class PreviewSpecTest
 	@Test
 	public void shiftYDefaultsToZero()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(0, spec.getShiftY());
 	}
@@ -91,9 +91,33 @@ public class PreviewSpecTest
 	@Test
 	public void explicitShiftYIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, 268)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, 268, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(268, spec.getShiftY());
+	}
+
+	/**
+	 * docs/DECISIONS.md D27, {@code preview.modelId} override: absent by default, so
+	 * {@code com.bossmechanics.ui} knows to resolve the model through the npc lookup instead.
+	 */
+	@Test
+	public void modelIdDefaultsToNull()
+	{
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null)), BOSS_NPC_IDS, false);
+
+		assertEquals(null, spec.getModelId());
+	}
+
+	/**
+	 * docs/DECISIONS.md D27: an explicit {@code preview.modelId} is carried through untouched, so
+	 * secondary models (and any mechanic whose distinct model needs no npc lookup) can bypass it.
+	 */
+	@Test
+	public void explicitModelIdIsHonored()
+	{
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, 17550)), BOSS_NPC_IDS, false);
+
+		assertEquals(Integer.valueOf(17550), spec.getModelId());
 	}
 
 	private static Mechanic mechanic(Preview preview)

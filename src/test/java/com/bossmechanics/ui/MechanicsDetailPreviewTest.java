@@ -184,6 +184,32 @@ public class MechanicsDetailPreviewTest
 			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalY")[0]).intValue());
 	}
 
+	/**
+	 * {@code preview.modelId} override (docs/DECISIONS.md D27): an explicit model id must be used
+	 * directly on the pool widget and must skip the npc -> model lookup lambda entirely, since
+	 * secondary models (and other non-npc-derived models) have no npc to resolve.
+	 */
+	@Test
+	public void explicitModelIdSkipsNpcResolution()
+	{
+		Widget column = RecordingWidget.create();
+		int[] modelForNpcCalls = new int[1];
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> {
+			modelForNpcCalls[0]++;
+			return npcId * 10;
+		});
+		detail.build();
+
+		detail.show(unlockedRowWithModelId("m1", 17550, 500));
+
+		Widget model = findModelWidget(column);
+		assertEquals("an explicit preview.modelId must be set directly on the pool widget",
+			17550, ((Integer) RecordingWidget.lastArgsOf(model, "setModelId")[0]).intValue());
+		assertEquals("an explicit preview.modelId must skip the npc->model lookup lambda entirely",
+			0, modelForNpcCalls[0]);
+	}
+
 	private static long countCreateChild(List<String> calls)
 	{
 		return calls.stream().filter("createChild"::equals).count();
@@ -251,7 +277,13 @@ public class MechanicsDetailPreviewTest
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null));
+	}
+
+	private static MechanicRow unlockedRowWithModelId(String mechanicId, int modelId, int animationId)
+	{
+		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
+			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId));
 	}
 
 	private static MechanicRow lockedRow()

@@ -23,4 +23,11 @@ public class Preview
 	 * cachetool's {@code FitZoom}, which now emits it alongside zoom).
 	 */
 	Integer shiftY;
+	/**
+	 * Explicit cache model id to show, bypassing the npc -> model lookup entirely (docs/
+	 * DECISIONS.md D27). Null means "resolve the model from {@code npcId} instead", the existing
+	 * behaviour. Curated for a model that has no npc to look it up from (e.g. a base spotanim
+	 * model), or that a curator otherwise wants to pin directly.
+	 */
+	Integer modelId;
 }

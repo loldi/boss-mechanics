@@ -213,6 +213,11 @@ final class MechanicsDetail
 	 * mutated every {@code show()} rather than only at pool-widget creation, because two specs
 	 * sharing one animation id (and so one pool widget) could in principle curate different
 	 * {@code shiftY} values.
+	 *
+	 * <p><b>The {@code modelId} override (docs/DECISIONS.md D27).</b> When
+	 * {@link PreviewSpec#getModelId()} is present it is used directly and {@link #modelForNpc} is
+	 * never called at all — some models (a base spotanim model, a secondary model) have no npc to
+	 * look them up from.
 	 */
 	private void showModel(PreviewSpec preview)
 	{
@@ -232,7 +237,8 @@ final class MechanicsDetail
 			visibleModel.revalidate();
 		}
 
-		int modelId = modelForNpc.applyAsInt(preview.getNpcId());
+		Integer explicitModelId = preview.getModelId();
+		int modelId = explicitModelId != null ? explicitModelId : modelForNpc.applyAsInt(preview.getNpcId());
 
 		widget.setModelId(modelId);
 		widget.setModelZoom(preview.getZoom());
