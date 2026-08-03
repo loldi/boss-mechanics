@@ -13,7 +13,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5912 }
       ],
-      "preview": { "animationId": 7106, "npcId": 5912, "staticFallback": false, "zoom": 3958 }
+      "preview": { "animationId": 7106, "npcId": 5912, "staticFallback": false, "zoom": 3958, "shiftY": 530 }
     },
     {
       "id": "respiratory-systems",
@@ -24,7 +24,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5914 }
       ],
-      "preview": { "npcId": 5914, "staticFallback": true, "zoom": 1200 }
+      "preview": { "npcId": 5914, "staticFallback": true, "zoom": 1200, "shiftY": 147 }
     },
     {
       "id": "miasma-pools",
@@ -35,7 +35,7 @@
         { "type": "animation", "id": 4531 },
         { "type": "animation", "id": 5367 }
       ],
-      "preview": { "animationId": 4531, "staticFallback": false, "zoom": 4425 }
+      "preview": { "animationId": 4531, "staticFallback": false, "zoom": 4425, "shiftY": 546 }
     },
     {
       "id": "spawn-summon",
@@ -47,7 +47,7 @@
         { "type": "animation", "id": 7095 },
         { "type": "npc-spawn", "id": 5916 }
       ],
-      "preview": { "animationId": 4530, "staticFallback": false, "zoom": 3550 }
+      "preview": { "animationId": 4530, "staticFallback": false, "zoom": 3550, "shiftY": 430 }
     },
     {
       "id": "scions",
@@ -57,7 +57,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5918 }
       ],
-      "preview": { "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635 }
+      "preview": { "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 76 }
     },
     {
       "id": "melee-combo",
@@ -71,7 +71,7 @@
         { "type": "animation", "id": 5751 },
         { "type": "animation", "id": 5755 }
       ],
-      "preview": { "animationId": 5751, "staticFallback": false, "zoom": 2225 }
+      "preview": { "animationId": 5751, "staticFallback": false, "zoom": 2225, "shiftY": 261 }
     },
     {
       "id": "safespot-dislodge",
@@ -82,7 +82,7 @@
       "detection": [
         { "type": "animation", "id": 5368 }
       ],
-      "preview": { "animationId": 5368, "staticFallback": false, "zoom": 2375 }
+      "preview": { "animationId": 5368, "staticFallback": false, "zoom": 2375, "shiftY": 284 }
     },
     {
       "id": "minion-surge",
@@ -94,7 +94,7 @@
         { "type": "animation", "id": 7096 },
         { "type": "npc-spawn", "id": 5891 }
       ],
-      "preview": { "animationId": 7096, "staticFallback": false, "zoom": 3875 }
+      "preview": { "animationId": 7096, "staticFallback": false, "zoom": 3875, "shiftY": 267 }
     },
     {
       "id": "apocalypse",
@@ -106,7 +106,7 @@
         { "type": "animation", "id": 7098 },
         { "type": "npc-spawn", "id": 5908 }
       ],
-      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 5350 }
+      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 5350, "shiftY": 451 }
     }
   ],
   "_note": "IDs are taken from RuneLite's gameval NpcID/AnimationID constants, so the numbers themselves are authoritative cache values. What still needs one live fight to confirm is the mapping: that each listed animation is the one the Sire actually plays for that mechanic, and that every trigger fires. See issue #9."
