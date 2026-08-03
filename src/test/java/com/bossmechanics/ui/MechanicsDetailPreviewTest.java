@@ -103,6 +103,13 @@ public class MechanicsDetailPreviewTest
 	 * The model box IS the frame the engine centres a MODEL widget's above-ground bounds inside,
 	 * every frame (docs/DECISIONS.md D25) — a pool widget whose own size drifts from the box's
 	 * would silently mis-centre, with no crash to catch it.
+	 *
+	 * <p>Amended for the vertical anchor fix (docs/DECISIONS.md D26): the engine actually anchors
+	 * a MODEL widget's ground line at the widget's own vertical centre, not the centre of its
+	 * animated bounds, so a curated {@code shiftY} grows the pool widget's rect downward
+	 * ({@code setOriginalHeight = MODEL_HEIGHT + 2*shiftY}, {@code setOriginalY} unchanged at 0)
+	 * to move that centre without tilting the model. Width is untouched by shiftY, so this still
+	 * catches the same box-size drift the original test existed for.
 	 */
 	@Test
 	public void modelPoolWidgetMatchesTheModelBoxSize()
@@ -112,15 +119,22 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
 		detail.build();
 
-		detail.show(unlockedRow("m1", 1, 500));
+		int shiftY = 30;
+		detail.show(unlockedRow("m1", 1, 500, shiftY));
 
 		Widget model = findModelWidget(column);
 		assertEquals("a pool widget's width must match the model box it is centered inside",
 			MechanicsDetail.COLUMN_WIDTH,
 			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalWidth")[0]).intValue());
-		assertEquals("a pool widget's height must match the model box it is centered inside",
-			MechanicsDetail.MODEL_HEIGHT,
+		assertEquals("a pool widget's height must grow by twice the curated shiftY (docs/"
+				+ "DECISIONS.md D26), which is what moves its vertical center down without tilting "
+				+ "the model",
+			MechanicsDetail.MODEL_HEIGHT + 2 * shiftY,
 			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalHeight")[0]).intValue());
+		assertEquals("a pool widget's y origin stays 0: the rect grows only downward from the "
+				+ "box's own top edge (docs/DECISIONS.md D26)",
+			0,
+			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalY")[0]).intValue());
 	}
 
 	private static long countCreateChild(List<String> calls)
@@ -184,8 +198,13 @@ public class MechanicsDetailPreviewTest
 
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId)
 	{
+		return unlockedRow(mechanicId, npcId, animationId, 0);
+	}
+
+	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY)
+	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY));
 	}
 
 	private static MechanicRow lockedRow()

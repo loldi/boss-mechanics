@@ -167,11 +167,21 @@ final class MechanicsDetail
 
 	/**
 	 * Gets or creates the pool widget for this spec's animation id (D24) and mutates only
-	 * {@code setModelId}/{@code setModelZoom}/{@code setHidden} on it — never {@code
-	 * setAnimationId}, which is set exactly once, at creation, in {@link #poolWidgetFor}. Hides
-	 * whatever pool widget was previously visible first, so at most one is ever shown at a time;
-	 * hides outright for a locked row or an npc this client has no model for, so a locked
+	 * {@code setModelId}/{@code setModelZoom}/{@code setHidden}/the rect (below) on it — never
+	 * {@code setAnimationId}, which is set exactly once, at creation, in {@link #poolWidgetFor}.
+	 * Hides whatever pool widget was previously visible first, so at most one is ever shown at a
+	 * time; hides outright for a locked row or an npc this client has no model for, so a locked
 	 * mechanic can never leak through the preview.
+	 *
+	 * <p><b>The vertical anchor correction (docs/DECISIONS.md D26).</b> The engine anchors an if3
+	 * MODEL widget's ground line (y=0) at the widget's own vertical centre, body extending
+	 * upward — not the centre of its animated bounds, which D25 assumed. A curated
+	 * {@code shiftY} moves that centre down by growing the widget's rect downward:
+	 * {@code setOriginalHeight(MODEL_HEIGHT + 2*shiftY)} with {@code setOriginalY} pinned at 0, so
+	 * the extra height only ever extends past the box's own bottom edge, never its top. This is
+	 * mutated every {@code show()} rather than only at pool-widget creation, because two specs
+	 * sharing one animation id (and so one pool widget) could in principle curate different
+	 * {@code shiftY} values.
 	 */
 	private void showModel(PreviewSpec preview)
 	{
@@ -195,6 +205,8 @@ final class MechanicsDetail
 
 		widget.setModelId(modelId);
 		widget.setModelZoom(preview.getZoom());
+		widget.setOriginalY(0);
+		widget.setOriginalHeight(MODEL_HEIGHT + 2 * preview.getShiftY());
 		widget.setHidden(modelId == UNKNOWN_MODEL);
 		widget.revalidate();
 
