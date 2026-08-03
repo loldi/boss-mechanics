@@ -57,13 +57,45 @@ public class BossMechanicsWindow
 	private static final int WINDOW_WIDTH = 512;
 	private static final int WINDOW_HEIGHT = 334;
 
-	/** Collection log close button, script 2240: 26x23 at (2,6) from the right, sprites 535/536. */
-	private static final int SPRITE_CLOSE = 535;
-	private static final int SPRITE_CLOSE_HOVER = 536;
-	private static final int CLOSE_WIDTH = 26;
-	private static final int CLOSE_HEIGHT = 23;
-	private static final int CLOSE_X = 2;
-	private static final int CLOSE_Y = 6;
+	/**
+	 * The full steel CA chrome (docs/DECISIONS.md D27, G2 fork resolved: full) draws its edge
+	 * sprites straddling the logical window's own border rather than sitting inside it (script
+	 * 228's own −15 offsets), so the root has to be this many pixels larger on every edge than the
+	 * 512x334 logical window, or the overhang would clip against the host. Nothing outside the
+	 * chrome ({@link #header}, {@link #progressBar}, {@link #columns}) ever sees this: they still
+	 * parent to the inner, exactly-512x334 {@code window} layer at coordinates unchanged from
+	 * before this decision.
+	 */
+	private static final int CHROME = 15;
+	private static final int ROOT_WIDTH = WINDOW_WIDTH + (2 * CHROME);
+	private static final int ROOT_HEIGHT = WINDOW_HEIGHT + (2 * CHROME);
+
+	/**
+	 * Script 228's own chrome: a stretched background, four corners, four tiled edges. Corner
+	 * sprite-to-corner assignment (TL/TR/BL/BR) and the edges' exact tiled span are this class's
+	 * own reasonable read of the plan's measured numbers, not independently re-verified pixel by
+	 * pixel — flagged for the live pass (docs/DECISIONS.md D27), same as D26's own open hedge.
+	 */
+	private static final int SPRITE_STEEL_BACKGROUND = 297;
+	private static final int SPRITE_STEEL_CORNER_TL = 310;
+	private static final int SPRITE_STEEL_CORNER_TR = 311;
+	private static final int SPRITE_STEEL_CORNER_BL = 312;
+	private static final int SPRITE_STEEL_CORNER_BR = 313;
+	private static final int SPRITE_STEEL_EDGE_TOP = 314;
+	private static final int SPRITE_STEEL_EDGE_RIGHT = 315;
+	private static final int SPRITE_STEEL_EDGE_LEFT = 172;
+	private static final int SPRITE_STEEL_EDGE_BOTTOM = 173;
+	private static final int STEEL_CORNER_WIDTH = 25;
+	private static final int STEEL_CORNER_HEIGHT = 30;
+	private static final int STEEL_EDGE_THICKNESS = 36;
+
+	/** Close button, script 4769: 21x21 at (7,7) from the logical top-right, sprites 2289/2290. */
+	private static final int SPRITE_CLOSE = 2289;
+	private static final int SPRITE_CLOSE_HOVER = 2290;
+	private static final int CLOSE_WIDTH = 21;
+	private static final int CLOSE_HEIGHT = 21;
+	private static final int CLOSE_X = 7;
+	private static final int CLOSE_Y = 7;
 
 	/**
 	 * The WIKI button, cache sprites 2420 (resting) and 2421 (hover), both 40x14 and both
@@ -95,8 +127,14 @@ public class BossMechanicsWindow
 	private static final int COLUMN_INSET = 6;
 	private static final int COLUMN_HEIGHT = CONTENT_HEIGHT - COLUMN_Y - COLUMN_INSET;
 
-	/** 621 HEADER_RECT1 child 22 fills the title bar with 0x585040. */
-	private static final int HEADER_COLOR = 0x585040;
+	/**
+	 * The full steel CA chrome drops the old filled title band (docs/DECISIONS.md D27, G2 fork
+	 * resolved: full): the title text sits directly on the steel background instead, orange,
+	 * matching script 228/4836's own recipe.
+	 */
+	private static final int HEADER_TITLE_Y = 6;
+	private static final int HEADER_TITLE_HEIGHT = 24;
+	private static final int HEADER_TITLE_INSET = 6;
 
 	/**
 	 * The Combat Achievements progress bar, script 4782, in draw order: an inner border, the
@@ -228,12 +266,14 @@ public class BossMechanicsWindow
 			deleteChildrenOf(host, root);
 		}
 
-		root.setOriginalWidth(WINDOW_WIDTH);
-		root.setOriginalHeight(WINDOW_HEIGHT);
+		// The root is now the full steel-chrome box, CHROME px larger on every edge than the
+		// 512x334 logical window (docs/DECISIONS.md D27, G2): it no longer carries noClickThrough
+		// itself, since the CHROME gutter around the logical window must pass clicks through to
+		// the game world exactly as the area outside our old window always did.
+		root.setOriginalWidth(ROOT_WIDTH);
+		root.setOriginalHeight(ROOT_HEIGHT);
 		root.setWidthMode(WidgetSizeMode.ABSOLUTE);
 		root.setHeightMode(WidgetSizeMode.ABSOLUTE);
-		// Without this the whole window is click-through and every click lands on the game world.
-		root.setNoClickThrough(true);
 		root.setHidden(false);
 
 		place(host);
@@ -245,10 +285,27 @@ public class BossMechanicsWindow
 		root.revalidate();
 		host.revalidate();
 
-		Widgets.frame(root, WINDOW_WIDTH, WINDOW_HEIGHT);
-		header(root, view);
-		progressBar(root, view);
-		columns(root, view);
+		// The steel chrome first, so the window's real content below draws over its inward
+		// overhang rather than the frame drawing over the content — the same "frame, then
+		// content" order Widgets.frame()/header()/progressBar()/columns() already relied on.
+		steelChrome(root);
+
+		// The exactly-512x334 logical window, offset by CHROME inside the enlarged root: every
+		// coordinate below this point (header/progressBar/columns) is unchanged from before D27.
+		Widget window = root.createChild(-1, WidgetType.LAYER);
+		window.setOriginalX(CHROME);
+		window.setOriginalY(CHROME);
+		window.setOriginalWidth(WINDOW_WIDTH);
+		window.setOriginalHeight(WINDOW_HEIGHT);
+		window.setWidthMode(WidgetSizeMode.ABSOLUTE);
+		window.setHeightMode(WidgetSizeMode.ABSOLUTE);
+		// Without this the whole window is click-through and every click lands on the game world.
+		window.setNoClickThrough(true);
+		window.revalidate();
+
+		header(window, view);
+		progressBar(window, view);
+		columns(window, view);
 
 		registerEscape();
 
@@ -344,7 +401,11 @@ public class BossMechanicsWindow
 		int y = WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, true),
 			collectionLog.getHeight(), WindowPlacement.offsetInRoot(host, true), WINDOW_HEIGHT);
 
-		return move(WidgetPositionMode.ABSOLUTE_LEFT, x, y);
+		// The steel-chrome root is CHROME px larger on every edge than the 512x334 logical window
+		// this origin covers the log with (docs/DECISIONS.md D27, G2): the root's own origin has
+		// to sit CHROME px up-left of it, so the logical window inside the root still lands here.
+		return move(WidgetPositionMode.ABSOLUTE_LEFT,
+			WindowPlacement.withChrome(x, CHROME), WindowPlacement.withChrome(y, CHROME));
 	}
 
 	private boolean move(int positionMode, int x, int y)
@@ -474,21 +535,54 @@ public class BossMechanicsWindow
 	{
 		Widget header = Widgets.layer(parent, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, HEADER_HEIGHT);
 
-		Widgets.filled(header, 0, 0, CONTENT_WIDTH, HEADER_HEIGHT, HEADER_COLOR);
-
-		// Centred across the full header, as the Combat Achievements screen centres its own
-		// title. Spanning the whole band rather than insetting keeps it centred on the window
-		// instead of on the space left over beside the close button.
-		Widget title = Widgets.text(header, view.title(), FontID.BOLD_12, Widgets.WHITE);
-		title.setOriginalX(0);
-		title.setOriginalWidth(CONTENT_WIDTH);
-		title.setOriginalHeight(HEADER_HEIGHT);
+		// No filled band (docs/DECISIONS.md D27, G2 fork resolved: full steel chrome): the title
+		// sits directly on the steel background (sprite 297), the same way script 228/4836's own
+		// CA title does. Centred across the header the same as before.
+		Widget title = Widgets.text(header, view.title(), FontID.BOLD_12, Widgets.ORANGE);
+		title.setOriginalX(HEADER_TITLE_INSET);
+		title.setOriginalY(HEADER_TITLE_Y);
+		title.setOriginalWidth(CONTENT_WIDTH - (2 * HEADER_TITLE_INSET));
+		title.setOriginalHeight(HEADER_TITLE_HEIGHT);
 		title.setXTextAlignment(WidgetTextAlignment.CENTER);
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
 		title.revalidate();
 
 		wikiButton(header);
 		closeButton(header);
+	}
+
+	/**
+	 * The full steel CA chrome (docs/DECISIONS.md D27, G2 fork resolved: full): background, four
+	 * corners, four tiled edges, all direct children of the enlarged {@code root} in root-local
+	 * coordinates so the edges' overhang (script 228's own −15 offsets) never clips against
+	 * anything outside our own tree. Purely visual — verified in the live pass, matching D26's own
+	 * precedent for the dim rectangle and the nine-slice frame, not with a color-pinning test.
+	 */
+	private void steelChrome(Widget root)
+	{
+		Widgets.sprite(root, SPRITE_STEEL_BACKGROUND, CHROME + 1, CHROME + 1,
+			WINDOW_WIDTH - 2, WINDOW_HEIGHT - 2, false);
+
+		Widgets.sprite(root, SPRITE_STEEL_CORNER_TL, CHROME, CHROME,
+			STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
+		Widgets.sprite(root, SPRITE_STEEL_CORNER_TR, ROOT_WIDTH - CHROME - STEEL_CORNER_WIDTH, CHROME,
+			STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
+		Widgets.sprite(root, SPRITE_STEEL_CORNER_BL, CHROME, ROOT_HEIGHT - CHROME - STEEL_CORNER_HEIGHT,
+			STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
+		Widgets.sprite(root, SPRITE_STEEL_CORNER_BR, ROOT_WIDTH - CHROME - STEEL_CORNER_WIDTH,
+			ROOT_HEIGHT - CHROME - STEEL_CORNER_HEIGHT, STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
+
+		int horizontalEdgeSpan = ROOT_WIDTH - (2 * (CHROME + STEEL_CORNER_WIDTH));
+		Widgets.sprite(root, SPRITE_STEEL_EDGE_TOP, CHROME + STEEL_CORNER_WIDTH, 0,
+			horizontalEdgeSpan, STEEL_EDGE_THICKNESS, true);
+		Widgets.sprite(root, SPRITE_STEEL_EDGE_BOTTOM, CHROME + STEEL_CORNER_WIDTH,
+			ROOT_HEIGHT - STEEL_EDGE_THICKNESS, horizontalEdgeSpan, STEEL_EDGE_THICKNESS, true);
+
+		int verticalEdgeSpan = ROOT_HEIGHT - (2 * (CHROME + STEEL_CORNER_HEIGHT));
+		Widgets.sprite(root, SPRITE_STEEL_EDGE_LEFT, 0, CHROME + STEEL_CORNER_HEIGHT,
+			STEEL_EDGE_THICKNESS, verticalEdgeSpan, true);
+		Widgets.sprite(root, SPRITE_STEEL_EDGE_RIGHT, ROOT_WIDTH - STEEL_EDGE_THICKNESS,
+			CHROME + STEEL_CORNER_HEIGHT, STEEL_EDGE_THICKNESS, verticalEdgeSpan, true);
 	}
 
 	private void toggleReveal()
