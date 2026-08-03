@@ -31,7 +31,11 @@ a 291x140 model box above its description, curated per mechanic to a zoom that
 fits the animation's full frame range and a vertical anchor correction so the
 model sits centred rather than riding high in the box; a `staticFallback`
 mechanic shows the npc's own idle pose (never a raw T-pose) instead, and a
-locked "???" row shows nothing. See
+locked "???" row shows nothing. The window now wears the real steel Combat
+Achievements chrome (frame, corners and title all pulled from the game's own
+sprites), and a mechanic's preview can also be a bundled sprite image (for the
+few moves whose colour the Widget API can't render live) or a second model
+shown alongside the first. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 
