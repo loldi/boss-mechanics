@@ -532,12 +532,19 @@ so new decisions are appended here rather than inserted in a themed section.
       below-ground extent as needing double the room (to stay conservative under the wrong
       centering assumption), which in the common case (`maxY <= 0`, no below-ground vertices) is
       already exactly the ground-anchored requirement; existing curated zoom values did not need
-      recomputing. `shiftY` is a new, separate quantity: `shiftY = -(minY + maxY) / 2` across the
-      same per-frame extents `zoom` is computed from (the model's own combined vertical envelope
-      across the whole animation, or the static pose). The cachetool's `FitZoom` now emits both
-      numbers together per npc/animation pair; all 15 preview blocks across both launch bosses
-      carry a curated `shiftY`, re-verified by rerunning `FitZoom` against the live cache rather
-      than trusting hand estimates (they landed within roughly 1%).
+      recomputing. `shiftY` is a new, separate quantity, and — like `zoom` itself — needs a model-
+      units-to-pixels projection: `shiftY_units = -(minY + maxY) / 2` across the same per-frame
+      extents `zoom` is computed from (the model's own combined vertical envelope across the whole
+      animation, or the static pose), then `shiftY = round(shiftY_units * 512 / zoom)` using the
+      preview's own zoom, the same `units * 512 / zoom` projection the fit-zoom recipe already
+      uses. **The baked value is in pixels, not model units** — `MechanicsDetail.showModel`
+      consumes it directly as `MODEL_HEIGHT + 2*shiftY` inside the 140px box, so a correctly
+      projected value can never exceed 70 (half the box); `BundledBossDataTest` now guards this.
+      The cachetool's `FitZoom` emits `shiftY_units` (the model-unit quantity, not yet projected)
+      alongside zoom; a curator does the `* 512 / zoom` conversion before pasting the value in, the
+      same way `zoom` itself already needed no such step because `FitZoom` projects zoom for you.
+      All 15 preview blocks across both launch bosses carry a curated, pixel-projected `shiftY`,
+      landing between 35 and 69px — comfortably inside the 70px ceiling.
     - **Open hedge, to resolve on the next in-game pass:** whether the *animated* draw path shares
       this ground-line anchor or actually centers on animated bounds (D25's original, now-suspect
       claim) was not re-confirmed in game for this change — every shipped animated preview from PR

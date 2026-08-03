@@ -40,6 +40,37 @@ public class BundledBossDataTest
 		assertEquals(idsOnDisk(), idsInIndex());
 	}
 
+	/**
+	 * {@code shiftY} is a PIXEL offset consumed directly by {@code MechanicsDetail.showModel}'s
+	 * rect mutation (docs/DECISIONS.md D26) — {@code setOriginalHeight(MODEL_HEIGHT + 2*shiftY)}
+	 * inside a 140px-tall box. A correctly-projected value can therefore never exceed half that
+	 * box, 70px; anything larger is almost certainly a raw model-unit value (what the cachetool's
+	 * {@code FitZoom} emits before the {@code shiftY_px = round(shiftY_units * 512 / zoom)}
+	 * projection) baked straight into the JSON without converting it.
+	 */
+	@Test
+	public void everyPreviewShiftYFitsInHalfTheModelBoxHeight()
+	{
+		// MechanicsDetail.MODEL_HEIGHT / 2 (140 / 2). Duplicated rather than referenced: that
+		// constant is package-private in a different package (ui), and this guard exists
+		// specifically so a stale copy here would need noticing before it could go stale.
+		int maxShiftYPixels = 70;
+
+		LoadResult result = new BossDataLoader(new Gson()).loadAll();
+		for (Boss boss : result.getBosses())
+		{
+			for (Mechanic mechanic : boss.getMechanics())
+			{
+				Preview preview = mechanic.getPreview();
+				int shiftY = preview == null || preview.getShiftY() == null ? 0 : preview.getShiftY();
+				assertTrue(boss.getId() + "/" + mechanic.getId() + ": shiftY " + shiftY
+						+ "px exceeds half the 140px model box (" + maxShiftYPixels + "px) — likely a "
+						+ "raw model-unit value baked without the units-to-pixels projection",
+					shiftY <= maxShiftYPixels);
+			}
+		}
+	}
+
 	private static Set<String> idsOnDisk() throws IOException
 	{
 		try (Stream<Path> files = Files.list(BOSSES_DIR))
