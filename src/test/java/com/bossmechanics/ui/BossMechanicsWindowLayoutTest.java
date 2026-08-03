@@ -17,6 +17,7 @@ import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetConfig;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.input.KeyManager;
@@ -115,6 +116,57 @@ public class BossMechanicsWindowLayoutTest
 				+ "old white-on-filled-band",
 			Widgets.ORANGE,
 			((Integer) RecordingWidget.lastArgsOf(title, "setTextColor")[0]).intValue());
+	}
+
+	/**
+	 * Issue #48, Slice 1 (the probe): pins the drag handle's wiring, which is the one unverified
+	 * engine assumption the whole feature rests on -- that a widget flagged draggable via
+	 * {@code setClickMask(... | WidgetConfig.DRAG)} is what actually makes the engine's drag
+	 * listener family fire, independent of {@code setOnDragListener} itself. Nothing about
+	 * placement is asserted here; that is deliberately deferred past this slice.
+	 */
+	@Test
+	public void dragHandleIsWiredForDragging() throws Exception
+	{
+		Widget host = RecordingWidget.create();
+		Client client = fakeClient(host);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		List<Widget> dragWidgets = new ArrayList<>();
+		collectWidgetsWithDragListener(host, dragWidgets);
+
+		assertEquals("expected exactly one widget wired with setOnDragListener "
+				+ "(BossMechanicsWindow.dragHandle())",
+			1, dragWidgets.size());
+
+		Widget dragHandle = dragWidgets.get(0);
+		Object[] clickMaskArgs = RecordingWidget.lastArgsOf(dragHandle, "setClickMask");
+		assertNotNull("the drag handle must call setClickMask", clickMaskArgs);
+
+		int clickMask = (Integer) clickMaskArgs[0];
+		assertTrue("the drag handle's click mask must include WidgetConfig.DRAG, or the engine's "
+				+ "drag listener family will very likely never fire",
+			(clickMask & WidgetConfig.DRAG) != 0);
+	}
+
+	/** Depth-first search for every widget in the tree wired with {@code setOnDragListener}. */
+	private static void collectWidgetsWithDragListener(Widget widget, List<Widget> into)
+	{
+		if (RecordingWidget.listenerOf(widget, "setOnDragListener") != null)
+		{
+			into.add(widget);
+		}
+		for (Widget child : RecordingWidget.childrenOf(widget))
+		{
+			collectWidgetsWithDragListener(child, into);
+		}
 	}
 
 	/** Depth-first search for the widget whose most recent {@code setAction(0, action)} matches. */
