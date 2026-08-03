@@ -394,6 +394,12 @@ public class BossMechanicsWindow
 		// selectedMechanicId and previousBossId deliberately survive: reopening the same boss's
 		// screen puts you back on the row you were reading, and Selection resets it for any other.
 
+		// dragOffsetX/Y survive too (D29, session lifetime), but the in-progress flag must not: a
+		// gesture interrupted by Esc or by the log closing never gets its completion event, and a
+		// stale `dragging` would make the next gesture's first event continue from a dead baseline
+		// and jump the window.
+		dragging = false;
+
 		if (root != null)
 		{
 			root.setHidden(true);

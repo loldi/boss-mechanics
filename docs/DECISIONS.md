@@ -847,7 +847,11 @@ so new decisions are appended here rather than inserted in a themed section.
       player-visible reason to outlive the session, so persisting it would be a config key nobody
       asked for. It forgets on client restart with no code to make that happen: a restart is a
       fresh plugin instance with fresh, zero-valued fields, the same reason `selectedMechanicId`
-      needs no explicit reset there either.
+      needs no explicit reset there either. The **in-progress** flag is the one piece of drag state
+      that does NOT get that lifetime: `close()` clears `dragging` explicitly, because a gesture
+      interrupted by Esc or by the collection log closing never receives its completion event, and a
+      stale flag would make the next gesture's first event continue from a dead baseline and jump
+      the window. Offsets persist; a half-finished gesture does not.
     - **Resize remains out.** D22's third symptom already resolved "should the window resize" as a
       non-fix, since the Combat Achievements screen this window mirrors (D21) is itself fixed-size;
       this slice only repositions the fixed-size window, and issue #48 is where that evidence and
