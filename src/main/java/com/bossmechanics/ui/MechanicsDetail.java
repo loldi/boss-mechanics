@@ -5,6 +5,7 @@ import com.bossmechanics.view.PreviewSpec;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
+import java.util.function.ToIntFunction;
 import net.runelite.api.FontID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
@@ -70,6 +71,19 @@ final class MechanicsDetail
 	private static final int UNKNOWN_MODEL = -1;
 
 	/**
+	 * Sprite previews (docs/DECISIONS.md D27): a bundled PNG shown in place of a model, exactly
+	 * filling the model box's own interior inside its 2px section border (287x136 = 291x140 minus
+	 * a 2px inset on every edge).
+	 */
+	private static final int SPRITE_X = 2;
+	private static final int SPRITE_Y = 2;
+	private static final int SPRITE_WIDTH = COLUMN_WIDTH - (2 * SPRITE_X);
+	private static final int SPRITE_HEIGHT = MODEL_HEIGHT - (2 * SPRITE_Y);
+
+	/** {@link ToIntFunction#applyAsInt} result meaning "no sprite registered for this name". */
+	private static final int UNKNOWN_SPRITE = -1;
+
+	/**
 	 * G1 fix (docs/DECISIONS.md D27): the text area's own section border starts here, one pixel
 	 * above the old {@code NAME_Y}, so the name's top row of glyphs no longer shares a scanline
 	 * with the border's top edge.
@@ -107,6 +121,7 @@ final class MechanicsDetail
 
 	private final Widget column;
 	private final IntUnaryOperator modelForNpc;
+	private final ToIntFunction<String> spriteIdForName;
 
 	/** The LAYER every pool widget is created under (D19: nested dynamic children need a LAYER). */
 	private Widget modelBox;
@@ -121,6 +136,18 @@ final class MechanicsDetail
 	/** The pool widget the previous {@link #show} left on screen, or null if none is. */
 	private Widget visibleModel;
 
+	/**
+	 * One GRAPHIC widget per distinct resolved sprite id (docs/DECISIONS.md D27), created lazily
+	 * on first use, mirroring the model pool's discipline: {@code setSpriteId} is called once, at
+	 * creation, and never again. GRAPHIC widgets carry no frame counter, so D24's ban doesn't
+	 * technically bind here, but keeping the same set-once shape avoids a second pattern to reason
+	 * about for what is otherwise the model pool's twin.
+	 */
+	private final Map<Integer, Widget> spritePool = new HashMap<>();
+
+	/** The sprite pool widget the previous {@link #show} left on screen, or null if none is. */
+	private Widget visibleSprite;
+
 	private Widget name;
 	private Widget description;
 	private Widget counterplay;
@@ -131,11 +158,15 @@ final class MechanicsDetail
 	 * @param modelForNpc resolves an npc id to the cache model id to render ({@link #UNKNOWN_MODEL}
 	 *     if none); supplied as a lambda so this package never imports
 	 *     {@code client.getNpcDefinition()}
+	 * @param spriteIdForName resolves a bundled sprite resource name to its registered (negative)
+	 *     sprite id ({@link #UNKNOWN_SPRITE} if none); supplied as a lambda so this package never
+	 *     imports {@code ImageUtil} or {@code client.getSpriteOverrides()} (docs/DECISIONS.md D27)
 	 */
-	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc)
+	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc, ToIntFunction<String> spriteIdForName)
 	{
 		this.column = column;
 		this.modelForNpc = modelForNpc;
+		this.spriteIdForName = spriteIdForName;
 	}
 
 	void build()
@@ -188,7 +219,20 @@ final class MechanicsDetail
 		set(description, row == null ? "" : row.getDescription());
 		set(counterplay, row == null ? "" : row.getCounterplay());
 
-		showModel(row == null ? PreviewSpec.hidden() : row.getPreview());
+		PreviewSpec preview = row == null ? PreviewSpec.hidden() : row.getPreview();
+
+		// Sprite tier (docs/DECISIONS.md D27): wins over the model slot entirely. Only one of the
+		// two is ever shown, so switching between them hides whichever one the new spec doesn't use.
+		if (preview.getSprite() != null)
+		{
+			hideVisibleModel();
+			showSprite(preview.getSprite());
+		}
+		else
+		{
+			hideVisibleSprite();
+			showModel(preview);
+		}
 
 		dim.setHidden(row == null || !row.isLocked());
 		dim.revalidate();
@@ -258,6 +302,58 @@ final class MechanicsDetail
 			visibleModel.revalidate();
 			visibleModel = null;
 		}
+	}
+
+	/**
+	 * Gets or creates the sprite pool entry for {@code spriteName}'s resolved id and shows it,
+	 * hiding whatever sprite widget was previously visible first (mirroring {@link #showModel}).
+	 * An unknown name resolves to {@link #UNKNOWN_SPRITE}, which hides the widget instead of
+	 * drawing garbage — the same sentinel-hides idiom {@link #showModel} uses for
+	 * {@link #UNKNOWN_MODEL} (docs/DECISIONS.md D27).
+	 */
+	private void showSprite(String spriteName)
+	{
+		int spriteId = spriteIdForName.applyAsInt(spriteName);
+		Widget widget = spritePool.computeIfAbsent(spriteId, this::createSpriteWidget);
+
+		if (visibleSprite != null && visibleSprite != widget)
+		{
+			visibleSprite.setHidden(true);
+			visibleSprite.revalidate();
+		}
+
+		widget.setHidden(spriteId == UNKNOWN_SPRITE);
+		widget.revalidate();
+
+		visibleSprite = widget;
+	}
+
+	private void hideVisibleSprite()
+	{
+		if (visibleSprite != null)
+		{
+			visibleSprite.setHidden(true);
+			visibleSprite.revalidate();
+			visibleSprite = null;
+		}
+	}
+
+	/**
+	 * The pool entry for {@code spriteId}, creating it on first use. {@code setSpriteId} is called
+	 * here, once, mirroring the model pool's set-once discipline (D24) even though a GRAPHIC
+	 * widget carries no frame counter to corrupt.
+	 */
+	private Widget createSpriteWidget(int spriteId)
+	{
+		Widget widget = modelBox.createChild(-1, WidgetType.GRAPHIC);
+		widget.setOriginalX(SPRITE_X);
+		widget.setOriginalY(SPRITE_Y);
+		widget.setOriginalWidth(SPRITE_WIDTH);
+		widget.setOriginalHeight(SPRITE_HEIGHT);
+		widget.setSpriteTiling(false);
+		widget.setSpriteId(spriteId);
+		widget.revalidate();
+		return widget;
 	}
 
 	/**

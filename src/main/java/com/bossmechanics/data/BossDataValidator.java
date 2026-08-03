@@ -101,8 +101,11 @@ final class BossDataValidator
 				errors.add(expectedId + ": " + label + ": preview is required");
 			}
 			// Issue #6, docs/DECISIONS.md D23: with no animationId and no static pose to fall
-			// back to, the model box would have nothing to render.
-			else if (!mechanic.getPreview().isStaticFallback() && mechanic.getPreview().getAnimationId() == null)
+			// back to, the model box would have nothing to render. Docs/DECISIONS.md D27: a
+			// sprite preview carries no model fields at all, so it is exempt -- the sprite tier
+			// wins over every model field, including this requirement.
+			else if (mechanic.getPreview().getSprite() == null
+				&& !mechanic.getPreview().isStaticFallback() && mechanic.getPreview().getAnimationId() == null)
 			{
 				errors.add(expectedId + ": " + label
 					+ ": preview.animationId is required when staticFallback is false");

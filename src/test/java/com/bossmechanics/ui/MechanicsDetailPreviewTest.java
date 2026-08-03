@@ -26,7 +26,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
 		// A long animation, played a while, then a shorter one: the crash pair family from the
@@ -49,7 +49,7 @@ public class MechanicsDetailPreviewTest
 		List<String> calls = new ArrayList<>();
 		Widget column = RecordingWidget.create(calls);
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
 		detail.show(unlockedRow("m1", 1, 500));
@@ -71,7 +71,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
 		// An unlocked row first, so the model widget is identifiable below by its setModelId
@@ -116,7 +116,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
 		List<Widget> textWidgets = widgetsThatCalled(column, "setLineHeight");
@@ -163,7 +163,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
 		int shiftY = 30;
@@ -198,7 +198,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> {
 			modelForNpcCalls[0]++;
 			return npcId * 10;
-		});
+		}, name -> -1);
 		detail.build();
 
 		detail.show(unlockedRowWithModelId("m1", 17550, 500));
@@ -208,6 +208,91 @@ public class MechanicsDetailPreviewTest
 			17550, ((Integer) RecordingWidget.lastArgsOf(model, "setModelId")[0]).intValue());
 		assertEquals("an explicit preview.modelId must skip the npc->model lookup lambda entirely",
 			0, modelForNpcCalls[0]);
+	}
+
+	/**
+	 * Sprite previews (docs/DECISIONS.md D27): a bundled image resolves to a GRAPHIC pool widget
+	 * keyed by its resolved sprite id, and must never touch the npc -> model lookup lambda at all.
+	 */
+	@Test
+	public void spritePreviewCreatesOneGraphicWidgetAndNeverInvokesModelForNpc()
+	{
+		Widget column = RecordingWidget.create();
+		int[] modelForNpcCalls = new int[1];
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> {
+			modelForNpcCalls[0]++;
+			return npcId * 10;
+		}, name -> -3517000);
+		detail.build();
+
+		detail.show(spriteRow("m1", "venomous-dragonfire.png"));
+
+		Widget sprite = findSpritePreviewWidget(column);
+		assertEquals("expected the sprite preview widget to carry the resolved sprite id", -3517000,
+			((Integer) RecordingWidget.lastArgsOf(sprite, "setSpriteId")[0]).intValue());
+		assertEquals("a sprite spec must never invoke the npc->model lookup lambda",
+			0, modelForNpcCalls[0]);
+	}
+
+	/** docs/DECISIONS.md D27: re-showing the same sprite must reuse its pool widget. */
+	@Test
+	public void reselectingTheSameSpriteCreatesNoNewChildren()
+	{
+		List<String> calls = new ArrayList<>();
+		Widget column = RecordingWidget.create(calls);
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -3517000);
+		detail.build();
+
+		detail.show(spriteRow("m1", "venomous-dragonfire.png"));
+		long createChildCallsSoFar = countCreateChild(calls);
+
+		detail.show(spriteRow("m2", "venomous-dragonfire.png"));
+
+		assertEquals("re-showing the same sprite must reuse its widget, never create a new one",
+			createChildCallsSoFar, countCreateChild(calls));
+	}
+
+	/** docs/DECISIONS.md D27: the sprite and model slots are mutually exclusive on screen. */
+	@Test
+	public void switchingFromSpriteToModelHidesTheSpriteWidget()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -3517000);
+		detail.build();
+
+		detail.show(spriteRow("m1", "venomous-dragonfire.png"));
+		detail.show(unlockedRow("m2", 1, 500));
+
+		Widget sprite = findSpritePreviewWidget(column);
+		assertEquals("switching to a model row must hide the previously visible sprite widget",
+			Boolean.TRUE, RecordingWidget.lastArgsOf(sprite, "setHidden")[0]);
+	}
+
+	/**
+	 * The sprite preview widget is the only one in the tree that calls
+	 * {@code setSpriteTiling(false)} -- the model box's own sprite-1040 backdrop (D26) also calls
+	 * {@code setSpriteId}, but tiled ({@code true}), so a plain "who called setSpriteId" search
+	 * finds the backdrop first.
+	 */
+	private static Widget findSpritePreviewWidget(Widget widget)
+	{
+		Object[] args = RecordingWidget.lastArgsOf(widget, "setSpriteTiling");
+		if (args != null && args.length == 1 && Boolean.FALSE.equals(args[0]))
+		{
+			return widget;
+		}
+		for (Widget child : RecordingWidget.childrenOf(widget))
+		{
+			Widget found = findSpritePreviewWidget(child);
+			if (found != null)
+			{
+				return found;
+			}
+		}
+		return null;
 	}
 
 	private static long countCreateChild(List<String> calls)
@@ -277,13 +362,19 @@ public class MechanicsDetailPreviewTest
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null));
 	}
 
 	private static MechanicRow unlockedRowWithModelId(String mechanicId, int modelId, int animationId)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId));
+			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null));
+	}
+
+	private static MechanicRow spriteRow(String mechanicId, String sprite)
+	{
+		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
+			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite));
 	}
 
 	private static MechanicRow lockedRow()

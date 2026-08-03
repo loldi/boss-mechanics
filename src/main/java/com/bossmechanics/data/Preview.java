@@ -30,4 +30,12 @@ public class Preview
 	 * model), or that a curator otherwise wants to pin directly.
 	 */
 	Integer modelId;
+	/**
+	 * Bundled sprite resource name under {@code src/main/resources/sprites/} (docs/DECISIONS.md
+	 * D27), e.g. {@code "venomous-dragonfire.png"}. When present it wins over every model field
+	 * (sprite &gt; modelId &gt; npcId+animationId &gt; idle &gt; raw pose): the loaded PNG is shown
+	 * instead of any resolved model, for the (rare) case where the game cache genuinely has no
+	 * distinctly-coloured model to render. Null means "no sprite; resolve the model as usual".
+	 */
+	String sprite;
 }

@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.ToIntFunction;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -191,6 +192,15 @@ public class BossMechanicsWindow
 	private Consumer<String> onMechanicSelected;
 	private Consumer<String> onWikiOpened;
 
+	/**
+	 * Resolves a bundled sprite resource name to its registered (negative) sprite id (docs/
+	 * DECISIONS.md D27). Defaults to "nothing registered" so a window built before the plugin
+	 * calls {@link #setSpriteIdForName} (or in a test) never NPEs; the plugin sets the real lookup
+	 * once at startup, after registering every sprite via {@code ImageUtil} +
+	 * {@code client.getSpriteOverrides()} -- kept out of this package, which stays ImageUtil-free.
+	 */
+	private ToIntFunction<String> spriteIdForName = name -> -1;
+
 	private final KeyListener escapeListener = new EscapeToClose();
 	private boolean escapeListenerRegistered;
 
@@ -217,6 +227,14 @@ public class BossMechanicsWindow
 	public void setOnWikiOpened(Consumer<String> onWikiOpened)
 	{
 		this.onWikiOpened = onWikiOpened;
+	}
+
+	/**
+	 * @see #spriteIdForName
+	 */
+	public void setSpriteIdForName(ToIntFunction<String> spriteIdForName)
+	{
+		this.spriteIdForName = spriteIdForName;
 	}
 
 	public void onPluginStart()
@@ -643,7 +661,7 @@ public class BossMechanicsWindow
 		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal);
 		mechanicsList.build();
 
-		mechanicsDetail = new MechanicsDetail(detail, this::modelForNpc);
+		mechanicsDetail = new MechanicsDetail(detail, this::modelForNpc, spriteIdForName);
 		mechanicsDetail.build();
 	}
 

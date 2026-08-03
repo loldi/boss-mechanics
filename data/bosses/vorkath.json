@@ -39,7 +39,7 @@
         { "type": "projectile", "id": 1484 },
         { "type": "npc-spawn", "id": 8063 }
       ],
-      "preview": { "animationId": 7948, "npcId": 8061, "staticFallback": false, "zoom": 2196, "shiftY": 62 }
+      "preview": { "sprite": "zombified-spawn.png" }
     },
     {
       "id": "venomous-dragonfire",
@@ -49,17 +49,17 @@
       "detection": [
         { "type": "projectile", "id": 1470 }
       ],
-      "preview": { "animationId": 7948, "npcId": 8061, "staticFallback": false, "zoom": 2196, "shiftY": 62 }
+      "preview": { "sprite": "venomous-dragonfire.png" }
     },
     {
       "id": "corrupting-dragonfire",
       "name": "Corrupting Dragonfire",
-      "description": "A white dragonfire breath that switches off every prayer the moment it lands.",
+      "description": "A pink dragonfire breath that switches off every prayer the moment it lands.",
       "counterplay": "Set quick-prayers and flick them straight back on. Use divine potions, which the drain can't touch.",
       "detection": [
         { "type": "projectile", "id": 1471 }
       ],
-      "preview": { "animationId": 7948, "npcId": 8061, "staticFallback": false, "zoom": 2196, "shiftY": 62 }
+      "preview": { "sprite": "corrupting-dragonfire.png" }
     },
     {
       "id": "acid-phase",
