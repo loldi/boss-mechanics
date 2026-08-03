@@ -67,6 +67,17 @@ public class BundledBossDataTest
 						+ "px exceeds half the 140px model box (" + maxShiftYPixels + "px) — likely a "
 						+ "raw model-unit value baked without the units-to-pixels projection",
 					shiftY <= maxShiftYPixels);
+
+				// The secondary model's shiftY is the same pixel offset in the same box, so it can
+				// go stale in exactly the same way and needs the same guard.
+				SecondaryPreview secondary = preview == null ? null : preview.getSecondary();
+				int secondaryShiftY = secondary == null || secondary.getShiftY() == null
+					? 0 : secondary.getShiftY();
+				assertTrue(boss.getId() + "/" + mechanic.getId() + ": secondary shiftY "
+						+ secondaryShiftY + "px exceeds half the 140px model box ("
+						+ maxShiftYPixels + "px) — likely a raw model-unit value baked without the "
+						+ "units-to-pixels projection",
+					secondaryShiftY <= maxShiftYPixels);
 			}
 		}
 	}

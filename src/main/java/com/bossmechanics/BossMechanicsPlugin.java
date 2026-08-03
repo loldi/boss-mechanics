@@ -154,7 +154,10 @@ public class BossMechanicsPlugin extends Plugin
 		eventBus.register(collectionLogButton);
 		collectionLogButton.onPluginStart();
 
-		registerSprites();
+		// The override map and the widget sprite cache are read by the render loop, so both the
+		// register here and the unregister in shutDown() hop to the client thread rather than
+		// mutating them from the EDT that runs these two methods.
+		clientThread.invokeLater(this::registerSprites);
 
 		bossMechanicsWindow.setOnRevealToggled(this::setRevealed);
 		bossMechanicsWindow.setOnWikiOpened(this::openWiki);
@@ -175,7 +178,7 @@ public class BossMechanicsPlugin extends Plugin
 		bossMechanicsWindow.onPluginStop();
 		eventBus.unregister(bossMechanicsWindow);
 
-		unregisterSprites();
+		clientThread.invokeLater(this::unregisterSprites);
 	}
 
 	/**

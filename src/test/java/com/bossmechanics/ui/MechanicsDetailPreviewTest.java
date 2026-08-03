@@ -385,6 +385,26 @@ public class MechanicsDetailPreviewTest
 	}
 
 	/**
+	 * docs/DECISIONS.md D27: a sprite name with no registered id resolves to the unknown sentinel,
+	 * which must hide the widget rather than draw sprite -1. Only reachable if a bundled resource
+	 * fails to register at runtime, which no data test can catch.
+	 */
+	@Test
+	public void anUnregisteredSpriteNameHidesTheSpriteWidget()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		detail.show(spriteRow("m1", "never-registered.png"));
+
+		Widget sprite = findSpritePreviewWidget(column);
+		assertEquals("an unregistered sprite name must hide the widget, never draw the sentinel id",
+			Boolean.TRUE, RecordingWidget.lastArgsOf(sprite, "setHidden")[0]);
+	}
+
+	/**
 	 * The sprite preview widget is the only one in the tree that calls
 	 * {@code setSpriteTiling(false)} -- the model box's own sprite-1040 backdrop (D26) also calls
 	 * {@code setSpriteId}, but tiled ({@code true}), so a plain "who called setSpriteId" search

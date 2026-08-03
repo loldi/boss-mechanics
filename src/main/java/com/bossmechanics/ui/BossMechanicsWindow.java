@@ -551,7 +551,10 @@ public class BossMechanicsWindow
 
 	private void header(Widget parent, MechanicsView view)
 	{
-		Widget header = Widgets.layer(parent, CONTENT_X, CONTENT_Y, CONTENT_WIDTH, HEADER_HEIGHT);
+		// Spans the whole logical window rather than the 9px-inset content box, so the title's y 6
+		// and the close button's (7,7) are the *logical* offsets script 228/4769 use. Insetting the
+		// band would push both 9px in from where the real CA screen puts them.
+		Widget header = Widgets.layer(parent, 0, 0, WINDOW_WIDTH, HEADER_HEIGHT);
 
 		// No filled band (docs/DECISIONS.md D27, G2 fork resolved: full steel chrome): the title
 		// sits directly on the steel background (sprite 297), the same way script 228/4836's own
@@ -559,7 +562,7 @@ public class BossMechanicsWindow
 		Widget title = Widgets.text(header, view.title(), FontID.BOLD_12, Widgets.ORANGE);
 		title.setOriginalX(HEADER_TITLE_INSET);
 		title.setOriginalY(HEADER_TITLE_Y);
-		title.setOriginalWidth(CONTENT_WIDTH - (2 * HEADER_TITLE_INSET));
+		title.setOriginalWidth(WINDOW_WIDTH - (2 * HEADER_TITLE_INSET));
 		title.setOriginalHeight(HEADER_TITLE_HEIGHT);
 		title.setXTextAlignment(WidgetTextAlignment.CENTER);
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
@@ -758,7 +761,9 @@ public class BossMechanicsWindow
 	 */
 	private void wikiButton(Widget header)
 	{
-		int y = (HEADER_HEIGHT - WIKI_HEIGHT) / 2;
+		// Centred on the close button's own row rather than on the band, so the two read as one
+		// group of header buttons the way the CA screen's do.
+		int y = CLOSE_Y + ((CLOSE_HEIGHT - WIKI_HEIGHT) / 2);
 		Widget button = Widgets.sprite(header, SPRITE_WIKI, WIKI_X, y, WIKI_WIDTH, WIKI_HEIGHT, false);
 		button.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
 		button.setAction(0, "Open");
