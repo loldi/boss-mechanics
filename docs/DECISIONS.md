@@ -437,6 +437,63 @@ so new decisions are appended here rather than inserted in a themed section.
       same value" from "set twice, different values" needs the full call history, not just the most
       recent call. `lockedRowHidesTheModelWidget` is unchanged.
 
+25. **Model preview oversizing, root-caused from the cache and injected-client bytecode after D24
+    shipped (PR #44); corrects D14/D23's "zoom ~3000" rough guidance with a real fit recipe.**
+    Playtesting every animated preview across both launch bosses showed each one rendering
+    oversized, cropped by the 291x110 box rather than framed inside it — not a mis-anchor, a wrong
+    zoom for that mechanic's own animation.
+
+    - **The engine fact, verified from injected-client bytecode: an if3 MODEL widget's draw call
+      auto-centers its above-ground bounds on the widget's own center, every single frame.** There
+      is no anchor point to set on our side; the client always re-centers. Projected size on
+      screen is approximately `units x 512 / zoom`, so "oversized" and "off-center" were always the
+      same symptom read two ways — get the zoom right for the box and the centering takes care of
+      itself.
+    - **Upstream `runelite-api` gap.** The cache format carries `offsetX2d`/`offsetY2d` fields for
+      a model widget, but the published API exposes no setter for either. The fix is therefore
+      zoom and box geometry only; there is no offset knob to reach for.
+    - **The fit-zoom recipe:** for every frame of a mechanic's full animation sequence,
+      `zoom = 512 * max(2 * maxAbsX / 291, (heightAbove + 2 * heightBelow) / 140)`, then take the
+      worst (largest) zoom needed across the whole sequence and add a 10% margin. `291`/`140` are
+      the model box's own width/height (below), so the formula moves if the box ever does.
+      Computed offline, per mechanic, by a `FitZoom` `main()` that reads the same cache the rest of
+      curation does; it deliberately lives OUTSIDE this repo (a cachetool script, not shipped code,
+      the same runtime/curation-tooling split D5 already draws for wiki research) — a curator runs
+      it once and pastes the resulting number into the JSON. `data/SCHEMA.md`'s zoom row carries
+      the formula itself so a future curator doesn't have to find this decision first. All 15
+      preview blocks across Abyssal Sire and Vorkath now carry an explicit, recipe-derived zoom;
+      `PreviewSpec.DEFAULT_ZOOM` (3000) stays only as the absent-field fallback, not a value any
+      shipped mechanic actually relies on.
+    - **FORK 1, resolved by Andrew: Option B, WIKI moved to the title bar.** It sat in
+      `MechanicsDetail`'s own header band since D21; that band is now removed, and the WIKI button
+      lives beside the close button in the window's title bar instead, freeing the 23px the band
+      used to occupy. `MechanicsDetail`'s constructor drops both the header widget and the
+      `onWikiOpened` callback it used to take; `BossMechanicsWindow.header()` builds the button
+      directly, wired to the same `openWiki()`/`setOnWikiOpened` plugin seam D21 established.
+      Pinned by `BossMechanicsWindowLayoutTest.wikiClickReportsTheBossId`, which drives the button
+      through its recorded op listener and asserts the boss id reaches the seam — previously
+      unpinned.
+    - **FORK 2, resolved by Andrew: accept Vorkath's wide aspect.** The model box stays a fixed
+      291x140 for every boss rather than growing width per npc to fit a naturally wide silhouette
+      (Vorkath's wingspan); a wide boss instead gets a wider (weaker) zoom, same recipe, same box.
+      Grown from 291x110 to 291x140: Fork 1's now-removed header band freed 23px, and all of it
+      went to the box rather than being split between box and text. `MechanicsDetail.COLUMN_HEIGHT`
+      (235) and `MODEL_HEIGHT` (140) are both package-visible so
+      `MechanicsDetailPreviewTest.textBlockFitsInsideTheColumn` can assert the name/description/
+      counterplay block still fits inside the taller box's leftover space without a live widget
+      tree, and `modelPoolWidgetMatchesTheModelBoxSize` asserts every pool widget's own
+      `setOriginalWidth`/`setOriginalHeight` still match the box exactly — the engine only
+      re-centers correctly when a widget's own declared size matches the frame it's meant to be
+      centered in, so a stale size would mis-center silently rather than crash.
+    - **Known limitation, not a bug: a tall animation visibly bobs a few (~10px) pixels vertically
+      as it plays.** Because the engine re-centers the above-ground bounds every frame (above), and
+      a sequence's silhouette height changes frame to frame (a windup crouch vs. an overhead
+      strike, say), the model's vertical position shifts with it. There is no RuneLite API to pin a
+      model to a fixed baseline instead of a per-frame center, so this is accepted as engine
+      behavior and is explicitly not something a future PR should try to "fix" — the fit-zoom
+      recipe above already accounts for the worst-case frame so the bob stays small, it does not
+      eliminate it.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

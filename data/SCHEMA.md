@@ -60,7 +60,7 @@ themselves, or the trigger will false-positive.
 | `animationId` | int? | Animation played on the boss model in the viewer. **Ignored when `staticFallback` is true** — a static pose always wins, even if this is also set. Required when `staticFallback` is false (or absent); the loader rejects a mechanic with neither. |
 | `npcId` | int? | Which NPC model to show (defaults to first of `npcIds`) |
 | `staticFallback` | bool | true when the body animation alone doesn't read (projectile/AoE mechanics) and a static model pose should be shown instead of a looping animation. Defaults to `false` when the field is absent. |
-| `zoom` | int? | Model widget zoom. Defaults to 3000 (spike-validated for a large boss) when absent. |
+| `zoom` | int? | Model widget zoom, fit per mechanic (docs/DECISIONS.md D25). Defaults to 3000 (spike-validated for a large boss, but not a good fit for any specific mechanic) when absent — **no animated preview ships without an explicit zoom**. Compute it offline across the animation's full frame range: `zoom = 512 * max(2 * maxAbsX / 291, (heightAbove + 2 * heightBelow) / 140)`, plus a 10% margin, where the box is 291 wide and 140 tall. A static pose (`staticFallback: true`) is less sensitive to a wrong zoom (nothing moves), but still curate one so a boss switch doesn't visibly jump scale between mechanics. |
 
 ## Style rules
 

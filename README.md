@@ -25,10 +25,11 @@ the log, shaped like the Combat Achievements boss screen: a "Mechanics Discovere
 progress bar across the top, then a scrollable list of moves on the left where
 undiscovered ones read `???`, and the selected move's description and counterplay
 on the right, dimmed until you have found it. A reversible "View All" sits above
-the list and remembers itself per character, and a WIKI button opens the boss's
-wiki page. Selecting a mechanic plays its animation, looping, on the boss model
-above its description; a `staticFallback` mechanic shows a static pose instead,
-and a locked "???" row shows nothing. See
+the list, remembers itself per character, and a WIKI button in the title bar
+opens the boss's wiki page. Selecting a mechanic plays its animation, looping, on
+a 291x140 model box above its description, curated per mechanic to a zoom that
+fits the animation's full frame range; a `staticFallback` mechanic shows a static
+pose instead, and a locked "???" row shows nothing. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 
