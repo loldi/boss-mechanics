@@ -168,6 +168,10 @@ final class MechanicsList
 			}
 		}
 
+		// The Combat Achievements section frame (docs/DECISIONS.md D26), a sibling drawn after the
+		// rows and scrollbar so it overdraws their edges rather than sitting underneath them.
+		Widgets.sectionBorder(column, 0, 0, COLUMN_WIDTH, height);
+
 		column.revalidate();
 	}
 

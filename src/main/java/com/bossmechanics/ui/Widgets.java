@@ -45,6 +45,14 @@ final class Widgets
 	 */
 	static final int FRAME = 9;
 
+	/**
+	 * The Combat Achievements screen's own section frame, measured from 713's statics (c17-c21,
+	 * c31-c35): a 1px outer line, then a 1px inner line one pixel in, so a section's own content
+	 * starts 2px from its outside edge. Used for the list column, the model box and the text area.
+	 */
+	static final int SECTION_BORDER_OUTER = 0x303030;
+	static final int SECTION_BORDER_INNER = 0x5D5848;
+
 	private Widgets()
 	{
 	}
@@ -130,6 +138,26 @@ final class Widgets
 		border.setFilled(false);
 		border.revalidate();
 		return border;
+	}
+
+	/**
+	 * The Combat Achievements section frame (see {@link #SECTION_BORDER_OUTER}): two nested 1px
+	 * outlines, drawn last so they sit over whatever content the section already built.
+	 */
+	static void sectionBorder(Widget parent, int x, int y, int width, int height)
+	{
+		outline(parent, x, y, width, height, SECTION_BORDER_OUTER);
+		outline(parent, x + 1, y + 1, width - 2, height - 2, SECTION_BORDER_INNER);
+	}
+
+	/** As {@link #sprite}, plus an opacity (RuneLite's is inverted: higher is more transparent). */
+	static Widget sprite(Widget parent, int spriteId, int x, int y, int width, int height, boolean tiled,
+		int opacity)
+	{
+		Widget part = sprite(parent, spriteId, x, y, width, height, tiled);
+		part.setOpacity(opacity);
+		part.revalidate();
+		return part;
 	}
 
 	private static Widget rectangle(Widget parent, int x, int y, int width, int height, int color)

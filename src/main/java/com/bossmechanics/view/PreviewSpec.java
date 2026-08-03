@@ -25,6 +25,12 @@ public class PreviewSpec
 	int npcId;
 	int animationId;
 	int zoom;
+	/**
+	 * Vertical anchor correction pixels, resolved from {@link Preview#getShiftY()} (docs/
+	 * DECISIONS.md D26); 0 means no correction. {@code com.bossmechanics.ui} turns this into a
+	 * pool widget rect mutation, never a decision of its own.
+	 */
+	int shiftY;
 
 	/**
 	 * FORK, resolved (Option A, docs/DECISIONS.md D23): a static pose always wins over
@@ -47,16 +53,17 @@ public class PreviewSpec
 		Preview preview = mechanic.getPreview();
 		int npcId = preview != null && preview.getNpcId() != null ? preview.getNpcId() : bossNpcIds.get(0);
 		int zoom = preview != null && preview.getZoom() != null ? preview.getZoom() : DEFAULT_ZOOM;
+		int shiftY = preview != null && preview.getShiftY() != null ? preview.getShiftY() : 0;
 
 		boolean staticFallback = preview != null && preview.isStaticFallback();
 		Integer animationId = preview == null ? null : preview.getAnimationId();
 		int resolvedAnimationId = staticFallback || animationId == null ? NO_ANIMATION : animationId;
 
-		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom);
+		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY);
 	}
 
 	public static PreviewSpec hidden()
 	{
-		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM);
+		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0);
 	}
 }
