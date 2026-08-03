@@ -24,7 +24,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5914 }
       ],
-      "preview": { "npcId": 5915, "animationId": 7103, "zoom": 1267, "shiftY": 64 }
+      "preview": { "npcId": 5915, "animationId": 7105, "zoom": 1866, "shiftY": 64 }
     },
     {
       "id": "miasma-pools",
@@ -61,8 +61,8 @@
         { "type": "npc-spawn", "id": 5918 }
       ],
       "preview": {
-        "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 61, "shiftX": -60,
-        "secondary": { "npcId": 5916, "animationId": 4524, "zoom": 650, "shiftX": 70, "shiftY": 50 }
+        "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 61, "shiftX": 60,
+        "secondary": { "npcId": 5916, "animationId": 4524, "zoom": 650, "shiftX": -70, "shiftY": 50 }
       }
     },
     {
@@ -112,7 +112,7 @@
         { "type": "animation", "id": 7098 },
         { "type": "npc-spawn", "id": 5908 }
       ],
-      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 4875, "shiftY": 47 }
+      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 5350, "shiftY": 43 }
     }
   ],
   "_note": "IDs are taken from RuneLite's gameval NpcID/AnimationID constants, so the numbers themselves are authoritative cache values. What still needs one live fight to confirm is the mapping: that each listed animation is the one the Sire actually plays for that mechanic, and that every trigger fires. See issue #9."
