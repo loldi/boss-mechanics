@@ -28,7 +28,8 @@ public class MechanicsScrollbarTest
 		Widget list = RecordingWidget.create(calls);
 		Widget bar = RecordingWidget.create(calls);
 
-		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400);
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
 		scrollbar.build();
 
 		JavaScriptCallback wheel =
@@ -54,7 +55,8 @@ public class MechanicsScrollbarTest
 		Widget list = RecordingWidget.create(calls);
 		Widget bar = RecordingWidget.create(calls);
 
-		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400);
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
 		scrollbar.build();
 		long createChildCallsAfterBuild = countCreateChild(calls);
 
@@ -77,7 +79,8 @@ public class MechanicsScrollbarTest
 		Widget list = RecordingWidget.create();
 		Widget bar = RecordingWidget.create();
 
-		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400);
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
 		scrollbar.build();
 
 		scrollbar.setContentHeight(100);
@@ -87,7 +90,35 @@ public class MechanicsScrollbarTest
 			RecordingWidget.lastArgsOf(thumbMiddle, "setHidden")[0]);
 	}
 
+	/**
+	 * The two bars differ (docs/DECISIONS.md D28): the text box's hides its whole scrollbar when the
+	 * copy fits, but the list column's keeps its track and arrows, because the CA screen we mirror
+	 * draws that chrome unconditionally and the column reads as a cut-off box without it. Only the
+	 * thumb goes. Andrew's in-game pass on #47 is the evidence for the list side.
+	 */
+	@Test
+	public void chromeAlwaysKeepsTheTrackAndArrowsWhenContentFits()
+	{
+		Widget list = RecordingWidget.create();
+		Widget bar = RecordingWidget.create();
+
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
+			MechanicsScrollbar.Chrome.ALWAYS);
+		scrollbar.build();
+
+		scrollbar.setContentHeight(100);
+
+		assertEquals("the list column's track must stay drawn when its rows fit", Boolean.FALSE,
+			RecordingWidget.lastArgsOf(widgetNamed(bar, SPRITE_TRACK_ID), "setHidden")[0]);
+		assertEquals("the list column's arrows must stay drawn when its rows fit", Boolean.FALSE,
+			RecordingWidget.lastArgsOf(widgetNamed(bar, SPRITE_ARROW_UP_ID), "setHidden")[0]);
+		assertEquals("the thumb still hides -- there is nothing to indicate", Boolean.TRUE,
+			RecordingWidget.lastArgsOf(widgetNamed(bar, SPRITE_THUMB_MIDDLE_SPRITE_ID), "setHidden")[0]);
+	}
+
 	private static final int SPRITE_THUMB_MIDDLE_SPRITE_ID = 790;
+	private static final int SPRITE_TRACK_ID = 792;
+	private static final int SPRITE_ARROW_UP_ID = 773;
 
 	/** The thumb-middle widget is the only child whose {@code setSpriteId} is 790 (tiled). */
 	private static Widget widgetNamed(Widget bar, int spriteId)

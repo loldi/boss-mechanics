@@ -230,9 +230,10 @@ final class MechanicsDetail
 		counterplay = text(FontID.PLAIN_12, Widgets.ORANGE);
 
 		textScrollbar = new MechanicsScrollbar(textContent, textBar,
-			TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT);
+			TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT,
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
+		// build() already wires the wheel on textContent.
 		textScrollbar.build();
-		textScrollbar.listenForWheel(textContent);
 
 		// Same section frame around the text block, drawn after its own text for the same reason.
 		Widgets.sectionBorder(column, 0, TEXT_AREA_Y, COLUMN_WIDTH, TEXT_AREA_HEIGHT);

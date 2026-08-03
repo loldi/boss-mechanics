@@ -162,7 +162,8 @@ final class MechanicsList
 		}
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(
-			list, bar, height - (2 * SCROLLBAR_INSET), height, y);
+			list, bar, height - (2 * SCROLLBAR_INSET), height, y,
+			MechanicsScrollbar.Chrome.ALWAYS);
 		scrollbar.build();
 
 		// A wheel event over a row is not guaranteed to reach the list behind it, so every row

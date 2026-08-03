@@ -48,10 +48,26 @@ final class MechanicsScrollbar
 	/** One wheel notch. */
 	static final int WHEEL_STEP = 36;
 
+	/** What the track and arrows do once the content already fits the viewport. */
+	enum Chrome
+	{
+		/**
+		 * Keep them drawn. The list column's bar: the CA screen we mirror draws its list scrollbar
+		 * unconditionally, and the column reads as a cut-off box without it.
+		 */
+		ALWAYS,
+		/**
+		 * Hide them with the thumb. The text box's bar: it sits inside the copy in a ~93px band,
+		 * where an inert scrollbar is noise rather than affordance.
+		 */
+		ONLY_WHEN_SCROLLABLE
+	}
+
 	private final Widget list;
 	private final Widget bar;
 	private final int barHeight;
 	private final int viewportHeight;
+	private final Chrome chrome;
 
 	/**
 	 * Mutable (docs/DECISIONS.md D28, issue #47 follow-up): the text scroll box re-derives this on
@@ -68,13 +84,15 @@ final class MechanicsScrollbar
 	private Widget thumbBottom;
 	private int thumbHeight;
 
-	MechanicsScrollbar(Widget list, Widget bar, int barHeight, int viewportHeight, int contentHeight)
+	MechanicsScrollbar(Widget list, Widget bar, int barHeight, int viewportHeight, int contentHeight,
+		Chrome chrome)
 	{
 		this.list = list;
 		this.bar = bar;
 		this.barHeight = barHeight;
 		this.viewportHeight = viewportHeight;
 		this.contentHeight = contentHeight;
+		this.chrome = chrome;
 	}
 
 	/**
@@ -118,8 +136,8 @@ final class MechanicsScrollbar
 
 	/**
 	 * Lays out (or re-lays-out) the track, arrows and thumb against the current
-	 * {@link #contentHeight}, hiding the lot when the content already fits the viewport -- a
-	 * scrollbar with nothing to scroll is noise, not affordance.
+	 * {@link #contentHeight}. The thumb always hides when there is nothing to scroll; whether the
+	 * track and arrows go with it is this instance's {@link Chrome} policy.
 	 */
 	private void layout()
 	{
@@ -133,10 +151,11 @@ final class MechanicsScrollbar
 			? Math.min(trackHeight, Math.max(MIN_THUMB_HEIGHT, trackHeight * viewportHeight / Math.max(1, contentHeight)))
 			: 0;
 		boolean showThumb = scrollable && thumbHeight >= MIN_THUMB_HEIGHT;
+		boolean showTrack = scrollable || chrome == Chrome.ALWAYS;
 
-		setHidden(track, !scrollable);
-		setHidden(arrowUp, !scrollable);
-		setHidden(arrowDown, !scrollable);
+		setHidden(track, !showTrack);
+		setHidden(arrowUp, !showTrack);
+		setHidden(arrowDown, !showTrack);
 		setHidden(thumbTop, !showThumb);
 		setHidden(thumbMiddle, !showThumb);
 		setHidden(thumbBottom, !showThumb);

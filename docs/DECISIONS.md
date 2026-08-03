@@ -767,8 +767,14 @@ so new decisions are appended here rather than inserted in a themed section.
       mutation plus `setScrollHeight`/`setScrollY` only, never `createChild`, never
       `revalidateScroll()` (D22's permanent ban still holds). The scrollbar's track/arrows/thumb
       are now always created once in `build()`, never conditionally and never later, so
-      `setContentHeight` can only mutate and hide/show them — the bar hides itself entirely
-      whenever the new content already fits the ~90px-tall viewport. Text width is fixed
+      `setContentHeight` can only mutate and hide/show them. **What they do when the content fits
+      is per-instance policy, `MechanicsScrollbar.Chrome`, not one global rule.** The text box
+      passes `ONLY_WHEN_SCROLLABLE` and hides the whole bar — an inert scrollbar inside a ~90px
+      band of copy is noise. The list column passes `ALWAYS` and keeps its track and arrows,
+      hiding only the thumb: the CA screen we mirror (D21) draws that chrome unconditionally, and
+      a boss whose rows happen to fit would otherwise lose it and read as a cut-off box. Making
+      the text box's auto-hide global would have silently changed the list column, which nobody
+      asked for. Text width is fixed
       (`COLUMN_WIDTH - 2*TEXT_X - MechanicsScrollbar.WIDTH`, ~267px) to reserve the bar's own width
       whether or not it ends up showing, since wrapping against a width that depends on the very
       thing it's computing (does this content need to scroll?) would be circular. **This box's
