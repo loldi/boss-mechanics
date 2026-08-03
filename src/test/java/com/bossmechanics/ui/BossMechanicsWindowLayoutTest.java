@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import net.runelite.api.Client;
+import net.runelite.api.Point;
+import net.runelite.api.ScriptEvent;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
@@ -156,6 +158,178 @@ public class BossMechanicsWindowLayoutTest
 			(clickMask & WidgetConfig.DRAG) != 0);
 	}
 
+	/**
+	 * Issue #48, Slice 3: a zero drag offset must reproduce today's placement exactly (docs/
+	 * DECISIONS.md D29). {@code 113 = withChrome(origin(134,500,0,512), 15)}: the collection log
+	 * starts at x 134, is 500 wide; the host starts at x 0 and is 765 wide.
+	 */
+	@Test
+	public void placementWithoutADragIsUnchanged() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Client client = fakeClient(host, collectionLog, new Point[1]);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		window.open(emptyBoss(), MechanicsView.of(emptyBoss(), new DiscoveryState(), false));
+
+		Widget root = lastChildOf(host);
+		assertEquals("a zero drag offset must reproduce today's placement exactly (D29)",
+			113, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Issue #48, Slice 3: dragging moves the window live (every {@code setOnDragListener} event
+	 * after the first moves it, not just the release), and the resulting offset is session state
+	 * that survives a "View All" rebuild (fork 1, resolved: same lifetime as
+	 * {@code selectedMechanicId}). The first event of a gesture only captures a baseline; this
+	 * drives it twice so the second event is the one that actually composes a delta.
+	 *
+	 * <p>{@code client.getMouseCanvasPosition()} is the position source, deliberately never
+	 * {@code event.getMouseX()/getMouseY()} (D29): the latter is measured relative to the handle's
+	 * own origin, which moves as the window does, so it would feed back on itself.
+	 */
+	@Test
+	public void draggedOffsetSurvivesARebuild() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(340, 225);
+		onDrag.run(fakeScriptEvent());
+
+		Widget draggedRoot = lastChildOf(host);
+		assertEquals("computed origin 128 + delta 40, in bounds, minus 15 chrome",
+			153, ((Integer) RecordingWidget.lastArgsOf(draggedRoot, "setOriginalX")[0]).intValue());
+
+		// The "View All" rebuild path: open() again, same offset, same math.
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		Widget rebuiltRoot = lastChildOf(host);
+		assertEquals("a dragged offset must survive a View All rebuild (fork 1, session lifetime)",
+			153, ((Integer) RecordingWidget.lastArgsOf(rebuiltRoot, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Issue #48, Slice 3: releasing past the edge must normalize the stored offset to the clamped
+	 * position actually reached, not the raw (off-screen) accumulated delta -- otherwise the next
+	 * drag has to silently "unwind" the phantom off-screen offset before the window visibly moves
+	 * at all. Drags +400 (clamps hard against the right edge), releases, then drags -10 and expects
+	 * the window to move by the full 10px immediately.
+	 */
+	@Test
+	public void releasingPastTheEdgeStoresTheClampedOffset() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		Widget root = lastChildOf(host);
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		JavaScriptCallback onDragComplete = dragCompleteListenerOf(host);
+
+		// Drag +400: clamps hard against the right edge (computed origin 128, host 765 wide,
+		// window 512 wide -- max origin is 253).
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(700, 200);
+		onDrag.run(fakeScriptEvent());
+		assertEquals("clamped hard against the right edge before release",
+			238, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+
+		onDragComplete.run(fakeScriptEvent());
+
+		// Drag -10: if the stored offset were the raw (400) delta rather than the clamped one
+		// (125), this would still compute a clamped 253 and the window would not move at all.
+		mousePosition[0] = new Point(700, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(690, 200);
+		onDrag.run(fakeScriptEvent());
+
+		assertEquals("the window must respond immediately to the small drag back, not silently "
+				+ "unwind a phantom off-screen offset first",
+			228, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/** Host: 765x503, at the coordinate-space origin, with no parent (D29's slice 3 fixture). */
+	private static Widget hostWidget()
+	{
+		Widget host = RecordingWidget.create();
+		RecordingWidget.returning(host, "getWidth", 765);
+		RecordingWidget.returning(host, "getHeight", 503);
+		return host;
+	}
+
+	/** The collection log's own UNIVERSE widget (D21), stubbed per the slice 3 fixture. */
+	private static Widget collectionLogWidget()
+	{
+		Widget collectionLog = RecordingWidget.create();
+		RecordingWidget.returning(collectionLog, "getRelativeX", 134);
+		RecordingWidget.returning(collectionLog, "getRelativeY", 94);
+		RecordingWidget.returning(collectionLog, "getWidth", 500);
+		RecordingWidget.returning(collectionLog, "getHeight", 314);
+		return collectionLog;
+	}
+
+	/** The most recently created immediate child of {@code host} -- the current window root. */
+	private static Widget lastChildOf(Widget host)
+	{
+		List<Widget> children = RecordingWidget.childrenOf(host);
+		return children.get(children.size() - 1);
+	}
+
+	private static JavaScriptCallback dragListenerOf(Widget host)
+	{
+		List<Widget> dragWidgets = new ArrayList<>();
+		collectWidgetsWithDragListener(host, dragWidgets);
+		return (JavaScriptCallback) RecordingWidget.listenerOf(dragWidgets.get(0), "setOnDragListener");
+	}
+
+	private static JavaScriptCallback dragCompleteListenerOf(Widget host)
+	{
+		List<Widget> dragWidgets = new ArrayList<>();
+		collectWidgetsWithDragListener(host, dragWidgets);
+		return (JavaScriptCallback) RecordingWidget.listenerOf(dragWidgets.get(0), "setOnDragCompleteListener");
+	}
+
+	/**
+	 * A dummy stand-in, the {@code MechanicsScrollbarTest} idiom: production code reads the drag
+	 * position from {@code client.getMouseCanvasPosition()}, deliberately never from the event
+	 * itself (D29), so nothing here needs to answer any particular method.
+	 */
+	private static ScriptEvent fakeScriptEvent()
+	{
+		return (ScriptEvent) Proxy.newProxyInstance(ScriptEvent.class.getClassLoader(),
+			new Class<?>[] { ScriptEvent.class },
+			(proxy, method, args) -> RecordingWidget.defaultFor(method.getReturnType()));
+	}
+
 	/** Depth-first search for every widget in the tree wired with {@code setOnDragListener}. */
 	private static void collectWidgetsWithDragListener(Widget widget, List<Widget> into)
 	{
@@ -216,6 +390,20 @@ public class BossMechanicsWindowLayoutTest
 	/** Only {@code getTopLevelInterfaceId} and {@code getWidget(int)} are on {@code open()}'s path. */
 	private static Client fakeClient(Widget host)
 	{
+		// No collection log: place()'s no-log-found branch, which never touches the host's
+		// geometry -- unaffected by issue #48's drag offset either, since there is nothing to drag
+		// relative to yet.
+		return fakeClient(host, null, new Point[1]);
+	}
+
+	/**
+	 * Issue #48, Slice 3: also resolves the collection log widget ({@code InterfaceID.Collection
+	 * .UNIVERSE}, D21) and answers {@code getMouseCanvasPosition()} from a mutable single-element
+	 * array, so a test can move the "mouse" between successive drag events the way the real client
+	 * would.
+	 */
+	private static Client fakeClient(Widget host, Widget collectionLog, Point[] mouseCanvasPosition)
+	{
 		return (Client) Proxy.newProxyInstance(Client.class.getClassLoader(), new Class<?>[] { Client.class },
 			(proxy, method, args) -> {
 				switch (method.getName())
@@ -223,12 +411,21 @@ public class BossMechanicsWindowLayoutTest
 					case "getTopLevelInterfaceId":
 						return InterfaceID.TOPLEVEL_OSRS_STRETCH;
 					case "getWidget":
-						// The collection log lookup also lands here; returning null for it takes
-						// place()'s no-log-found branch, which never touches the host's geometry.
-						return args != null && args.length == 1 && args[0] instanceof Integer
-							&& (Integer) args[0] == InterfaceID.ToplevelOsrsStretch.UI_HIGHLIGHTS
-							? host
-							: null;
+						if (args != null && args.length == 1 && args[0] instanceof Integer)
+						{
+							int componentId = (Integer) args[0];
+							if (componentId == InterfaceID.ToplevelOsrsStretch.UI_HIGHLIGHTS)
+							{
+								return host;
+							}
+							if (componentId == InterfaceID.Collection.UNIVERSE)
+							{
+								return collectionLog;
+							}
+						}
+						return null;
+					case "getMouseCanvasPosition":
+						return mouseCanvasPosition[0];
 					default:
 						return RecordingWidget.defaultFor(method.getReturnType());
 				}

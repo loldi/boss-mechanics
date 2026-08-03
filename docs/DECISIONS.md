@@ -786,6 +786,99 @@ so new decisions are appended here rather than inserted in a themed section.
       and D22's third symptom already resolved "should this resize" as a non-fix for the same
       reason. Filed as its own spike rather than folded in here.
 
+29. **A draggable window, promoting issue #48's probe (D28's deferred item) to the real feature.**
+    The window can be dragged by its title bar to anywhere on screen, never fully off it, and the
+    dragged position survives a "View All" rebuild, a boss switch, and a close/reopen for the
+    current session.
+
+    - **The probe's five findings are now verified engine facts, not assumptions**, and this slice
+      builds on them rather than re-deriving them: (1) the drag listener family fires, and fires
+      continuously — seven `setOnDragListener` events inside one second of a single drag gesture,
+      so the window tracks the cursor live and needs no snap-on-release fallback; (2)
+      `setClickMask(getClickMask() | WidgetConfig.DRAG)` is what makes it fire — the logged mask
+      was exactly `131072` = `WidgetConfig.DRAG`, no other bit set, and `setDragParent`/`DRAG_ON`
+      were never needed, so neither is used; (3) there is no engine-rendered drag ghost for an
+      empty `LAYER`, so the "build a ghost ourselves" fork from planning is dead; (4) clicks on the
+      rows, WIKI and close still work with `setDragDeadZone(8)`/`setDragDeadTime(10)` on the handle,
+      so the handle can sit over draggable chrome without swallowing ordinary clicks.
+    - **CRITICAL: the position source is `client.getMouseCanvasPosition()`, never
+      `event.getMouseX()/getMouseY()`.** The probe logged both, every event, and they differ by a
+      *constant* offset (x was exactly 237 across every event) — which means the event's own
+      coordinates are measured **relative to the drag handle widget's own origin**, not the canvas.
+      Once a drag starts moving the window, the handle moves with it, so reading position from the
+      event would be reading a coordinate space that is itself sliding under the cursor: each
+      event's "delta" would already include however far the previous event moved the window, and
+      the window would accelerate or judder rather than track the cursor 1:1. The canvas position
+      is absolute and does not move when the window does, so it is immune. **Do not "simplify" this
+      back to `event.getMouseX/Y` later** — it looks equivalent in a single static screenshot of the
+      log and is not.
+    - **The mechanism.** The drag handle's `setOnDragListener` fires an `onDrag()` on every event of
+      a gesture. The first event of a gesture (a `dragging` flag distinguishes it) only captures a
+      baseline — the current mouse canvas position and the offset already in force — and returns;
+      every event after computes `dragOffset = offsetAtStart + (mouseNow - mouseAtStart)` on each
+      axis and calls `place(host)` (through the same `replaceIfChanged()` helper `onClientTick`
+      already used for a client resize, since both are "something that might move the window
+      changed, recompute" on the client thread). `setOnDragCompleteListener` fires an
+      `onDragComplete()` that normalizes the stored offset to `clampedFinalOrigin - computedOrigin`
+      and clears the transient state — without this, releasing past an edge would leave a phantom
+      off-screen offset that the *next* drag has to silently "unwind" before the window visibly
+      moves at all, since the raw accumulated delta could be far larger than the clamp ever let it
+      act on.
+    - **The clamp itself is `view.WindowDrag.clampedOrigin`**, RuneLite-free like every other
+      decision in that package (the same split D21 used for `view.Selection`): pure, static, one
+      axis at a time, matching `WindowPlacement.origin`'s own idiom. Bounds are
+      `[min(0, computedOrigin), max(hostSize - windowSize, computedOrigin)]` — never clamped
+      tighter than `computedOrigin` itself, so a zero offset reproduces today's placement exactly,
+      including a legitimately negative computed origin (D20's overhang); an offset can only ever
+      move an out-of-bounds origin back toward on-screen, never push it further out.
+    - **The clamp runs in logical-window coordinates (512x334 against the host's current
+      width/height), before `withChrome`.** `place()` composes `WindowDrag.clampedOrigin(x,
+      dragOffsetX, WINDOW_WIDTH, host.getWidth())` per axis, then still applies `withChrome` (D27)
+      afterward. The 15px chrome overhang is allowed to go off-canvas — it always has been, since
+      D27 grew the root outward from the logical window rather than the other way around — but the
+      512x334 window itself may not. The no-collection-log fallback branch (`ABSOLUTE_CENTER`,
+      D20) deliberately ignores the drag offset: it is a one-tick transient, not a placement worth
+      clamping against.
+    - **Fork 1, resolved by Andrew: session-only offset lifetime.** The dragged offset survives a
+      close/reopen, a boss switch, and a "View All" rebuild — the same lifetime as
+      `selectedMechanicId` — and forgets on a client restart. There is no config key for it: unlike
+      `selectedMechanicId` (which is genuinely per-character reading state, D18) or "View All"
+      (persisted per D20 because D10 calls reveal a reading mode), a screen position has no
+      player-visible reason to outlive the session, so persisting it would be a config key nobody
+      asked for. It forgets on client restart with no code to make that happen: a restart is a
+      fresh plugin instance with fresh, zero-valued fields, the same reason `selectedMechanicId`
+      needs no explicit reset there either. The **in-progress** flag is the one piece of drag state
+      that does NOT get that lifetime: `close()` clears `dragging` explicitly, because a gesture
+      interrupted by Esc or by the collection log closing never receives its completion event, and a
+      stale flag would make the next gesture's first event continue from a dead baseline and jump
+      the window. Offsets persist; a half-finished gesture does not.
+    - **Resize remains out.** D22's third symptom already resolved "should the window resize" as a
+      non-fix, since the Combat Achievements screen this window mirrors (D21) is itself fixed-size;
+      this slice only repositions the fixed-size window, and issue #48 is where that evidence and
+      this decision both live.
+    - Pinned with `view.WindowDragTest` (five cases: identity at zero offset, a legitimate negative
+      computed origin left unclamped at zero offset, the right edge, the left edge, and an
+      already-out-of-bounds origin only ever draggable back in) and three cases added to
+      `BossMechanicsWindowLayoutTest`: a zero-offset placement is unchanged; a drag composes and
+      survives a rebuild; releasing past an edge stores the clamped offset rather than the raw one,
+      proven by a second, small drag responding immediately rather than first unwinding a phantom
+      off-screen delta. The last two drive the handle's `setOnDragListener`/
+      `setOnDragCompleteListener` directly with fake `ScriptEvent` proxies (the
+      `MechanicsScrollbarTest` idiom) and a mutable stubbed `client.getMouseCanvasPosition()`, which
+      needed one additive `RecordingWidget` helper, `returning(widget, methodName, value)` — a stub
+      map so a test can pin a getter's return value, following the same additive pattern
+      `lastArgsOf`/`allArgsOf` were added by. Fixing it uncovered that `RecordingWidget`'s existing
+      "any setter returning `Widget` returns the proxy itself" default also silently applied to
+      `getParent()`, which is not a setter: unstubbed, it returned the same widget every time, so
+      `WindowPlacement.offsetInRoot`'s parent-chain walk never terminated. The default now only
+      applies to `set*` methods; every other `Widget`-returning getter defaults to null like any
+      other unstubbed getter, which is what `getParent()` should have done regardless of this
+      issue's needs.
+    - **The probe's own per-event and "armed" log lines are gone.** They were deliberately at info
+      so the probe's silence would be unambiguous; that job is done, and per-drag-event info logging
+      would spam `client.log` on every real gesture. `dragHandleIsWiredForDragging` (D28's probe
+      test) is unchanged: it still pins the one real-feature invariant the whole thing rests on.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
