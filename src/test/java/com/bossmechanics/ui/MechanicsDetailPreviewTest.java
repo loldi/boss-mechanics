@@ -23,10 +23,9 @@ public class MechanicsDetailPreviewTest
 	@Test
 	public void aModelWidgetNeverPlaysTwoDifferentAnimationsAcrossItsLifetime()
 	{
-		Widget header = RecordingWidget.create();
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(header, column, npcId -> npcId * 10, () -> { });
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
 		detail.build();
 
 		// A long animation, played a while, then a shorter one: the crash pair family from the
@@ -40,17 +39,16 @@ public class MechanicsDetailPreviewTest
 				+ "(docs/DECISIONS.md D24): setAnimationId never resets the client's per-widget "
 				+ "frame counter, only widget creation does, so no widget in the tree may ever "
 				+ "receive setAnimationId with two different values",
-			1, maxDistinctAnimationIdsEverSetOnAnyWidget(header, column));
+			1, maxDistinctAnimationIdsEverSetOnAnyWidget(column));
 	}
 
 	@Test
 	public void reselectingAMechanicWhoseAnimationWasAlreadyShownCreatesNoNewChildren()
 	{
 		List<String> calls = new ArrayList<>();
-		Widget header = RecordingWidget.create(calls);
 		Widget column = RecordingWidget.create(calls);
 
-		MechanicsDetail detail = new MechanicsDetail(header, column, npcId -> npcId * 10, () -> { });
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
 		detail.build();
 
 		detail.show(unlockedRow("m1", 1, 500));
@@ -70,10 +68,9 @@ public class MechanicsDetailPreviewTest
 	@Test
 	public void lockedRowHidesTheModelWidget()
 	{
-		Widget header = RecordingWidget.create();
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(header, column, npcId -> npcId * 10, () -> { });
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
 		detail.build();
 
 		// An unlocked row first, so the model widget is identifiable below by its setModelId

@@ -6,16 +6,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
 import net.runelite.api.FontID;
-import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
-import net.runelite.api.widgets.WidgetPositionMode;
 import net.runelite.api.widgets.WidgetType;
 
 /**
- * The window's right-hand column: a WIKI button in the header band, the animated model box (#6),
- * then the selected mechanic's name, description and counterplay, with a dim laid over the lot
- * while the selection is locked.
+ * The window's right-hand column: the animated model box (#6), then the selected mechanic's name,
+ * description and counterplay, with a dim laid over the lot while the selection is locked. The
+ * WIKI button used to live in this column's own header band; it now lives in the window's title
+ * bar instead (docs/DECISIONS.md D25, Fork 1 resolved: Option B), which is why this class no
+ * longer takes a header widget or an {@code onWikiOpened} callback.
  *
  * <p><b>Text is built once and then mutated.</b> {@link #show} rewrites the name, description and
  * counterplay text in place and never deletes a child: a {@code deleteAllChildren()} here would
@@ -57,27 +57,14 @@ final class MechanicsDetail
 	private static final int LINE_HEIGHT = 12;
 
 	/**
-	 * The WIKI button, cache sprites 2420 (resting) and 2421 (hover), both 40x14 and both
-	 * literally reading "WIKI". Positioned like the collection log's own header buttons: inset
-	 * from the right, vertically centred in the 23-tall band.
-	 */
-	private static final int SPRITE_WIKI = 2420;
-	private static final int SPRITE_WIKI_HOVER = 2421;
-	private static final int WIKI_WIDTH = 40;
-	private static final int WIKI_HEIGHT = 14;
-	private static final int WIKI_Y = 4;
-
-	/**
 	 * Script 4808's own idiom for a locked Combat Achievements entry: a black fill at
 	 * {@code cc_settrans 150} over the whole panel. RuneLite opacity is INVERTED, so 150 is
 	 * translucent, not nearly-solid.
 	 */
 	private static final int DIM_OPACITY = 150;
 
-	private final Widget header;
 	private final Widget column;
 	private final IntUnaryOperator modelForNpc;
-	private final Runnable onWikiOpened;
 
 	/** The LAYER every pool widget is created under (D19: nested dynamic children need a LAYER). */
 	private Widget modelBox;
@@ -98,26 +85,19 @@ final class MechanicsDetail
 	private Widget dim;
 
 	/**
-	 * @param header the 291-wide header band layer, already positioned and sized
-	 * @param column the 291-wide column layer below it, already positioned
+	 * @param column the 291-wide column layer, already positioned and sized
 	 * @param modelForNpc resolves an npc id to the cache model id to render ({@link #UNKNOWN_MODEL}
 	 *     if none); supplied as a lambda so this package never imports
 	 *     {@code client.getNpcDefinition()}
-	 * @param onWikiOpened fired when the WIKI button is clicked; opening the URL is the plugin's
-	 *     job, so this package never imports {@code LinkBrowser}
 	 */
-	MechanicsDetail(Widget header, Widget column, IntUnaryOperator modelForNpc, Runnable onWikiOpened)
+	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc)
 	{
-		this.header = header;
 		this.column = column;
 		this.modelForNpc = modelForNpc;
-		this.onWikiOpened = onWikiOpened;
 	}
 
 	void build()
 	{
-		wikiButton();
-
 		// A LAYER, not the RECTANGLE itself: the model needs a LAYER parent to render, since
 		// nested dynamic children are only known to render under one (D19). The border is a
 		// sibling drawn afterwards, so the model can never overdraw its own frame.
@@ -257,20 +237,5 @@ final class MechanicsDetail
 		widget.setLineHeight(LINE_HEIGHT);
 		widget.revalidate();
 		return widget;
-	}
-
-	private void wikiButton()
-	{
-		Widget button = Widgets.sprite(header, SPRITE_WIKI, 0, WIKI_Y, WIKI_WIDTH, WIKI_HEIGHT, false);
-		button.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
-		button.setAction(0, "Open");
-		button.setNoClickThrough(true);
-		button.setHasListener(true);
-		button.setOnOpListener((JavaScriptCallback) event -> onWikiOpened.run());
-		button.setOnMouseOverListener((JavaScriptCallback) event -> button.setSpriteId(SPRITE_WIKI_HOVER));
-		button.setOnMouseLeaveListener((JavaScriptCallback) event -> button.setSpriteId(SPRITE_WIKI));
-		button.revalidate();
-
-		header.revalidate();
 	}
 }

@@ -1,5 +1,7 @@
 package com.bossmechanics.ui;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.bossmechanics.data.Boss;
@@ -8,10 +10,12 @@ import com.bossmechanics.view.MechanicsView;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
@@ -47,6 +51,59 @@ public class BossMechanicsWindowLayoutTest
 		assertTrue("a fresh root must be laid out before its first child is built (D22, Bug A)",
 			rootCalls.indexOf("revalidate") >= 0
 				&& rootCalls.indexOf("revalidate") < rootCalls.indexOf("createChild"));
+	}
+
+	/**
+	 * The WIKI button moved into the title bar (Fork 1, resolved: Option B, docs/DECISIONS.md D25)
+	 * beside the close button, when the now-empty right-column header band it used to live in was
+	 * removed. This is currently unpinned: nothing asserted the click ever reaches the plugin seam.
+	 */
+	@Test
+	public void wikiClickReportsTheBossId() throws Exception
+	{
+		Widget host = RecordingWidget.create();
+		Client client = fakeClient(host);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		List<String> reportedBossIds = new ArrayList<>();
+		window.setOnWikiOpened(reportedBossIds::add);
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		Widget wikiButton = findWidgetWithAction(host, "Open");
+		assertNotNull("expected a widget somewhere in the tree carrying the WIKI button's "
+			+ "action string (\"Open\", MechanicsDetail.wikiButton() on HEAD)", wikiButton);
+
+		JavaScriptCallback listener =
+			(JavaScriptCallback) RecordingWidget.listenerOf(wikiButton, "setOnOpListener");
+		listener.run(null);
+
+		assertEquals("the WIKI click must report the open boss's id through setOnWikiOpened",
+			Collections.singletonList(boss.getId()), reportedBossIds);
+	}
+
+	/** Depth-first search for the widget whose most recent {@code setAction(0, action)} matches. */
+	private static Widget findWidgetWithAction(Widget widget, String action)
+	{
+		Object[] args = RecordingWidget.lastArgsOf(widget, "setAction");
+		if (args != null && args.length == 2 && action.equals(args[1]))
+		{
+			return widget;
+		}
+		for (Widget child : RecordingWidget.childrenOf(widget))
+		{
+			Widget found = findWidgetWithAction(child, action);
+			if (found != null)
+			{
+				return found;
+			}
+		}
+		return null;
 	}
 
 	private static Boss emptyBoss()

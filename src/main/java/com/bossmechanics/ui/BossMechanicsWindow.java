@@ -65,6 +65,19 @@ public class BossMechanicsWindow
 	private static final int CLOSE_X = 2;
 	private static final int CLOSE_Y = 6;
 
+	/**
+	 * The WIKI button, cache sprites 2420 (resting) and 2421 (hover), both 40x14 and both
+	 * literally reading "WIKI". Moved into the title bar, beside the close button (docs/
+	 * DECISIONS.md D25, Fork 1 resolved: Option B) — the right column's own header band it used
+	 * to sit in is gone as of the same change. Inset far enough from the right that it never
+	 * overlaps the close button, and vertically centred in the {@link #HEADER_HEIGHT}-tall band.
+	 */
+	private static final int SPRITE_WIKI = 2420;
+	private static final int SPRITE_WIKI_HOVER = 2421;
+	private static final int WIKI_WIDTH = 40;
+	private static final int WIKI_HEIGHT = 14;
+	private static final int WIKI_X = CLOSE_X + CLOSE_WIDTH + 6;
+
 	private static final int CONTENT_X = Widgets.FRAME;
 	private static final int CONTENT_Y = Widgets.FRAME;
 	private static final int CONTENT_WIDTH = WINDOW_WIDTH - (2 * Widgets.FRAME);
@@ -474,6 +487,7 @@ public class BossMechanicsWindow
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
 		title.revalidate();
 
+		wikiButton(header);
 		closeButton(header);
 	}
 
@@ -527,14 +541,15 @@ public class BossMechanicsWindow
 		Widget listHeader = band(parent, COLUMN_HEADER_Y, MechanicsList.COLUMN_WIDTH,
 			COLUMN_HEADER_HEIGHT, false);
 		Widget list = band(parent, COLUMN_Y, MechanicsList.COLUMN_WIDTH, COLUMN_HEIGHT, false);
-		Widget detailHeader = band(parent, COLUMN_HEADER_Y, MechanicsDetail.COLUMN_WIDTH,
-			COLUMN_HEADER_HEIGHT, true);
+		// Empty now that the WIKI button has moved to the title bar (D25); removed in the
+		// geometry slice that folds this band's height into the detail column below it.
+		band(parent, COLUMN_HEADER_Y, MechanicsDetail.COLUMN_WIDTH, COLUMN_HEADER_HEIGHT, true);
 		Widget detail = band(parent, COLUMN_Y, MechanicsDetail.COLUMN_WIDTH, COLUMN_HEIGHT, true);
 
 		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal);
 		mechanicsList.build();
 
-		mechanicsDetail = new MechanicsDetail(detailHeader, detail, this::modelForNpc, this::openWiki);
+		mechanicsDetail = new MechanicsDetail(detail, this::modelForNpc);
 		mechanicsDetail.build();
 	}
 
@@ -620,6 +635,26 @@ public class BossMechanicsWindow
 		button.setOnOpListener((JavaScriptCallback) e -> close());
 		button.setOnMouseOverListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_CLOSE_HOVER));
 		button.setOnMouseLeaveListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_CLOSE));
+		button.revalidate();
+	}
+
+	/**
+	 * Moved here from {@code MechanicsDetail}'s right-column header band (docs/DECISIONS.md D25,
+	 * Fork 1 resolved: Option B), which is otherwise empty after this change and removed entirely
+	 * once the geometry slice lands. {@code openWiki()} is the same plugin seam the old button
+	 * used, just wired directly rather than through a constructor-supplied {@code Runnable}.
+	 */
+	private void wikiButton(Widget header)
+	{
+		int y = (HEADER_HEIGHT - WIKI_HEIGHT) / 2;
+		Widget button = Widgets.sprite(header, SPRITE_WIKI, WIKI_X, y, WIKI_WIDTH, WIKI_HEIGHT, false);
+		button.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
+		button.setAction(0, "Open");
+		button.setNoClickThrough(true);
+		button.setHasListener(true);
+		button.setOnOpListener((JavaScriptCallback) e -> openWiki());
+		button.setOnMouseOverListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_WIKI_HOVER));
+		button.setOnMouseLeaveListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_WIKI));
 		button.revalidate();
 	}
 
