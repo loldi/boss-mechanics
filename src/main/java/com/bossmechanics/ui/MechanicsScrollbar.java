@@ -48,54 +48,130 @@ final class MechanicsScrollbar
 	/** One wheel notch. */
 	static final int WHEEL_STEP = 36;
 
+	/** What the track and arrows do once the content already fits the viewport. */
+	enum Chrome
+	{
+		/**
+		 * Keep them drawn. The list column's bar: the CA screen we mirror draws its list scrollbar
+		 * unconditionally, and the column reads as a cut-off box without it.
+		 */
+		ALWAYS,
+		/**
+		 * Hide them with the thumb. The text box's bar: it sits inside the copy in a ~93px band,
+		 * where an inert scrollbar is noise rather than affordance.
+		 */
+		ONLY_WHEN_SCROLLABLE
+	}
+
 	private final Widget list;
 	private final Widget bar;
 	private final int barHeight;
 	private final int viewportHeight;
-	private final int contentHeight;
+	private final Chrome chrome;
 
+	/**
+	 * Mutable (docs/DECISIONS.md D28, issue #47 follow-up): the text scroll box re-derives this on
+	 * every mechanic selection, since each mechanic's stacked text takes a different height.
+	 * {@link #setContentHeight} is the only thing that changes it after {@link #build}.
+	 */
+	private int contentHeight;
+
+	private Widget track;
+	private Widget arrowUp;
+	private Widget arrowDown;
 	private Widget thumbTop;
 	private Widget thumbMiddle;
 	private Widget thumbBottom;
 	private int thumbHeight;
 
-	MechanicsScrollbar(Widget list, Widget bar, int barHeight, int viewportHeight, int contentHeight)
+	MechanicsScrollbar(Widget list, Widget bar, int barHeight, int viewportHeight, int contentHeight,
+		Chrome chrome)
 	{
 		this.list = list;
 		this.bar = bar;
 		this.barHeight = barHeight;
 		this.viewportHeight = viewportHeight;
 		this.contentHeight = contentHeight;
+		this.chrome = chrome;
 	}
 
-	/** Builds the track, arrows and thumb, and wires the list's scroll behaviour. */
+	/**
+	 * Builds the track, arrows and thumb, and wires the list's scroll behaviour. Every widget this
+	 * scrollbar will ever show is created here, once, and only here: {@link #setContentHeight}
+	 * mutates rects and visibility on these same widgets, never {@code createChild}s a new one
+	 * (docs/DECISIONS.md D22 -- a post-build {@code createChild} is exactly the rebuild-leak shape
+	 * that decision fixed).
+	 */
 	void build()
 	{
-		list.setScrollHeight(contentHeight);
-		list.setScrollY(0);
 		listenForWheel(list);
 
 		int trackHeight = Math.max(0, barHeight - (2 * ARROW_SIZE));
 
-		sprite(SPRITE_TRACK, 0, ARROW_SIZE, WIDTH, trackHeight, true);
-		arrow(SPRITE_ARROW_UP, 0, -ARROW_STEP);
-		arrow(SPRITE_ARROW_DOWN, barHeight - ARROW_SIZE, ARROW_STEP);
+		track = sprite(SPRITE_TRACK, 0, ARROW_SIZE, WIDTH, trackHeight, true);
+		arrowUp = arrow(SPRITE_ARROW_UP, 0, -ARROW_STEP);
+		arrowDown = arrow(SPRITE_ARROW_DOWN, barHeight - ARROW_SIZE, ARROW_STEP);
 
-		thumbHeight = maxScroll() == 0
-			? trackHeight
-			: Math.max(MIN_THUMB_HEIGHT, trackHeight * viewportHeight / Math.max(1, contentHeight));
-		thumbHeight = Math.min(thumbHeight, trackHeight);
+		// Always created, regardless of whether the content this instance opens with actually
+		// needs to scroll: hiding is layout()'s job, from here on.
+		thumbTop = sprite(SPRITE_THUMB_TOP, 0, ARROW_SIZE, WIDTH, CAP_HEIGHT, false);
+		thumbMiddle = sprite(SPRITE_THUMB_MIDDLE, 0, ARROW_SIZE + CAP_HEIGHT, WIDTH, CAP_HEIGHT, true);
+		thumbBottom = sprite(SPRITE_THUMB_BOTTOM, 0, ARROW_SIZE + CAP_HEIGHT, WIDTH, CAP_HEIGHT, false);
 
-		if (thumbHeight >= MIN_THUMB_HEIGHT)
-		{
-			thumbTop = sprite(SPRITE_THUMB_TOP, 0, ARROW_SIZE, WIDTH, CAP_HEIGHT, false);
-			thumbMiddle = sprite(SPRITE_THUMB_MIDDLE, 0, ARROW_SIZE + CAP_HEIGHT, WIDTH,
-				thumbHeight - (2 * CAP_HEIGHT), true);
-			thumbBottom = sprite(SPRITE_THUMB_BOTTOM, 0, ARROW_SIZE + thumbHeight - CAP_HEIGHT, WIDTH,
-				CAP_HEIGHT, false);
-		}
-
+		layout();
 		bar.revalidate();
+	}
+
+	/**
+	 * Rebinds the scrollbar to a new content height, e.g. a different mechanic's stacked text
+	 * block (docs/DECISIONS.md D28). Rect mutation plus {@code setScrollHeight}/{@code setScrollY}
+	 * only -- never {@code createChild}, never {@code revalidateScroll()} (D22's permanent ban).
+	 */
+	void setContentHeight(int contentHeight)
+	{
+		this.contentHeight = contentHeight;
+		layout();
+		bar.revalidate();
+	}
+
+	/**
+	 * Lays out (or re-lays-out) the track, arrows and thumb against the current
+	 * {@link #contentHeight}. The thumb always hides when there is nothing to scroll; whether the
+	 * track and arrows go with it is this instance's {@link Chrome} policy.
+	 */
+	private void layout()
+	{
+		list.setScrollHeight(contentHeight);
+		list.setScrollY(0);
+
+		boolean scrollable = maxScroll() > 0;
+		int trackHeight = Math.max(0, barHeight - (2 * ARROW_SIZE));
+
+		thumbHeight = scrollable
+			? Math.min(trackHeight, Math.max(MIN_THUMB_HEIGHT, trackHeight * viewportHeight / Math.max(1, contentHeight)))
+			: 0;
+		boolean showThumb = scrollable && thumbHeight >= MIN_THUMB_HEIGHT;
+		boolean showTrack = scrollable || chrome == Chrome.ALWAYS;
+
+		setHidden(track, !showTrack);
+		setHidden(arrowUp, !showTrack);
+		setHidden(arrowDown, !showTrack);
+		setHidden(thumbTop, !showThumb);
+		setHidden(thumbMiddle, !showThumb);
+		setHidden(thumbBottom, !showThumb);
+
+		if (showThumb)
+		{
+			thumbMiddle.setOriginalHeight(thumbHeight - (2 * CAP_HEIGHT));
+			thumbMiddle.revalidate();
+			positionThumb(0);
+		}
+	}
+
+	private static void setHidden(Widget widget, boolean hidden)
+	{
+		widget.setHidden(hidden);
+		widget.revalidate();
 	}
 
 	/**
@@ -124,13 +200,9 @@ final class MechanicsScrollbar
 		positionThumb(target);
 	}
 
+	/** Only ever called while the thumb is shown (docs/DECISIONS.md D28): {@link #layout} gates it. */
 	private void positionThumb(int scrollY)
 	{
-		if (thumbTop == null)
-		{
-			return;
-		}
-
 		int trackHeight = Math.max(0, barHeight - (2 * ARROW_SIZE));
 		int travel = trackHeight - thumbHeight;
 		int y = ARROW_SIZE + (maxScroll() == 0 ? 0 : travel * scrollY / maxScroll());
@@ -150,13 +222,14 @@ final class MechanicsScrollbar
 		return Math.max(0, contentHeight - viewportHeight);
 	}
 
-	private void arrow(int spriteId, int y, int step)
+	private Widget arrow(int spriteId, int y, int step)
 	{
 		Widget button = sprite(spriteId, 0, y, ARROW_SIZE, ARROW_SIZE, false);
 		button.setAction(0, "Scroll");
 		button.setNoClickThrough(true);
 		button.setHasListener(true);
 		button.setOnOpListener((JavaScriptCallback) event -> scrollBy(step));
+		return button;
 	}
 
 	private Widget sprite(int spriteId, int x, int y, int width, int height, boolean tiled)

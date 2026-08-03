@@ -90,13 +90,18 @@ public class BossMechanicsWindow
 	private static final int STEEL_CORNER_HEIGHT = 30;
 	private static final int STEEL_EDGE_THICKNESS = 36;
 
-	/** Close button, script 4769: 21x21 at (7,7) from the logical top-right, sprites 2289/2290. */
-	private static final int SPRITE_CLOSE = 2289;
-	private static final int SPRITE_CLOSE_HOVER = 2290;
-	private static final int CLOSE_WIDTH = 21;
-	private static final int CLOSE_HEIGHT = 21;
-	private static final int CLOSE_X = 7;
-	private static final int CLOSE_Y = 7;
+	/**
+	 * Close button, script 228: 26x23 at (3,6) from the logical top-right, sprites 535 (resting) /
+	 * 536 (hover) -- RuneLite's own {@code WINDOW_CLOSE_BUTTON}/{@code _HOVERED} (docs/
+	 * DECISIONS.md D28). Script 4769/sprites 2289-2290, used here previously, is the Combat
+	 * Achievements screen's BURGER button (D21 explicitly dropped it) and was copied by mistake.
+	 */
+	private static final int SPRITE_CLOSE = 535;
+	private static final int SPRITE_CLOSE_HOVER = 536;
+	private static final int CLOSE_WIDTH = 26;
+	private static final int CLOSE_HEIGHT = 23;
+	private static final int CLOSE_X = 3;
+	private static final int CLOSE_Y = 6;
 
 	/**
 	 * The WIKI button, cache sprites 2420 (resting) and 2421 (hover), both 40x14 and both

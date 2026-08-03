@@ -52,4 +52,13 @@ public class Preview
 	 * secondary model; most mechanics have none.
 	 */
 	SecondaryPreview secondary;
+	/**
+	 * Model rotation about its own X/Y/Z axes, 0-2047 per axis (a full turn); null means 0, i.e.
+	 * unrotated (docs/DECISIONS.md D28). D23 fixed rotation at a constant 0/0/0 (what the issue #1
+	 * spike validated); a value outside 0-2047 crashes the client, so the loader validates it at
+	 * curation time rather than letting it reach the widget.
+	 */
+	Integer rotationX;
+	Integer rotationY;
+	Integer rotationZ;
 }

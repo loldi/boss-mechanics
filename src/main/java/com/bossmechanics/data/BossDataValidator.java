@@ -100,15 +100,33 @@ final class BossDataValidator
 			{
 				errors.add(expectedId + ": " + label + ": preview is required");
 			}
-			// Issue #6, docs/DECISIONS.md D23: with no animationId and no static pose to fall
-			// back to, the model box would have nothing to render. Docs/DECISIONS.md D27: a
-			// sprite preview carries no model fields at all, so it is exempt -- the sprite tier
-			// wins over every model field, including this requirement.
-			else if (mechanic.getPreview().getSprite() == null
-				&& !mechanic.getPreview().isStaticFallback() && mechanic.getPreview().getAnimationId() == null)
+			else
 			{
-				errors.add(expectedId + ": " + label
-					+ ": preview.animationId is required when staticFallback is false");
+				Preview preview = mechanic.getPreview();
+
+				// Issue #6, docs/DECISIONS.md D23: with no animationId and no static pose to fall
+				// back to, the model box would have nothing to render. Docs/DECISIONS.md D27: a
+				// sprite preview carries no model fields at all, so it is exempt -- the sprite
+				// tier wins over every model field, including this requirement.
+				if (preview.getSprite() == null && !preview.isStaticFallback() && preview.getAnimationId() == null)
+				{
+					errors.add(expectedId + ": " + label
+						+ ": preview.animationId is required when staticFallback is false");
+				}
+
+				// docs/DECISIONS.md D28: a rotation value outside 0-2047 crashes the client (D23),
+				// so it is caught here rather than at runtime.
+				validateRotation(errors, expectedId, label + ".rotationX", preview.getRotationX());
+				validateRotation(errors, expectedId, label + ".rotationY", preview.getRotationY());
+				validateRotation(errors, expectedId, label + ".rotationZ", preview.getRotationZ());
+
+				SecondaryPreview secondary = preview.getSecondary();
+				if (secondary != null)
+				{
+					validateRotation(errors, expectedId, label + ".secondary.rotationX", secondary.getRotationX());
+					validateRotation(errors, expectedId, label + ".secondary.rotationY", secondary.getRotationY());
+					validateRotation(errors, expectedId, label + ".secondary.rotationZ", secondary.getRotationZ());
+				}
 			}
 		}
 	}
@@ -133,6 +151,19 @@ final class BossDataValidator
 			{
 				errors.add(expectedId + ": " + label + ": missing required field 'id'");
 			}
+		}
+	}
+
+	/**
+	 * A rotation axis value must fit 0-2047 (a full turn); anything outside crashes the client
+	 * (docs/DECISIONS.md D23, D28). Null (absent) is always fine -- it resolves to 0.
+	 */
+	private static void validateRotation(List<String> errors, String expectedId, String field, Integer value)
+	{
+		if (value != null && (value < 0 || value > 2047))
+		{
+			errors.add(expectedId + ": " + field + ": rotation " + value
+				+ " is outside the valid 0-2047 range and would crash the client (docs/DECISIONS.md D23/D28)");
 		}
 	}
 

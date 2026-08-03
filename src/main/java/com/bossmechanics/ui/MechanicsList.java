@@ -39,6 +39,14 @@ final class MechanicsList
 	private static final int PHASE_INSET = 4;
 
 	/**
+	 * Docs/DECISIONS.md D28: the first row used to butt straight up against the column's own top
+	 * edge, which read as cramped for every row but was most visible on a locked "???" row (no
+	 * phase tag to break it up). Folded into the scroll content height below it, so scrolling
+	 * still lines up with the real row positions.
+	 */
+	private static final int LIST_TOP_MARGIN = 4;
+
+	/**
 	 * The zone reserved for the phase tag at the row's right end, ellipsis budget included:
 	 * "Phase 1" in PLAIN_12 is ~40px, plus the inset and a 2px gap. The name is fitted into what
 	 * is left of the row rather than given the full width, because two full-width texts on one
@@ -146,7 +154,7 @@ final class MechanicsList
 		bar.setOriginalHeight(2 * SCROLLBAR_INSET);
 		bar.revalidate();
 
-		int y = 0;
+		int y = LIST_TOP_MARGIN;
 		for (MechanicRow row : view.getRows())
 		{
 			row(list, row, y);
@@ -154,7 +162,8 @@ final class MechanicsList
 		}
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(
-			list, bar, height - (2 * SCROLLBAR_INSET), height, y);
+			list, bar, height - (2 * SCROLLBAR_INSET), height, y,
+			MechanicsScrollbar.Chrome.ALWAYS);
 		scrollbar.build();
 
 		// A wheel event over a row is not guaranteed to reach the list behind it, so every row

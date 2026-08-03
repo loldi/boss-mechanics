@@ -158,6 +158,71 @@ public class BossDataLoaderTest
 		assertEquals(1, result.getBosses().size());
 	}
 
+	/**
+	 * docs/DECISIONS.md D28: curated rotation fields round-trip from JSON to {@link Preview}
+	 * untouched, the same null-means-default shape as {@code zoom}/{@code shiftX}.
+	 */
+	@Test
+	public void rotationFieldsRoundTripFromJson()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true, "
+				+ "\"rotationX\": 512, \"rotationY\": 1024, \"rotationZ\": 1536 }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue("expected no errors but got: " + result.getErrors(), result.getErrors().isEmpty());
+		Preview preview = result.getBosses().get(0).getMechanics().get(0).getPreview();
+		assertEquals(Integer.valueOf(512), preview.getRotationX());
+		assertEquals(Integer.valueOf(1024), preview.getRotationY());
+		assertEquals(Integer.valueOf(1536), preview.getRotationZ());
+	}
+
+	/** docs/DECISIONS.md D28: an absent rotation field parses as null, i.e. "no rotation curated". */
+	@Test
+	public void rotationFieldsDefaultToNullWhenAbsent()
+	{
+		LoadResult result = loader.parseOne(MINIMAL_VALID_JSON, "vorkath");
+
+		Preview preview = result.getBosses().get(0).getMechanics().get(0).getPreview();
+		assertEquals(null, preview.getRotationX());
+		assertEquals(null, preview.getRotationY());
+		assertEquals(null, preview.getRotationZ());
+	}
+
+	/**
+	 * docs/DECISIONS.md D23/D28: a rotation value outside 0-2047 crashes the client, so it is
+	 * rejected at curation time instead.
+	 */
+	@Test
+	public void rotationOutsideValidRangeIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true, \"rotationX\": 2048 }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "rotationX"));
+		assertTrue(errorContaining(result, "2048"));
+	}
+
+	/** docs/DECISIONS.md D28: a negative rotation value is just as invalid as one over 2047. */
+	@Test
+	public void negativeRotationIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true, \"rotationZ\": -1 }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "rotationZ"));
+	}
+
 	@Test
 	public void malformedJsonYieldsErrorNotException()
 	{
