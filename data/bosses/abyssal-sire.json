@@ -13,7 +13,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5912 }
       ],
-      "preview": { "npcId": 5912, "staticFallback": true, "zoom": 4125 }
+      "preview": { "animationId": 7106, "npcId": 5912, "staticFallback": false, "zoom": 3958 }
     },
     {
       "id": "respiratory-systems",
@@ -57,7 +57,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5918 }
       ],
-      "preview": { "npcId": 5918, "staticFallback": true, "zoom": 750 }
+      "preview": { "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635 }
     },
     {
       "id": "melee-combo",
