@@ -1,5 +1,6 @@
 package com.bossmechanics.ui;
 
+import com.bossmechanics.view.LineWrap;
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
 import com.bossmechanics.view.SecondaryPreviewSpec;
@@ -8,8 +9,10 @@ import java.util.Map;
 import java.util.function.IntUnaryOperator;
 import java.util.function.ToIntFunction;
 import net.runelite.api.FontID;
+import net.runelite.api.FontTypeFace;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
+import net.runelite.api.widgets.WidgetPositionMode;
 import net.runelite.api.widgets.WidgetType;
 
 /**
@@ -23,6 +26,13 @@ import net.runelite.api.widgets.WidgetType;
  * counterplay text in place and never deletes a child: a {@code deleteAllChildren()} here would
  * blow away whichever animation is currently playing every time the player clicked a different
  * row. Only the window's own root is ever emptied (D19).
+ *
+ * <p><b>The text block lives in a real scroll box, stacked by wrapped height (docs/DECISIONS.md
+ * D28).</b> A long counterplay used to clip against a fixed-height box (issue #47's "Tentacle
+ * Guard" case). {@link #show} now measures each of the three text widgets' own wrapped line count
+ * ({@link LineWrap}, fed the widget's real font metrics) and stacks them one after another inside
+ * a scrollable content layer, handing the resulting total height to a {@link MechanicsScrollbar}
+ * whose bar hides itself whenever that height already fits the viewport.
  *
  * <p><b>The model widget is a pool keyed by animation id, not a single mutated widget
  * (docs/DECISIONS.md D24).</b> The client keeps a MODEL widget's animation frame counter on the
@@ -95,22 +105,31 @@ final class MechanicsDetail
 	/**
 	 * The section border draws a 2px frame ({@code Widgets.sectionBorder}: a 1px outer line then a
 	 * 1px inner line one pixel in), so the real usable interior is 2px tighter on every edge than
-	 * the raw {@link #TEXT_AREA_Y}/{@link #TEXT_AREA_HEIGHT} box. Package-visible so
-	 * {@code MechanicsDetailPreviewTest} can assert the text block ends inside it, not just inside
-	 * the raw column height.
+	 * the raw {@link #TEXT_AREA_Y}/{@link #TEXT_AREA_HEIGHT} box.
 	 */
-	static final int TEXT_AREA_INTERIOR_BOTTOM = TEXT_AREA_Y + TEXT_AREA_HEIGHT - 2;
+	private static final int TEXT_AREA_INTERIOR_BOTTOM = TEXT_AREA_Y + TEXT_AREA_HEIGHT - 2;
 
 	/** G1 fix (docs/DECISIONS.md D27): every text widget is inset this far from the border. */
 	private static final int TEXT_X = 4;
-	private static final int TEXT_WIDTH = COLUMN_WIDTH - (2 * TEXT_X);
 
-	private static final int NAME_Y = 143;
-	private static final int NAME_HEIGHT = 15;
-	private static final int DESCRIPTION_Y = 159;
-	private static final int DESCRIPTION_HEIGHT = 36;
-	static final int COUNTERPLAY_Y = 197;
-	static final int COUNTERPLAY_HEIGHT = 36;
+	/**
+	 * The scrollable text content's own top and height (docs/DECISIONS.md D28): the same starting
+	 * row the name always had, running to the border's interior bottom -- a roughly 90px-tall
+	 * viewport, visually the same box as before, just scrollable now instead of clipping.
+	 */
+	private static final int TEXT_CONTENT_Y = TEXT_AREA_Y + 3;
+	private static final int TEXT_CONTENT_HEIGHT = TEXT_AREA_INTERIOR_BOTTOM - TEXT_CONTENT_Y;
+
+	/**
+	 * Reserves {@link MechanicsScrollbar#WIDTH} on the right so text wrapping is stable whether or
+	 * not the bar ends up showing (docs/DECISIONS.md D28) -- wrapping against a width that changes
+	 * depending on the very thing it is computing would be circular.
+	 */
+	private static final int TEXT_WIDTH = COLUMN_WIDTH - (2 * TEXT_X) - MechanicsScrollbar.WIDTH;
+
+	/** Vertical breathing room between the stacked name/description/counterplay blocks. */
+	private static final int TEXT_LINE_GAP = 2;
+
 	private static final int LINE_HEIGHT = 12;
 
 	/**
@@ -153,6 +172,10 @@ final class MechanicsDetail
 	/** The sprite pool widget the previous {@link #show} left on screen, or null if none is. */
 	private Widget visibleSprite;
 
+	/** The scrollable content layer name/description/counterplay stack inside (docs/DECISIONS.md D28). */
+	private Widget textContent;
+	private MechanicsScrollbar textScrollbar;
+
 	private Widget name;
 	private Widget description;
 	private Widget counterplay;
@@ -192,9 +215,25 @@ final class MechanicsDetail
 		// box so the model can never overdraw its own frame.
 		Widgets.sectionBorder(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
 
-		name = text("", FontID.BOLD_12, Widgets.ORANGE, NAME_Y, NAME_HEIGHT);
-		description = text("", FontID.PLAIN_12, Widgets.WHITE, DESCRIPTION_Y, DESCRIPTION_HEIGHT);
-		counterplay = text("", FontID.PLAIN_12, Widgets.ORANGE, COUNTERPLAY_Y, COUNTERPLAY_HEIGHT);
+		// The scrollable text content and its bar (docs/DECISIONS.md D28), the same shape
+		// MechanicsList already uses for the row list: a viewport LAYER plus a scrollbar built
+		// once here and only ever re-bound afterward via setContentHeight (never rebuilt).
+		textContent = Widgets.layer(column, TEXT_X, TEXT_CONTENT_Y, TEXT_WIDTH, TEXT_CONTENT_HEIGHT);
+
+		Widget textBar = Widgets.layer(column, TEXT_X, TEXT_CONTENT_Y,
+			MechanicsScrollbar.WIDTH, TEXT_CONTENT_HEIGHT);
+		textBar.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT);
+		textBar.revalidate();
+
+		name = text(FontID.BOLD_12, Widgets.ORANGE);
+		description = text(FontID.PLAIN_12, Widgets.WHITE);
+		counterplay = text(FontID.PLAIN_12, Widgets.ORANGE);
+
+		textScrollbar = new MechanicsScrollbar(textContent, textBar,
+			TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT,
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
+		// build() already wires the wheel on textContent.
+		textScrollbar.build();
 
 		// Same section frame around the text block, drawn after its own text for the same reason.
 		Widgets.sectionBorder(column, 0, TEXT_AREA_Y, COLUMN_WIDTH, TEXT_AREA_HEIGHT);
@@ -218,11 +257,11 @@ final class MechanicsDetail
 	 */
 	void show(MechanicRow row)
 	{
-		// A locked row still fills the panel with "???" and empty strings, so the layout never
-		// reflows; the dim is what says "you have not found this yet".
-		set(name, row == null ? "" : row.getName());
-		set(description, row == null ? "" : row.getDescription());
-		set(counterplay, row == null ? "" : row.getCounterplay());
+		// A locked row still fills the panel with "???" and empty strings, so the stack never
+		// overlaps; the dim is what says "you have not found this yet".
+		restackText(row == null ? "" : row.getName(),
+			row == null ? "" : row.getDescription(),
+			row == null ? "" : row.getCounterplay());
 
 		PreviewSpec preview = row == null ? PreviewSpec.hidden() : row.getPreview();
 
@@ -261,7 +300,8 @@ final class MechanicsDetail
 		}
 
 		primaryModel.show(preview.getAnimationId(), preview.getModelId(), preview.getNpcId(),
-			preview.getZoom(), preview.getShiftX(), preview.getShiftY());
+			preview.getZoom(), preview.getShiftX(), preview.getShiftY(),
+			preview.getRotationX(), preview.getRotationY(), preview.getRotationZ());
 
 		SecondaryPreviewSpec secondary = preview.getSecondary();
 		if (secondary == null)
@@ -271,7 +311,8 @@ final class MechanicsDetail
 		else
 		{
 			secondaryModel.show(secondary.getAnimationId(), secondary.getModelId(), secondary.getNpcId(),
-				secondary.getZoom(), secondary.getShiftX(), secondary.getShiftY());
+				secondary.getZoom(), secondary.getShiftX(), secondary.getShiftY(),
+				secondary.getRotationX(), secondary.getRotationY(), secondary.getRotationZ());
 		}
 	}
 
@@ -332,8 +373,17 @@ final class MechanicsDetail
 		 * + 2*shiftY)} vertically, since a model only ever needs to move down from its own ground
 		 * line, never up. Mutated every {@code show()} rather than only at creation, because two
 		 * specs sharing one animation id (and so one pool widget) could curate different shifts.
+		 *
+		 * <p><b>Per-preview rotation (docs/DECISIONS.md D28).</b> D24 fixed rotation at a constant
+		 * 0/0/0 in {@link #create}, the value the issue #1 spike validated; curated rotation is now
+		 * a rect-style mutation applied here on every {@code show()} instead, the same register as
+		 * shiftX/shiftY -- {@code setAnimationId} remains the only mutation D24 forbids on a live
+		 * pool widget, and rotation is not it. Values are validated 0-2047 at curation time
+		 * ({@code BossDataValidator}), so an out-of-range value that would crash the client (D23)
+		 * never reaches this call.
 		 */
-		void show(int animationId, Integer explicitModelId, int npcId, int zoom, int shiftX, int shiftY)
+		void show(int animationId, Integer explicitModelId, int npcId, int zoom, int shiftX, int shiftY,
+			int rotationX, int rotationY, int rotationZ)
 		{
 			Widget widget = pool.computeIfAbsent(animationId, this::create);
 
@@ -348,6 +398,9 @@ final class MechanicsDetail
 
 			widget.setModelId(modelId);
 			widget.setModelZoom(zoom);
+			widget.setRotationX(rotationX);
+			widget.setRotationY(rotationY);
+			widget.setRotationZ(rotationZ);
 			widget.setOriginalX(shiftX - absShiftX);
 			widget.setOriginalWidth(COLUMN_WIDTH + (2 * absShiftX));
 			widget.setOriginalY(0);
@@ -361,18 +414,14 @@ final class MechanicsDetail
 		/**
 		 * A freshly created MODEL widget's frame counter starts at zero (D24), so
 		 * {@code setAnimationId} is called here, once, and never again for this widget's
-		 * lifetime — that invariant is the entire fix.
+		 * lifetime — that invariant is the entire fix. Rotation is no longer set here (docs/
+		 * DECISIONS.md D28): it moved to {@link #show}, since it is a per-preview curated value,
+		 * not a constant.
 		 */
 		private Widget create(int animationId)
 		{
 			Widget widget = modelBox.createChild(-1, WidgetType.MODEL);
 			widget.setModelType(WidgetModelType.MODEL);
-			// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes
-			// must stay within 0-2047 or the client crashes, which a constant zero trivially
-			// satisfies.
-			widget.setRotationX(0);
-			widget.setRotationY(0);
-			widget.setRotationZ(0);
 			widget.setOriginalX(0);
 			widget.setOriginalY(0);
 			widget.setOriginalWidth(COLUMN_WIDTH);
@@ -435,19 +484,54 @@ final class MechanicsDetail
 		return widget;
 	}
 
-	private void set(Widget widget, String content)
+	/**
+	 * Restacks the three text widgets top to bottom by their own real wrapped height (docs/
+	 * DECISIONS.md D28), then hands the total to {@link #textScrollbar} -- the mechanism that
+	 * replaces the old fixed-height boxes a long counterplay used to clip against.
+	 */
+	private void restackText(String nameText, String descriptionText, String counterplayText)
 	{
-		widget.setText(content);
-		widget.revalidate();
+		int y = stack(name, nameText, 0) + TEXT_LINE_GAP;
+		y = stack(description, descriptionText, y) + TEXT_LINE_GAP;
+		int contentHeight = stack(counterplay, counterplayText, y);
+
+		textScrollbar.setContentHeight(contentHeight);
 	}
 
-	private Widget text(String content, int fontId, int color, int y, int height)
+	/**
+	 * Sets {@code widget}'s text, sizes it to its own wrapped line count at {@link #TEXT_WIDTH},
+	 * positions it at {@code y}, and returns the y its bottom edge lands on -- what the next block
+	 * in the stack (or the final content height) starts from.
+	 */
+	private int stack(Widget widget, String content, int y)
 	{
-		Widget widget = Widgets.text(column, content, fontId, color);
-		widget.setOriginalX(TEXT_X);
+		widget.setText(content);
+
+		int height = LINE_HEIGHT * lineCount(widget, content);
 		widget.setOriginalY(y);
-		widget.setOriginalWidth(TEXT_WIDTH);
 		widget.setOriginalHeight(height);
+		widget.revalidate();
+
+		return y + height;
+	}
+
+	/**
+	 * How many lines {@code content} wraps to at {@link #TEXT_WIDTH}, using the widget's own real
+	 * font metrics ({@link LineWrap}). A null font (never expected once {@code build()} has set
+	 * one, but a real possibility in a Proxy-backed test) falls back to one line rather than
+	 * crashing -- the same null-font fallback {@code MechanicsList.fitName} already uses.
+	 */
+	private int lineCount(Widget widget, String content)
+	{
+		FontTypeFace font = widget.getFont();
+		return font == null ? 1 : LineWrap.lines(content, font::getTextWidth, TEXT_WIDTH);
+	}
+
+	private Widget text(int fontId, int color)
+	{
+		Widget widget = Widgets.text(textContent, "", fontId, color);
+		widget.setOriginalX(0);
+		widget.setOriginalWidth(TEXT_WIDTH);
 		widget.setLineHeight(LINE_HEIGHT);
 		widget.revalidate();
 		return widget;

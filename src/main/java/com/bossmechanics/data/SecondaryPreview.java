@@ -22,4 +22,11 @@ public class SecondaryPreview
 	Integer shiftX;
 	/** Vertical anchor correction, in pixels; null means 0 (docs/DECISIONS.md D26/D27). */
 	Integer shiftY;
+	/**
+	 * Model rotation about its own X/Y/Z axes, 0-2047 per axis; null means 0 (docs/DECISIONS.md
+	 * D28). Mirrors {@link Preview}'s rotation fields; a value outside 0-2047 crashes the client.
+	 */
+	Integer rotationX;
+	Integer rotationY;
+	Integer rotationZ;
 }

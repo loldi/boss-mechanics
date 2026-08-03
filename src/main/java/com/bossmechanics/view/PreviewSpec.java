@@ -59,6 +59,16 @@ public class PreviewSpec
 	 * just in a second pool slot.
 	 */
 	SecondaryPreviewSpec secondary;
+	/**
+	 * Model rotation about its own X/Y/Z axes, 0-2047 per axis, resolved from
+	 * {@link Preview#getRotationX()}/{@code getRotationY()}/{@code getRotationZ()} (docs/
+	 * DECISIONS.md D28); 0 means unrotated, the value D23's spike validated.
+	 * {@code com.bossmechanics.ui} applies these directly on every {@code show()}, never deciding
+	 * them itself.
+	 */
+	int rotationX;
+	int rotationY;
+	int rotationZ;
 
 	/**
 	 * FORK, resolved (Option A, docs/DECISIONS.md D23): a static pose always wins over
@@ -85,7 +95,7 @@ public class PreviewSpec
 		String sprite = preview == null ? null : preview.getSprite();
 		if (sprite != null)
 		{
-			return new PreviewSpec(true, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, sprite, 0, null);
+			return new PreviewSpec(true, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0);
 		}
 
 		int npcId = preview != null && preview.getNpcId() != null ? preview.getNpcId() : bossNpcIds.get(0);
@@ -93,6 +103,9 @@ public class PreviewSpec
 		int shiftY = preview != null && preview.getShiftY() != null ? preview.getShiftY() : 0;
 		int shiftX = preview != null && preview.getShiftX() != null ? preview.getShiftX() : 0;
 		Integer modelId = preview == null ? null : preview.getModelId();
+		int rotationX = preview != null && preview.getRotationX() != null ? preview.getRotationX() : 0;
+		int rotationY = preview != null && preview.getRotationY() != null ? preview.getRotationY() : 0;
+		int rotationZ = preview != null && preview.getRotationZ() != null ? preview.getRotationZ() : 0;
 
 		boolean staticFallback = preview != null && preview.isStaticFallback();
 		Integer animationId = preview == null ? null : preview.getAnimationId();
@@ -101,11 +114,12 @@ public class PreviewSpec
 		SecondaryPreview secondaryData = preview == null ? null : preview.getSecondary();
 		SecondaryPreviewSpec secondary = secondaryData == null ? null : SecondaryPreviewSpec.of(secondaryData);
 
-		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY, modelId, null, shiftX, secondary);
+		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY, modelId, null, shiftX, secondary,
+			rotationX, rotationY, rotationZ);
 	}
 
 	public static PreviewSpec hidden()
 	{
-		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, null, 0, null);
+		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, null, 0, null, 0, 0, 0);
 	}
 }

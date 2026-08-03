@@ -86,34 +86,56 @@ public class MechanicsDetailPreviewTest
 	}
 
 	/**
-	 * The enlarged model box (Fork 2, resolved: accept Vorkath's wide aspect, docs/DECISIONS.md
-	 * D25) grew from 110 to 140 tall, which pushed name/description/counterplay down with it. This
-	 * pins the new numbers against each other rather than the client: the text block must still
-	 * fit inside the 235-tall column the window now hands this class, with nothing left over to
-	 * silently clip.
-	 *
-	 * <p>Tightened for the G1 text-inset fix (docs/DECISIONS.md D27): the real constraint is the
-	 * text area's own section-border <b>interior</b> (233), two pixels tighter than the column's
-	 * raw height (235), since {@code Widgets.sectionBorder} draws a 2px frame around the block.
+	 * The text scroll box (docs/DECISIONS.md D28, issue #47 follow-up): a long counterplay used to
+	 * clip against a fixed-height box (the "Tentacle Guard" case). Name/description/counterplay
+	 * now stack by their own real wrapped height instead, so this replaces the old fixed-geometry
+	 * assertion with the invariants that actually matter: the blocks never overlap, and the
+	 * scrollable content height the scrollbar is told about matches the real stacked height.
 	 */
 	@Test
-	public void textBlockFitsInsideTheSectionBorderInterior()
+	public void textBlocksStackWithoutOverlappingAndScrollContentMatchesTheStackedHeight()
 	{
-		assertTrue("the text block (name, description, counterplay) must end at or before the "
-				+ "text area's own section-border interior, not just the column height, or the "
-				+ "border draws over the last pixels of counterplay (docs/DECISIONS.md D27, G1)",
-			MechanicsDetail.COUNTERPLAY_Y + MechanicsDetail.COUNTERPLAY_HEIGHT
-				<= MechanicsDetail.TEXT_AREA_INTERIOR_BOTTOM);
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		detail.show(unlockedRowWithText("m1", "Tentacle Guard",
+			"Tentacles ring the throne, shielding the respiratory systems.",
+			"Stun the Sire to drop them for 30 seconds. Shadow Barrage always stuns."));
+
+		Widget name = widgetWithText(column, "Tentacle Guard");
+		Widget description = widgetWithText(column,
+			"Tentacles ring the throne, shielding the respiratory systems.");
+		Widget counterplay = widgetWithText(column,
+			"Stun the Sire to drop them for 30 seconds. Shadow Barrage always stuns.");
+
+		int nameBottom = originalY(name) + originalHeight(name);
+		int descriptionY = originalY(description);
+		int descriptionBottom = descriptionY + originalHeight(description);
+		int counterplayY = originalY(counterplay);
+		int counterplayBottom = counterplayY + originalHeight(counterplay);
+
+		assertTrue("the description must start at or after the name block's own bottom edge",
+			descriptionY >= nameBottom);
+		assertTrue("the counterplay must start at or after the description block's own bottom edge",
+			counterplayY >= descriptionBottom);
+
+		Widget scrollContent = widgetsThatCalled(column, "setScrollHeight").get(0);
+		assertEquals("the scrollable content height handed to the scrollbar must equal the real "
+				+ "stacked height (counterplay's own bottom edge), or the box either clips or "
+				+ "over-scrolls",
+			counterplayBottom, ((Integer) RecordingWidget.lastArgsOf(scrollContent, "setScrollHeight")[0]).intValue());
 	}
 
 	/**
-	 * G1 root cause (docs/DECISIONS.md D27): the name/description/counterplay text widgets used to
-	 * start at x=0, so the text area's own section border (drawn after the text, at x=0 and x=1)
-	 * overdrew the first two glyph columns of every line. Each text widget must now start inset
-	 * from the border.
+	 * G1's fix (docs/DECISIONS.md D27) moved every text widget off x=0 so the section border never
+	 * overdrew the first glyph columns. The text scroll box (D28) achieves the same inset one level
+	 * up: the text widgets sit at x=0 inside their own scrollable content layer, and that layer
+	 * itself is what starts inset from the border.
 	 */
 	@Test
-	public void textWidgetsAreInsetFromTheBorder()
+	public void theScrollableTextContentLayerIsInsetFromTheBorder()
 	{
 		Widget column = RecordingWidget.create();
 
@@ -124,13 +146,55 @@ public class MechanicsDetailPreviewTest
 		assertEquals("expected exactly the three text widgets (name, description, counterplay), "
 				+ "identified by their unique setLineHeight call",
 			3, textWidgets.size());
-		for (Widget widget : textWidgets)
+
+		Widget textContent = parentOf(column, textWidgets.get(0));
+		int x = ((Integer) RecordingWidget.lastArgsOf(textContent, "setOriginalX")[0]).intValue();
+		assertTrue("the scrollable text content layer must not start at x=0, or the section "
+				+ "border's left edge draws over its first glyph columns (docs/DECISIONS.md D27, "
+				+ "G1 fix; D28 moved the inset from the text widgets to their shared parent)",
+			x >= 4);
+	}
+
+	private static int originalY(Widget widget)
+	{
+		return ((Integer) RecordingWidget.lastArgsOf(widget, "setOriginalY")[0]).intValue();
+	}
+
+	private static int originalHeight(Widget widget)
+	{
+		return ((Integer) RecordingWidget.lastArgsOf(widget, "setOriginalHeight")[0]).intValue();
+	}
+
+	/** The text widget whose most recent {@code setText} call carries {@code text} exactly. */
+	private static Widget widgetWithText(Widget column, String text)
+	{
+		for (Widget widget : widgetsThatCalled(column, "setText"))
 		{
-			int x = ((Integer) RecordingWidget.lastArgsOf(widget, "setOriginalX")[0]).intValue();
-			assertTrue("a text widget must not start at x=0, or the section border's left edge "
-					+ "draws over its first glyph columns (docs/DECISIONS.md D27, G1 fix)",
-				x >= 4);
+			Object[] args = RecordingWidget.lastArgsOf(widget, "setText");
+			if (text.equals(args[0]))
+			{
+				return widget;
+			}
 		}
+		return null;
+	}
+
+	/** Walks {@code root}'s subtree looking for whichever widget's own children include {@code target}. */
+	private static Widget parentOf(Widget root, Widget target)
+	{
+		for (Widget child : RecordingWidget.childrenOf(root))
+		{
+			if (child == target)
+			{
+				return root;
+			}
+			Widget found = parentOf(child, target);
+			if (found != null)
+			{
+				return found;
+			}
+		}
+		return null;
 	}
 
 	private static List<Widget> widgetsThatCalled(Widget widget, String methodName)
@@ -238,6 +302,27 @@ public class MechanicsDetailPreviewTest
 	}
 
 	/**
+	 * Per-preview rotation (docs/DECISIONS.md D28): a curated rotation is applied to the visible
+	 * pool widget on every {@code show()}, mirroring how shiftX/shiftY are already rect-mutated
+	 * rather than fixed at creation.
+	 */
+	@Test
+	public void primaryModelWidgetReceivesTheSpecsRotation()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		detail.show(unlockedRowWithRotation("m1", 1, 500, 512, 1024, 1536));
+
+		Widget model = findModelWidget(column);
+		assertEquals(512, ((Integer) RecordingWidget.lastArgsOf(model, "setRotationX")[0]).intValue());
+		assertEquals(1024, ((Integer) RecordingWidget.lastArgsOf(model, "setRotationY")[0]).intValue());
+		assertEquals(1536, ((Integer) RecordingWidget.lastArgsOf(model, "setRotationZ")[0]).intValue());
+	}
+
+	/**
 	 * Secondary models (docs/DECISIONS.md D27, shape (a)): a curated secondary is a second MODEL
 	 * widget shown alongside the primary, resolved through its own modelId/npcId precedence.
 	 */
@@ -249,7 +334,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
-		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
 		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
 
 		List<Widget> modelWidgets = widgetsThatCalled(column, "setModelId");
@@ -269,7 +354,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
-		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
 		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
 		long createChildCallsSoFar = countCreateChild(calls);
 
@@ -289,7 +374,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
-		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
 		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
 		detail.show(unlockedRow("m2", 2, 600));
 
@@ -500,26 +585,41 @@ public class MechanicsDetailPreviewTest
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY, int shiftX)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null, 0, 0, 0));
+	}
+
+	private static MechanicRow unlockedRowWithText(String mechanicId, String name, String description,
+		String counterplay)
+	{
+		return new MechanicRow(mechanicId, true, false, name, description, counterplay, null,
+			new PreviewSpec(true, 1, 500, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null, 0, 0, 0));
+	}
+
+	private static MechanicRow unlockedRowWithRotation(String mechanicId, int npcId, int animationId,
+		int rotationX, int rotationY, int rotationZ)
+	{
+		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null,
+				rotationX, rotationY, rotationZ));
 	}
 
 	private static MechanicRow unlockedRowWithModelId(String mechanicId, int modelId, int animationId)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null));
+			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null, 0, 0, 0));
 	}
 
 	private static MechanicRow spriteRow(String mechanicId, String sprite)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null));
+			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0));
 	}
 
 	private static MechanicRow unlockedRowWithSecondary(String mechanicId, int npcId, int animationId,
 		SecondaryPreviewSpec secondary)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary, 0, 0, 0));
 	}
 
 	private static MechanicRow lockedRow()
