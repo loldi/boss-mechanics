@@ -59,8 +59,12 @@ final class MechanicsDetail
 	 */
 	static final int MODEL_HEIGHT = 140;
 
-	private static final int MODEL_FILL = 0x0E0E0C;
-	private static final int MODEL_BORDER = 0x474645;
+	/**
+	 * The model box's backdrop, measured from 713's statics: sprite 1040 tiled at opacity 40, in
+	 * place of a flat fill. RuneLite opacity is inverted, so 40 is mostly (not barely) opaque.
+	 */
+	private static final int MODEL_BACKDROP_SPRITE = 1040;
+	private static final int MODEL_BACKDROP_OPACITY = 40;
 
 	/** {@link IntUnaryOperator#applyAsInt} result meaning "no model resolved for this npc". */
 	private static final int UNKNOWN_MODEL = -1;
@@ -72,6 +76,10 @@ final class MechanicsDetail
 	static final int COUNTERPLAY_Y = 199;
 	static final int COUNTERPLAY_HEIGHT = 36;
 	private static final int LINE_HEIGHT = 12;
+
+	/** The text block's own section frame starts where the name text does, just below the box. */
+	private static final int TEXT_AREA_Y = NAME_Y;
+	private static final int TEXT_AREA_HEIGHT = COLUMN_HEIGHT - TEXT_AREA_Y;
 
 	/**
 	 * Script 4808's own idiom for a locked Combat Achievements entry: a black fill at
@@ -120,17 +128,23 @@ final class MechanicsDetail
 		// sibling drawn afterwards, so the model can never overdraw its own frame.
 		int height = column.getOriginalHeight();
 		modelBox = Widgets.layer(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
-		Widgets.filled(modelBox, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, MODEL_FILL);
+		Widgets.sprite(modelBox, MODEL_BACKDROP_SPRITE, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, true,
+			MODEL_BACKDROP_OPACITY);
 
 		// Pool widgets are created lazily, per distinct animation id, the first time show() needs
 		// one (D24) — not here. Creating one eagerly would mean an animation id of NO_ANIMATION
 		// with no spec ever asking for it, which is harmless but pointless.
 
-		Widgets.outline(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT, MODEL_BORDER);
+		// The Combat Achievements section frame (docs/DECISIONS.md D26), a sibling drawn after the
+		// box so the model can never overdraw its own frame.
+		Widgets.sectionBorder(column, 0, 0, COLUMN_WIDTH, MODEL_HEIGHT);
 
 		name = text("", FontID.BOLD_12, Widgets.ORANGE, NAME_Y, NAME_HEIGHT);
 		description = text("", FontID.PLAIN_12, Widgets.WHITE, DESCRIPTION_Y, DESCRIPTION_HEIGHT);
 		counterplay = text("", FontID.PLAIN_12, Widgets.ORANGE, COUNTERPLAY_Y, COUNTERPLAY_HEIGHT);
+
+		// Same section frame around the text block, drawn after its own text for the same reason.
+		Widgets.sectionBorder(column, 0, TEXT_AREA_Y, COLUMN_WIDTH, TEXT_AREA_HEIGHT);
 
 		// Last, so it covers the box, the model and the text.
 		dim = Widgets.filled(column, 0, 0, COLUMN_WIDTH, height, 0x000000);
