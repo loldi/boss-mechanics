@@ -696,6 +696,90 @@ so new decisions are appended here rather than inserted in a themed section.
       pool-creation order (primary first); they are curated not to overlap once shifted apart, not
       enforced by any z-index mechanism.
 
+28. **In-game live-pass fixes from PR #47's shell/chrome/preview work: the wrong close button,
+    Vent's real breathing animation, a recolor-table rule for model previews, per-preview
+    rotation, and a real text scroll box.** Five findings, one slice each; the movable/resizable
+    window Andrew also flagged is deliberately deferred to issue #48, not built here.
+
+    - **The close button was the Combat Achievements screen's BURGER menu, not its close button.**
+      Script 4769 sets `if_setop(1, "Show Menu")` on sprite 2289 — that is CA's burger, which D21
+      explicitly dropped as having no menu of our own to promise. It was copied here by a
+      cache-reading mistake, not a design choice. The real close button is script 228's own
+      sprites 535 (resting) / 536 (hover) — RuneLite's own `WINDOW_CLOSE_BUTTON`/`_HOVERED` gameval
+      names — 26x23 at (3,6) from the logical top-right. `BossMechanicsWindow`'s `WIKI_X` already
+      derives from `CLOSE_WIDTH`, so it self-adjusted with no further change.
+    - **The Vent finding extends D27's preview-npc-need-not-be-the-trigger-npc principle one step
+      further: the animation itself may live on a different cache entity than the one being
+      previewed, provided they share a model.** D27 already moved `respiratory-systems`'s preview
+      off the unanimatable spawn npc (5914) onto npc 5915 ("Vent", model 29429). What D27 missed:
+      anim 7103 (Vent's own `standingAnim`) is a **one-frame sequence**, and model 29429 carries
+      zero vertex groups — no in-game motion is possible from that pair at all, one-frame sequences
+      being static by definition. What actually breathes in the fight is scenery **object 26953**,
+      also literally named "Vent", sharing the same model 29429 but playing **anim 7105**: 12
+      frames, 60 cycles, looping, whose face labels (max index 26) exactly cover the model's 27
+      transparency groups — a genuine alpha pulse. The fix stays entirely inside the existing
+      `npcId`/`animationId` fields: `respiratory-systems`'s preview keeps `npcId: 5915` (the model
+      lookup only needs a model, and 5915's model **is** 29429) but its `animationId` moves to
+      7105, borrowed from the object that actually plays it. No schema or code change was needed —
+      an animation id is just a sequence to apply to whatever model is loaded, with no enforced tie
+      to the entity gameval names suggest it "belongs" to. Re-baked with the cachetool's `FitZoom`
+      against the corrected animation: zoom 1267 → 1866, `shiftY` unchanged at 64.
+    - **The recolor-table rule (extends D27's sprite-preview precedent): an npc whose recolor table
+      covers its entire model cannot be model-previewed colour-true — bundle a sprite instead.**
+      Vorkath's zombified spawn (npc 8063, model 35025) is the case: its recolor table replaces
+      100% of the model's faces, and D27 already established there is no Widget API path to apply
+      an npc's own recolor table to a live model widget (`setModelId` takes a bare cache id;
+      `client.loadModelData(id).recolor(...)`'s output only ever attaches to a scene
+      `RuneLiteObject`, never a widget). The three replacement colours are `30123`/`30238`/`29590`
+      (`#307B69`/`#1A5D4D`/`#02553A` — the icy-teal zombie skin), confirming a raw model preview
+      would have rendered whatever base texture colour ships in the cache, not this. The composite
+      sprite D27 already called for is now shipped (icy breath flying in from the left into the
+      teal spawn on the right, 287x136, binary alpha, no opaque `#000000`), replacing the earlier
+      placeholder with no data or code change (same filename).
+    - **D27's open world-hop hedge is resolved: custom sprite overrides CONFIRMED surviving a world
+      hop, live pass 2026-08-02.** `venomous-dragonfire`/`corrupting-dragonfire`/`zombified-spawn`
+      kept rendering correctly after a world hop with no re-registration observed, so the mirrored
+      `GameStateChanged HOPPING`/`LOGIN_SCREEN` fallback D27 flagged is not needed. This line exists
+      so the question does not get re-litigated: sprite overrides live in a RuneLite-side map, not
+      transient game state, exactly as expected.
+    - **Per-preview rotation (`Preview`/`SecondaryPreview` gain optional `rotationX`/`rotationY`/
+      `rotationZ`).** D23 fixed rotation at a constant 0/0/0 (what the issue #1 spike validated);
+      Miasma Pools' secondary (the pool model) needed 90° (`rotationX: 512`, of 2047 per full turn)
+      so its top faces the viewer, which the constant made impossible. Resolved the same
+      null-means-default way as `zoom`/`shiftX` (`view.PreviewSpec`/`SecondaryPreviewSpec` gain
+      resolved `int` getters), validated 0-2047 by `BossDataValidator` — a value outside that range
+      crashes the client (D23) — and applied in `MechanicsDetail.ModelSlot.show()` on every
+      `show()` rather than fixed at creation in `create()`: rect and rotation mutation on a live
+      pool widget is D24-legal, only `setAnimationId` is banned there, and rotation is not it.
+      **Live-pass tunable, flagged in the PR body:** `FitZoom`'s own extents assume rotation 0, so
+      a rotated secondary's zoom (and the primary's own re-centring shiftX alongside it) is
+      eyeballed, not derived — Miasma Pools' primary zoom was also lowered from the ship+10%-margin
+      fit to the raw zero-margin `FitZoom` value (Andrew asked to zoom in on the Sire), and both
+      models' `shiftX` nudged toward centre.
+    - **A real text scroll box, replacing the fixed-height name/description/counterplay boxes.**
+      Long counterplay text (Abyssal Sire's "Tentacle Guard") clipped against the fixed
+      `COUNTERPLAY_HEIGHT`. New `view.LineWrap.lines(text, widthOf, maxWidth)` (RuneLite-free, same
+      `ToIntFunction<String>` measurement seam `Ellipsize` already uses) greedily word-wraps and
+      reports a line count; `MechanicsDetail.show()` now stacks the three text widgets top to
+      bottom by `LineWrap.lines(...) * LINE_HEIGHT` against the widget's own real font metrics,
+      instead of three widgets pinned at fixed y-offsets. The stacked total becomes the scrollable
+      content height, handed to a `MechanicsScrollbar` via its new `setContentHeight(int)` — rect
+      mutation plus `setScrollHeight`/`setScrollY` only, never `createChild`, never
+      `revalidateScroll()` (D22's permanent ban still holds). The scrollbar's track/arrows/thumb
+      are now always created once in `build()`, never conditionally and never later, so
+      `setContentHeight` can only mutate and hide/show them — the bar hides itself entirely
+      whenever the new content already fits the ~90px-tall viewport. Text width is fixed
+      (`COLUMN_WIDTH - 2*TEXT_X - MechanicsScrollbar.WIDTH`, ~267px) to reserve the bar's own width
+      whether or not it ends up showing, since wrapping against a width that depends on the very
+      thing it's computing (does this content need to scroll?) would be circular. **This box's
+      visual feel in a ~90px viewport is the one thing only the in-game pass can judge** — the unit
+      tests pin the stacking mechanism (blocks never overlap, content height matches the real
+      stack), not how comfortable it reads at that height.
+    - **Deferred, not built here: a movable/resizable window (issue #48).** Andrew raised it in the
+      same pass; the Combat Achievements boss screen this window mirrors (D21) is itself fixed-size,
+      and D22's third symptom already resolved "should this resize" as a non-fix for the same
+      reason. Filed as its own spike rather than folded in here.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

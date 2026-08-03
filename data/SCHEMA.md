@@ -65,7 +65,10 @@ themselves, or the trigger will false-positive.
 | `modelId` | int? | Explicit cache model id, bypassing the `npcId` lookup entirely (docs/DECISIONS.md D27). Curated for a model that has no npc to look it up from (e.g. a base spotanim model) or that a curator otherwise wants to pin directly. Still needs an `animationId` (or `staticFallback`) to say what plays on it. Defaults to absent, i.e. resolve the model from `npcId` as usual. |
 | `sprite` | string? | Bundled sprite resource name under `src/main/resources/sprites/` (docs/DECISIONS.md D27), e.g. `"venomous-dragonfire.png"`. **Wins over every other field in this table** — when present, none of them are read, and no validator error requires `animationId`/`staticFallback` either. For the rare case where the game cache genuinely has no distinctly-coloured model to render (colour applied only as a spotanim-level recolor the Widget API can't reach). Must be exactly 287x136, binary alpha, no opaque `#000000` (see docs/DECISIONS.md D27 for the full image spec). Defaults to absent. |
 | `shiftX` | int? | Horizontal anchor offset, **in pixels** (docs/DECISIONS.md D27). Mirrors `shiftY`'s mechanism sideways: the pool widget's rect grows by `2 * abs(shiftX)` and its origin moves by `shiftX - abs(shiftX)`, so the model's own centre moves without the rect ever losing coverage of the box. Defaults to 0 (centred) when absent. |
-| `secondary` | object? | A second model shown beside this one (docs/DECISIONS.md D27, shape (a)): `{modelId\|npcId, animationId, zoom, shiftX, shiftY}`, resolved with the same `modelId`/`npcId` precedence as the primary, in its own widget. Defaults to absent (no secondary). |
+| `secondary` | object? | A second model shown beside this one (docs/DECISIONS.md D27, shape (a)): `{modelId\|npcId, animationId, zoom, shiftX, shiftY, rotationX, rotationY, rotationZ}`, resolved with the same `modelId`/`npcId` precedence as the primary, in its own widget. Defaults to absent (no secondary). |
+| `rotationX` | int? | Model rotation about its own X axis, **0-2047 per axis** (a full turn), docs/DECISIONS.md D28. Defaults to 0 (unrotated, D23's spike-validated value) when absent. A value outside 0-2047 crashes the client, so `BossDataValidator` rejects it at curation time. **`FitZoom` does not model rotation** — its extents assume rotation 0, so a mechanic that curates a non-zero rotation needs its `zoom`/`shiftY`/`shiftX` re-eyeballed in game rather than trusted from the tool's output. |
+| `rotationY` | int? | Same range/default/caveat as `rotationX`, about the Y axis. |
+| `rotationZ` | int? | Same range/default/caveat as `rotationX`, about the Z axis. |
 
 **Preview resolution order (the preference ladder, docs/DECISIONS.md D27): `sprite` > `modelId` >
 `npcId`+`animationId` > the npc's own idle animation > a raw static pose (`staticFallback`).** Only
@@ -74,7 +77,22 @@ validator error. **The preview npc need not be the trigger npc** — curate whic
 carries the visible model/animation. Abyssal Sire's `respiratory-systems` is the example: detection
 stays on npc-spawn 5914 (the id the game actually spawns), but the preview targets npc 5915, the
 distinct npc that is actually animated in the fight; 5914 itself is an unanimatable 8-vertex
-clickbox placeholder.
+clickbox placeholder. **The animation itself can come from a still different cache entity than the
+npc being previewed, provided they share a model** (docs/DECISIONS.md D28) — `respiratory-systems`
+keeps `npcId: 5915` but its `animationId` (7105) is borrowed from a scenery object that shares
+5915's model and is what actually animates in the fight; an animation id has no enforced tie to
+the entity a gameval name suggests it "belongs" to, it is just a sequence applied to whatever model
+is loaded.
+
+**The recolor-table rule (docs/DECISIONS.md D28): an npc whose recolor table covers its entire
+model cannot be model-previewed colour-true — curate a `sprite` instead.** There is no Widget API
+path to apply an npc's own recolor table to a live model widget (docs/DECISIONS.md D27's survey
+still stands: `setModelId` takes a bare cache id, and `client.loadModelData(id).recolor(...)`'s
+output only ever attaches to a scene `RuneLiteObject`, never a widget). Vorkath's zombified spawn
+(npc 8063, model 35025) is the example: its recolor table replaces 100% of the model's faces
+(`30123`/`30238`/`29590`, i.e. `#307B69`/`#1A5D4D`/`#02553A`), so a raw model preview would render
+the cache's base texture colour, not this. Check an npc's recolor coverage before curating a model
+preview for it; full coverage means a bundled sprite, not `modelId`/`npcId`.
 
 ## Style rules
 
