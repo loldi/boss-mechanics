@@ -14,4 +14,13 @@ public class Preview
 	boolean staticFallback;
 	/** Model widget zoom; null means "use the resolved default" (docs/DECISIONS.md D23). */
 	Integer zoom;
+	/**
+	 * Vertical anchor correction, in pixels; null means 0, i.e. no correction (docs/DECISIONS.md
+	 * D26). The engine anchors an if3 MODEL widget's ground line (y=0) at the widget's own
+	 * vertical center, not the centre of its animated bounds, so a model that extends mostly
+	 * upward from the ground needs its widget rect grown downward by this many pixels to land
+	 * centred in the box. Curated per mechanic from the model's own vertical extents (see the
+	 * cachetool's {@code FitZoom}, which now emits it alongside zoom).
+	 */
+	Integer shiftY;
 }
