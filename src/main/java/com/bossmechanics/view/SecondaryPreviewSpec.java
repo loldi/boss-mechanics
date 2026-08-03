@@ -19,6 +19,10 @@ public class SecondaryPreviewSpec
 	int zoom;
 	int shiftX;
 	int shiftY;
+	/** Model rotation about its own X/Y/Z axes, 0-2047 per axis; mirrors {@link PreviewSpec}'s. */
+	int rotationX;
+	int rotationY;
+	int rotationZ;
 
 	static SecondaryPreviewSpec of(SecondaryPreview secondary)
 	{
@@ -27,7 +31,11 @@ public class SecondaryPreviewSpec
 		int zoom = secondary.getZoom() != null ? secondary.getZoom() : PreviewSpec.DEFAULT_ZOOM;
 		int shiftX = secondary.getShiftX() != null ? secondary.getShiftX() : 0;
 		int shiftY = secondary.getShiftY() != null ? secondary.getShiftY() : 0;
+		int rotationX = secondary.getRotationX() != null ? secondary.getRotationX() : 0;
+		int rotationY = secondary.getRotationY() != null ? secondary.getRotationY() : 0;
+		int rotationZ = secondary.getRotationZ() != null ? secondary.getRotationZ() : 0;
 
-		return new SecondaryPreviewSpec(secondary.getModelId(), npcId, animationId, zoom, shiftX, shiftY);
+		return new SecondaryPreviewSpec(secondary.getModelId(), npcId, animationId, zoom, shiftX, shiftY,
+			rotationX, rotationY, rotationZ);
 	}
 }

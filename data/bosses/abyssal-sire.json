@@ -36,8 +36,8 @@
         { "type": "animation", "id": 5367 }
       ],
       "preview": {
-        "animationId": 4531, "staticFallback": false, "zoom": 4425, "shiftY": 63, "shiftX": -50,
-        "secondary": { "modelId": 29475, "animationId": 7115, "zoom": 1100, "shiftX": 90, "shiftY": 33 }
+        "animationId": 4531, "staticFallback": false, "zoom": 4027, "shiftY": 69, "shiftX": -40,
+        "secondary": { "modelId": 29475, "animationId": 7115, "zoom": 1100, "shiftX": 75, "shiftY": 33, "rotationX": 512 }
       }
     },
     {

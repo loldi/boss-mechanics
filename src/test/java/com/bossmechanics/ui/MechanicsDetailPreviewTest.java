@@ -238,6 +238,27 @@ public class MechanicsDetailPreviewTest
 	}
 
 	/**
+	 * Per-preview rotation (docs/DECISIONS.md D28): a curated rotation is applied to the visible
+	 * pool widget on every {@code show()}, mirroring how shiftX/shiftY are already rect-mutated
+	 * rather than fixed at creation.
+	 */
+	@Test
+	public void primaryModelWidgetReceivesTheSpecsRotation()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		detail.build();
+
+		detail.show(unlockedRowWithRotation("m1", 1, 500, 512, 1024, 1536));
+
+		Widget model = findModelWidget(column);
+		assertEquals(512, ((Integer) RecordingWidget.lastArgsOf(model, "setRotationX")[0]).intValue());
+		assertEquals(1024, ((Integer) RecordingWidget.lastArgsOf(model, "setRotationY")[0]).intValue());
+		assertEquals(1536, ((Integer) RecordingWidget.lastArgsOf(model, "setRotationZ")[0]).intValue());
+	}
+
+	/**
 	 * Secondary models (docs/DECISIONS.md D27, shape (a)): a curated secondary is a second MODEL
 	 * widget shown alongside the primary, resolved through its own modelId/npcId precedence.
 	 */
@@ -249,7 +270,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
-		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
 		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
 
 		List<Widget> modelWidgets = widgetsThatCalled(column, "setModelId");
@@ -269,7 +290,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
-		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
 		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
 		long createChildCallsSoFar = countCreateChild(calls);
 
@@ -289,7 +310,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
 		detail.build();
 
-		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33);
+		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
 		detail.show(unlockedRowWithSecondary("m1", 1, 500, secondary));
 		detail.show(unlockedRow("m2", 2, 600));
 
@@ -500,26 +521,34 @@ public class MechanicsDetailPreviewTest
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY, int shiftX)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null, 0, 0, 0));
+	}
+
+	private static MechanicRow unlockedRowWithRotation(String mechanicId, int npcId, int animationId,
+		int rotationX, int rotationY, int rotationZ)
+	{
+		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null,
+				rotationX, rotationY, rotationZ));
 	}
 
 	private static MechanicRow unlockedRowWithModelId(String mechanicId, int modelId, int animationId)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null));
+			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null, 0, 0, 0));
 	}
 
 	private static MechanicRow spriteRow(String mechanicId, String sprite)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null));
+			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0));
 	}
 
 	private static MechanicRow unlockedRowWithSecondary(String mechanicId, int npcId, int animationId,
 		SecondaryPreviewSpec secondary)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary, 0, 0, 0));
 	}
 
 	private static MechanicRow lockedRow()

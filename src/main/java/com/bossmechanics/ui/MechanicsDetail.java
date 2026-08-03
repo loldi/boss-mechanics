@@ -261,7 +261,8 @@ final class MechanicsDetail
 		}
 
 		primaryModel.show(preview.getAnimationId(), preview.getModelId(), preview.getNpcId(),
-			preview.getZoom(), preview.getShiftX(), preview.getShiftY());
+			preview.getZoom(), preview.getShiftX(), preview.getShiftY(),
+			preview.getRotationX(), preview.getRotationY(), preview.getRotationZ());
 
 		SecondaryPreviewSpec secondary = preview.getSecondary();
 		if (secondary == null)
@@ -271,7 +272,8 @@ final class MechanicsDetail
 		else
 		{
 			secondaryModel.show(secondary.getAnimationId(), secondary.getModelId(), secondary.getNpcId(),
-				secondary.getZoom(), secondary.getShiftX(), secondary.getShiftY());
+				secondary.getZoom(), secondary.getShiftX(), secondary.getShiftY(),
+				secondary.getRotationX(), secondary.getRotationY(), secondary.getRotationZ());
 		}
 	}
 
@@ -332,8 +334,17 @@ final class MechanicsDetail
 		 * + 2*shiftY)} vertically, since a model only ever needs to move down from its own ground
 		 * line, never up. Mutated every {@code show()} rather than only at creation, because two
 		 * specs sharing one animation id (and so one pool widget) could curate different shifts.
+		 *
+		 * <p><b>Per-preview rotation (docs/DECISIONS.md D28).</b> D24 fixed rotation at a constant
+		 * 0/0/0 in {@link #create}, the value the issue #1 spike validated; curated rotation is now
+		 * a rect-style mutation applied here on every {@code show()} instead, the same register as
+		 * shiftX/shiftY -- {@code setAnimationId} remains the only mutation D24 forbids on a live
+		 * pool widget, and rotation is not it. Values are validated 0-2047 at curation time
+		 * ({@code BossDataValidator}), so an out-of-range value that would crash the client (D23)
+		 * never reaches this call.
 		 */
-		void show(int animationId, Integer explicitModelId, int npcId, int zoom, int shiftX, int shiftY)
+		void show(int animationId, Integer explicitModelId, int npcId, int zoom, int shiftX, int shiftY,
+			int rotationX, int rotationY, int rotationZ)
 		{
 			Widget widget = pool.computeIfAbsent(animationId, this::create);
 
@@ -348,6 +359,9 @@ final class MechanicsDetail
 
 			widget.setModelId(modelId);
 			widget.setModelZoom(zoom);
+			widget.setRotationX(rotationX);
+			widget.setRotationY(rotationY);
+			widget.setRotationZ(rotationZ);
 			widget.setOriginalX(shiftX - absShiftX);
 			widget.setOriginalWidth(COLUMN_WIDTH + (2 * absShiftX));
 			widget.setOriginalY(0);
@@ -361,18 +375,14 @@ final class MechanicsDetail
 		/**
 		 * A freshly created MODEL widget's frame counter starts at zero (D24), so
 		 * {@code setAnimationId} is called here, once, and never again for this widget's
-		 * lifetime — that invariant is the entire fix.
+		 * lifetime — that invariant is the entire fix. Rotation is no longer set here (docs/
+		 * DECISIONS.md D28): it moved to {@link #show}, since it is a per-preview curated value,
+		 * not a constant.
 		 */
 		private Widget create(int animationId)
 		{
 			Widget widget = modelBox.createChild(-1, WidgetType.MODEL);
 			widget.setModelType(WidgetModelType.MODEL);
-			// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes
-			// must stay within 0-2047 or the client crashes, which a constant zero trivially
-			// satisfies.
-			widget.setRotationX(0);
-			widget.setRotationY(0);
-			widget.setRotationZ(0);
 			widget.setOriginalX(0);
 			widget.setOriginalY(0);
 			widget.setOriginalWidth(COLUMN_WIDTH);
