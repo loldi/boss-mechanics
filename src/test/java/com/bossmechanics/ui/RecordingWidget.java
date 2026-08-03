@@ -31,6 +31,7 @@ final class RecordingWidget implements InvocationHandler
 	private final Map<String, Object> listeners = new HashMap<>();
 	private final Map<String, Object[]> lastArgs = new HashMap<>();
 	private final Map<String, List<Object[]>> allArgs = new HashMap<>();
+	private final Map<String, Object> returning = new HashMap<>();
 
 	private RecordingWidget(List<String> allCalls)
 	{
@@ -89,6 +90,17 @@ final class RecordingWidget implements InvocationHandler
 		return handlerOf(widget).allArgs.getOrDefault(methodName, new ArrayList<>());
 	}
 
+	/**
+	 * Pins a getter's return value, e.g. {@code returning(host, "getWidth", 765)}. Additive
+	 * alongside {@link #lastArgsOf}/{@link #allArgsOf}: those record what production code *sent*,
+	 * this controls what a fake widget *answers* -- issue #48's drag clamp needs real widths,
+	 * heights and relative offsets rather than every getter's harmless zero default.
+	 */
+	static void returning(Widget widget, String methodName, Object value)
+	{
+		handlerOf(widget).returning.put(methodName, value);
+	}
+
 	/** A harmless stand-in for a return type we don't need to model precisely. */
 	static Object defaultFor(Class<?> type)
 	{
@@ -133,6 +145,11 @@ final class RecordingWidget implements InvocationHandler
 			}
 		}
 
+		if (returning.containsKey(name))
+		{
+			return returning.get(name);
+		}
+
 		if (name.equals("createChild"))
 		{
 			Widget child = create(allCalls);
@@ -141,7 +158,12 @@ final class RecordingWidget implements InvocationHandler
 		}
 
 		Class<?> returnType = method.getReturnType();
-		if (returnType == Widget.class)
+		// Only a fluent setter (setX(...) returning Widget for chaining) defaults to the proxy
+		// itself. A real getter that happens to return Widget -- getParent(), notably -- defaults
+		// to null like every other unstubbed getter would, via defaultFor: without this split,
+		// getParent() returned the same widget forever and WindowPlacement.offsetInRoot's
+		// parent-chain walk (issue #48) never terminated.
+		if (name.startsWith("set") && returnType == Widget.class)
 		{
 			return proxy;
 		}

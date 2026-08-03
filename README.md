@@ -35,7 +35,9 @@ locked "???" row shows nothing. The window now wears the real steel Combat
 Achievements chrome (frame, corners and title all pulled from the game's own
 sprites), and a mechanic's preview can also be a bundled sprite image (for the
 few moves whose colour the Widget API can't render live) or a second model
-shown alongside the first. See
+shown alongside the first. The window can be dragged by its title bar anywhere
+on screen (never fully off it), and remembers where you put it across a "View
+All" flip, a boss switch and a close/reopen for the rest of your session. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 

@@ -3,6 +3,7 @@ package com.bossmechanics.ui;
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.view.MechanicsView;
 import com.bossmechanics.view.Selection;
+import com.bossmechanics.view.WindowDrag;
 import java.awt.event.KeyEvent;
 import java.util.HashSet;
 import java.util.Set;
@@ -16,7 +17,6 @@ import net.runelite.api.FontID;
 import net.runelite.api.GameState;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.Point;
-import net.runelite.api.ScriptEvent;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.WidgetClosed;
@@ -120,10 +120,10 @@ public class BossMechanicsWindow
 	private static final int WIKI_X = CLOSE_X + CLOSE_WIDTH + 6;
 
 	/**
-	 * Issue #48, Slice 1 (the probe): a title-bar drag handle, wide enough to stop left of the
-	 * WIKI button rather than hardcoded, so it stays correct if the button's own geometry ever
-	 * moves. {@code WIKI_X + WIKI_WIDTH} is 75px measured from the right; this adds a further 6px
-	 * margin so the handle never overlaps the button's own hit area.
+	 * The title-bar drag handle (docs/DECISIONS.md D29), wide enough to stop left of the WIKI
+	 * button rather than hardcoded, so it stays correct if the button's own geometry ever moves.
+	 * {@code WIKI_X + WIKI_WIDTH} is 75px measured from the right; this adds a further 6px margin
+	 * so the handle never overlaps the button's own hit area.
 	 */
 	private static final int DRAG_HANDLE_MARGIN = 6;
 	private static final int DRAG_HANDLE_WIDTH = WINDOW_WIDTH - (WIKI_X + WIKI_WIDTH) - DRAG_HANDLE_MARGIN;
@@ -227,11 +227,29 @@ public class BossMechanicsWindow
 	private final Set<Integer> warnedModelIds = new HashSet<>();
 
 	/**
-	 * Issue #48, Slice 1 (the probe): a shared counter across {@code setOnDragListener} and
-	 * {@code setOnDragCompleteListener} so the log shows their relative firing order and rate,
-	 * which is one of the four unknowns this slice exists to answer.
+	 * The player's dragged window offset, composed into {@link #place} before
+	 * {@link WindowPlacement#withChrome} (docs/DECISIONS.md D29). Session state, not a config key:
+	 * same lifetime as {@link #selectedMechanicId} (fork 1, resolved) -- survives close/reopen, a
+	 * boss switch and a "View All" rebuild, forgotten only when the plugin instance itself does not
+	 * survive (a client restart), which needs no explicit reset here since that starts a fresh
+	 * {@link BossMechanicsWindow} with fresh fields anyway.
 	 */
-	private int dragProbeSequence;
+	private int dragOffsetX;
+	private int dragOffsetY;
+
+	/**
+	 * Transient drag-gesture state, live only between a gesture's first {@code setOnDragListener}
+	 * event and its {@code setOnDragCompleteListener} (D29). {@link #dragging} tells the first
+	 * event of a gesture apart from every one after it: the first only captures
+	 * {@link #dragMouseStartX}/{@link #dragMouseStartY} and {@link #dragOffsetStartX}/
+	 * {@link #dragOffsetStartY} (what {@link #dragOffsetX}/{@link #dragOffsetY} already held before
+	 * this gesture began); every later event derives the new offset from the delta against those.
+	 */
+	private boolean dragging;
+	private int dragMouseStartX;
+	private int dragMouseStartY;
+	private int dragOffsetStartX;
+	private int dragOffsetStartY;
 
 	/** What "View All" / "Hide All" does: persist the new reveal state and rebuild (D18, D20). */
 	public void setOnRevealToggled(BiConsumer<String, Boolean> onRevealToggled)
@@ -425,8 +443,9 @@ public class BossMechanicsWindow
 	}
 
 	/**
-	 * Sits the root exactly over the collection log. See {@link WindowPlacement} for why
-	 * {@code ABSOLUTE_CENTER} on the host is not the same thing and shipped 125px off.
+	 * Sits the root exactly over the collection log, offset by however far the player has dragged
+	 * it (docs/DECISIONS.md D29). See {@link WindowPlacement} for why {@code ABSOLUTE_CENTER} on
+	 * the host is not the same thing and shipped 125px off.
 	 *
 	 * @return true if anything moved, so callers can skip the revalidate when nothing did
 	 */
@@ -437,19 +456,35 @@ public class BossMechanicsWindow
 		{
 			// Nothing to cover (the window can outlive a log rebuild for a tick). Centring on the
 			// host is wrong by the sidebar/chatbox delta, but it is on screen and it is temporary.
+			// The drag offset is deliberately ignored here: this branch is a one-tick transient,
+			// not a real placement worth clamping against.
 			return move(WidgetPositionMode.ABSOLUTE_CENTER, 0, 0);
 		}
 
-		int x = WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, false),
-			collectionLog.getWidth(), WindowPlacement.offsetInRoot(host, false), WINDOW_WIDTH);
-		int y = WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, true),
-			collectionLog.getHeight(), WindowPlacement.offsetInRoot(host, true), WINDOW_HEIGHT);
+		int x = WindowDrag.clampedOrigin(computedOriginX(host, collectionLog), dragOffsetX,
+			WINDOW_WIDTH, host.getWidth());
+		int y = WindowDrag.clampedOrigin(computedOriginY(host, collectionLog), dragOffsetY,
+			WINDOW_HEIGHT, host.getHeight());
 
 		// The steel-chrome root is CHROME px larger on every edge than the 512x334 logical window
 		// this origin covers the log with (docs/DECISIONS.md D27, G2): the root's own origin has
 		// to sit CHROME px up-left of it, so the logical window inside the root still lands here.
 		return move(WidgetPositionMode.ABSOLUTE_LEFT,
 			WindowPlacement.withChrome(x, CHROME), WindowPlacement.withChrome(y, CHROME));
+	}
+
+	/** Where {@link WindowPlacement#origin} would put the window on the x axis, drag aside. */
+	private int computedOriginX(Widget host, Widget collectionLog)
+	{
+		return WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, false),
+			collectionLog.getWidth(), WindowPlacement.offsetInRoot(host, false), WINDOW_WIDTH);
+	}
+
+	/** Where {@link WindowPlacement#origin} would put the window on the y axis, drag aside. */
+	private int computedOriginY(Widget host, Widget collectionLog)
+	{
+		return WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, true),
+			collectionLog.getHeight(), WindowPlacement.offsetInRoot(host, true), WINDOW_HEIGHT);
 	}
 
 	private boolean move(int positionMode, int x, int y)
@@ -475,6 +510,18 @@ public class BossMechanicsWindow
 	 */
 	@Subscribe
 	public void onClientTick(ClientTick event)
+	{
+		replaceIfChanged();
+	}
+
+	/**
+	 * Re-places the root against the host if anything about the answer changed, and only then
+	 * revalidates. Shared by {@link #onClientTick} (a client resize) and the drag handle's
+	 * {@code setOnDragListener} (docs/DECISIONS.md D29): both are "something that might move the
+	 * window changed, recompute" — a client-thread poll and a client-thread script callback are the
+	 * same register.
+	 */
+	private void replaceIfChanged()
 	{
 		if (!windowOpen || root == null)
 		{
@@ -583,7 +630,7 @@ public class BossMechanicsWindow
 		Widget header = Widgets.layer(parent, 0, 0, WINDOW_WIDTH, HEADER_HEIGHT);
 
 		// Created first, so everything else in the header (the title, WIKI, close) draws over it
-		// -- later children win the draw order (issue #48, Slice 1: the probe).
+		// -- later children win the draw order (docs/DECISIONS.md D29).
 		dragHandle(header);
 
 		// No filled band (docs/DECISIONS.md D27, G2 fork resolved: full steel chrome): the title
@@ -603,15 +650,10 @@ public class BossMechanicsWindow
 	}
 
 	/**
-	 * Issue #48, Slice 1: the probe. Instrumentation only -- nothing here moves the window.
-	 * Flags a header-spanning strip as draggable and logs every {@code setOnDragListener}/
-	 * {@code setOnDragCompleteListener} firing, to answer in the live client the one thing no
-	 * offline analysis can settle: whether the engine's drag listener family fires at all for a
-	 * widget whose only draggable-flagging is {@code setClickMask(... | WidgetConfig.DRAG)}, and
-	 * if it does, what coordinate system {@code event.getMouseX()/getMouseY()} carry for a drag
-	 * event -- the existing scroll-wheel listener ({@link MechanicsScrollbar#listenForWheel})
-	 * proves {@code getMouseY()} can mean wheel rotation instead of a position depending on event
-	 * type, so this logs {@code client.getMouseCanvasPosition()} alongside rather than assuming.
+	 * A header-spanning drag handle (docs/DECISIONS.md D29, promoting issue #48 Slice 1's probe):
+	 * the probe verified in the live client that {@code setClickMask(... | WidgetConfig.DRAG)}
+	 * alone makes the engine's drag listener family fire, continuously, for the whole gesture --
+	 * {@code setDragParent}/{@code DRAG_ON} proved unnecessary and are not used here.
 	 *
 	 * <p>Stops left of the WIKI button ({@link #DRAG_HANDLE_WIDTH}) so the title text and the
 	 * WIKI/close buttons, built after this returns, draw over it and stay clickable.
@@ -624,27 +666,69 @@ public class BossMechanicsWindow
 		handle.setClickMask(handle.getClickMask() | WidgetConfig.DRAG);
 		handle.setDragDeadZone(DRAG_DEAD_ZONE);
 		handle.setDragDeadTime(DRAG_DEAD_TIME);
-		handle.setOnDragListener((JavaScriptCallback) event -> logDragProbe("drag", event));
-		handle.setOnDragCompleteListener((JavaScriptCallback) event -> logDragProbe("dragComplete", event));
-
-		// So that silence in the log can only ever mean "the engine never fired", never "the
-		// handle was never built" -- the probe is worthless if those two are indistinguishable.
-		log.info("Boss Mechanics: drag probe armed, handle {}x{} clickMask={}",
-			DRAG_HANDLE_WIDTH, HEADER_HEIGHT, handle.getClickMask());
+		handle.setOnDragListener((JavaScriptCallback) event -> onDrag());
+		handle.setOnDragCompleteListener((JavaScriptCallback) event -> onDragComplete());
 	}
 
-	/** @see #dragHandle */
-	private void logDragProbe(String phase, ScriptEvent event)
+	/**
+	 * Every {@code setOnDragListener} firing of one gesture, continuous rather than snap-on-release
+	 * (the probe measured seven events inside one second of a single drag). The first event of a
+	 * gesture only captures a baseline; every one after composes a new offset from the delta since
+	 * that baseline and re-places the window immediately.
+	 *
+	 * <p>Reads {@code client.getMouseCanvasPosition()}, never {@code event.getMouseX()/getMouseY()}
+	 * (docs/DECISIONS.md D29): the event's own coordinates are relative to the handle widget's own
+	 * origin, which moves as the window does, so using them would feed back on itself and the
+	 * window would accelerate or judder. The canvas position is absolute and immune.
+	 */
+	private void onDrag()
 	{
-		Point canvasPosition = client.getMouseCanvasPosition();
-		// info, not debug: silence is this probe's most important possible result, and at debug
-		// level "no output" would be ambiguous between the engine never firing and the log level
-		// swallowing it. Goes back to debug (or away) when the probe becomes the real feature.
-		log.info("Boss Mechanics: drag probe #{} {} event.getMouseX()={} event.getMouseY()={} "
-				+ "client.getMouseCanvasPosition()=({},{})",
-			++dragProbeSequence, phase, event.getMouseX(), event.getMouseY(),
-			canvasPosition == null ? "null" : canvasPosition.getX(),
-			canvasPosition == null ? "null" : canvasPosition.getY());
+		Point mouse = client.getMouseCanvasPosition();
+		if (mouse == null)
+		{
+			return;
+		}
+
+		if (!dragging)
+		{
+			dragging = true;
+			dragMouseStartX = mouse.getX();
+			dragMouseStartY = mouse.getY();
+			dragOffsetStartX = dragOffsetX;
+			dragOffsetStartY = dragOffsetY;
+			return;
+		}
+
+		dragOffsetX = dragOffsetStartX + (mouse.getX() - dragMouseStartX);
+		dragOffsetY = dragOffsetStartY + (mouse.getY() - dragMouseStartY);
+		replaceIfChanged();
+	}
+
+	/**
+	 * Normalizes the stored offset to the position the window actually landed at, clamped, rather
+	 * than the raw accumulated delta -- otherwise a release past an edge would leave a phantom
+	 * off-screen offset that the next drag has to silently "unwind" before the window visibly moves
+	 * at all (docs/DECISIONS.md D29).
+	 */
+	private void onDragComplete()
+	{
+		if (!dragging)
+		{
+			return;
+		}
+		dragging = false;
+
+		Widget host = host();
+		Widget collectionLog = host == null ? null : client.getWidget(InterfaceID.Collection.UNIVERSE);
+		if (host == null || collectionLog == null)
+		{
+			return;
+		}
+
+		int computedX = computedOriginX(host, collectionLog);
+		int computedY = computedOriginY(host, collectionLog);
+		dragOffsetX = WindowDrag.clampedOrigin(computedX, dragOffsetX, WINDOW_WIDTH, host.getWidth()) - computedX;
+		dragOffsetY = WindowDrag.clampedOrigin(computedY, dragOffsetY, WINDOW_HEIGHT, host.getHeight()) - computedY;
 	}
 
 	/**
