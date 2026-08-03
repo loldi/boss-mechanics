@@ -494,6 +494,90 @@ so new decisions are appended here rather than inserted in a themed section.
       recipe above already accounts for the worst-case frame so the bob stays small, it does not
       eliminate it.
 
+26. **Vertical anchor correction, idle-loop statics, and Combat Achievements section styling, from
+    Andrew's live screenshots after D25 shipped; corrects D25's centering claim specifically.**
+    D25 said "an if3 MODEL widget's draw
+    call auto-centers its above-ground bounds on the widget's own center, every single frame."
+    **That line is wrong.** The screenshot Andrew compared against was group 713 (`CA_BOSS`), not
+    717 (`CA_OVERVIEW`, which genuinely has no model) — an obfuscated goto-graph in the bytecode
+    read earlier had misled which branch guarded which centering path. Decisive evidence: 713's
+    model box is built by clientscript 4842 — `cc_create(MODEL)` -> `cc_setmodel(param 1322)` ->
+    `cc_setmodelanim(param 1323)` -> `cc_setmodelangle(params 1324..1329)` = `(offsetX, offsetY,
+    rotX, rotY, rotZ, zoom)`, all per-boss struct values. Abyssal Sire (struct 3569): model 29477,
+    anim 4533, `offsetY=300`, `rotX=97`, `rotY=176`, zoom 3000, in a 156x106 box. Vorkath (struct
+    3576): dedicated display model 42781, anim 7948, `offsetY=280`, `rotX=25`, zoom 2500. If the
+    engine auto-centered, Jagex would not curate an `offsetY` per boss for roughly 60 of them.
+    **The real anchor: the model's ground line (y=0) sits at the widget's vertical center, body
+    extending upward** — exactly what Andrew's screenshot showed (the top half of the box occupied,
+    an empty band below).
+
+    - **Upstream `runelite-api` gaps, noted for Plugin Hub review alongside D24's (#15):**
+      `offsetY2d` has no setter (D25 already found this), and there is no standing/idle-animation
+      getter on `NPCComposition` — both are cache facts Jagex's own clientscripts read directly
+      that this plugin cannot, so idle animation ids and the anchor correction below are curated
+      data, not code that reads them off the npc.
+    - **Our compensation: move the widget rect, not the model.** We cannot set `offsetY2d` or add
+      an anchor point; we can move the pool widget's own geometry. Growing a pool widget downward —
+      `setOriginalY(0)` unchanged, `setOriginalHeight(MODEL_HEIGHT + 2*shiftY)` — moves its vertical
+      center down by `shiftY` pixels with zero tilt, using only the rect setters D24 already
+      permits (`setAnimationId` is the only banned mutation on a live pool widget; rect mutation is
+      not, and rect mutation is the entire mechanism). `shiftY` is a new `Preview`/`PreviewSpec`
+      field (`Integer`/`int`, default 0 when absent, resolved the same null-means-default way as
+      `zoom`), applied in `MechanicsDetail.showModel` on every `show()` rather than only at
+      pool-widget creation, since two specs could in principle share a pool entry (same animation
+      id) but curate different `shiftY` values. `modelPoolWidgetMatchesTheModelBoxSize` (D25) is
+      amended, not deleted, to assert the new height formula and the pinned y origin — it still
+      catches the same box-size drift it always did.
+    - **The fit-zoom recipe (D25) is unaffected.** `reqY`'s formula already treats a frame's
+      below-ground extent as needing double the room (to stay conservative under the wrong
+      centering assumption), which in the common case (`maxY <= 0`, no below-ground vertices) is
+      already exactly the ground-anchored requirement; existing curated zoom values did not need
+      recomputing. `shiftY` is a new, separate quantity: `shiftY = -(minY + maxY) / 2` across the
+      same per-frame extents `zoom` is computed from (the model's own combined vertical envelope
+      across the whole animation, or the static pose). The cachetool's `FitZoom` now emits both
+      numbers together per npc/animation pair; all 15 preview blocks across both launch bosses
+      carry a curated `shiftY`, re-verified by rerunning `FitZoom` against the live cache rather
+      than trusting hand estimates (they landed within roughly 1%).
+    - **Open hedge, to resolve on the next in-game pass:** whether the *animated* draw path shares
+      this ground-line anchor or actually centers on animated bounds (D25's original, now-suspect
+      claim) was not re-confirmed in game for this change — every shipped animated preview from PR
+      #45 is itself the untested probe, since D25 shipped before this correction existed. All 15
+      `shiftY` values above are baked assuming the ground-line anchor applies uniformly (static
+      and animated alike), which is what the cache/script evidence supports. **If the in-game pass
+      shows animated previews sitting too low (over-corrected)**, the animated anchor is the old
+      bounds-centering hypothesis after all, and the fix is a one-command `FitZoom` re-bake of
+      `shiftY` to 0 for animated previews only (statics keep theirs) — a data-only follow-up, no
+      code change, since the mechanism is identical either way and only the values would differ.
+    - **T-pose fix: `staticFallback` previews become idle loops.** The Combat Achievements screen
+      always plays an animation; `staticFallback: true` was rendering the model's raw, unposed bind
+      pose — a T-pose for most humanoid npcs — because a static pose is drawn without any animation
+      applied at all. `data/SCHEMA.md`'s `staticFallback` row now says to prefer the npc's own
+      standing/idle animation, curated the same way every other `animationId` is (there is no API
+      to read it off the npc, per the upstream gap above), and to reserve a true static pose for an
+      npc with no usable idle. Vorkath's five `staticFallback` previews (deadly-dragonfire,
+      zombified-spawn, venomous-dragonfire, corrupting-dragonfire, acid-phase) now share anim 7948
+      (Jagex's own idle, wings folded, ~127px tall looping instead of a 52px T-pose pancake), and
+      the Abyssal Sire's tentacle-guard (anim 7106) and scions (anim 7125) previews likewise
+      convert. Respiratory-systems keeps `staticFallback: true` (idle -1, an 8-vertex blob with no
+      T-pose to fix). `staticFallback` itself is untouched as a schema field and remains legal — no
+      validator or loader change, since every converted mechanic is now an ordinary animated
+      preview from the loader's point of view.
+    - **Combat Achievements section styling, matching D21's screen shape with D21's own measured
+      recipe.** 713's statics (children 17-21, 31-35) show each section — the list column, the
+      model box, and the text area — framed the same way: a 1px `0x303030` outer line, a 1px
+      `0x5D5848` inner line one pixel in, and the section's own content starting 2px from its
+      outside edge. `Widgets.sectionBorder(parent, x, y, width, height)` draws both lines as the
+      last sibling added to a section, the same "draw the border after the content" idiom the
+      model box's single border already used, so a rebuilt row or a playing model can never draw
+      over its own frame. Applied to `MechanicsList`'s row column, `MechanicsDetail`'s model box,
+      and a new bordered band behind the name/description/counterplay text block. The model box's
+      flat `0x0E0E0C` fill / `0x474645` outline is replaced with sprite 1040, tiled, at opacity 40
+      (RuneLite opacity is inverted, so 40 is mostly opaque, not barely) — also measured from 713.
+      D22's build order is unaffected: the dim still goes on last, and every border widget is
+      created during `build()`, never during `show()`, so no rebuild-time leak is possible. Purely
+      visual, so this is verified in game rather than with color-pinning unit tests, matching
+      D21's own precedent for the dim rectangle and the nine-slice frame.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

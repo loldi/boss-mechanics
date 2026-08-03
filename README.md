@@ -28,8 +28,10 @@ on the right, dimmed until you have found it. A reversible "View All" sits above
 the list, remembers itself per character, and a WIKI button in the title bar
 opens the boss's wiki page. Selecting a mechanic plays its animation, looping, on
 a 291x140 model box above its description, curated per mechanic to a zoom that
-fits the animation's full frame range; a `staticFallback` mechanic shows a static
-pose instead, and a locked "???" row shows nothing. See
+fits the animation's full frame range and a vertical anchor correction so the
+model sits centred rather than riding high in the box; a `staticFallback`
+mechanic shows the npc's own idle pose (never a raw T-pose) instead, and a
+locked "???" row shows nothing. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 
