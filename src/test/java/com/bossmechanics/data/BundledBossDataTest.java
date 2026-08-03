@@ -67,6 +67,45 @@ public class BundledBossDataTest
 						+ "px exceeds half the 140px model box (" + maxShiftYPixels + "px) — likely a "
 						+ "raw model-unit value baked without the units-to-pixels projection",
 					shiftY <= maxShiftYPixels);
+
+				// The secondary model's shiftY is the same pixel offset in the same box, so it can
+				// go stale in exactly the same way and needs the same guard.
+				SecondaryPreview secondary = preview == null ? null : preview.getSecondary();
+				int secondaryShiftY = secondary == null || secondary.getShiftY() == null
+					? 0 : secondary.getShiftY();
+				assertTrue(boss.getId() + "/" + mechanic.getId() + ": secondary shiftY "
+						+ secondaryShiftY + "px exceeds half the 140px model box ("
+						+ maxShiftYPixels + "px) — likely a raw model-unit value baked without the "
+						+ "units-to-pixels projection",
+					secondaryShiftY <= maxShiftYPixels);
+			}
+		}
+	}
+
+	/**
+	 * Every {@code preview.sprite} name must resolve to a bundled classpath resource under
+	 * {@code /sprites/} (docs/DECISIONS.md D27) -- a plain {@code getResourceAsStream} lookup, not
+	 * a RuneLite API, so {@code data} stays the RuneLite-free package it always has been.
+	 */
+	@Test
+	public void everyPreviewSpriteResolvesToABundledResource()
+	{
+		LoadResult result = new BossDataLoader(new Gson()).loadAll();
+		for (Boss boss : result.getBosses())
+		{
+			for (Mechanic mechanic : boss.getMechanics())
+			{
+				Preview preview = mechanic.getPreview();
+				String sprite = preview == null ? null : preview.getSprite();
+				if (sprite == null)
+				{
+					continue;
+				}
+
+				String path = "/sprites/" + sprite;
+				assertTrue(boss.getId() + "/" + mechanic.getId() + ": no bundled resource at "
+						+ path + " (docs/DECISIONS.md D27)",
+					getClass().getResourceAsStream(path) != null);
 			}
 		}
 	}

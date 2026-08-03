@@ -585,6 +585,117 @@ so new decisions are appended here rather than inserted in a themed section.
       visual, so this is verified in game rather than with color-pinning unit tests, matching
       D21's own precedent for the dim rectangle and the nine-slice frame.
 
+27. **Text inset fix, full steel Combat Achievements chrome, and the preview upgrades that came out
+    of curating the last two launch bosses (issues #6/#15 follow-ups).** Six slices: a text-geometry
+    bug fix, a chrome upgrade, curated data tweaks, a `modelId` override, bundled sprite previews,
+    and secondary models.
+
+    - **G1, text inset (bug).** `MechanicsDetail.text()` placed every name/description/counterplay
+      widget at `x=0`, width 291, while `Widgets.sectionBorder` draws its two 1px outlines at `x=0`
+      and `x=1` *after* the text — overdrawing the first two glyph columns of every line. The
+      border's top also coincided with the name's own top row. Fix: the text area's own section
+      border moves to `y=140` (one pixel above the old `NAME_Y`), all three text widgets get
+      `x=4`, `width=283`, and `NAME_Y=143`/`DESCRIPTION_Y=159`/`COUNTERPLAY_Y=197` (all h=36 except
+      the 15-tall name) keep the block ending at the border's own interior (233), not just the raw
+      column height (235).
+    - **G2, full steel CA chrome (fork resolved: full, not the minimal option first proposed).**
+      Recipe read from clientscripts 228 (frame/title), 4769 (close button) and 4836 (title text):
+      background sprite 297 stretched with a 1px inset; corners 310/311/312/313 (25x30); edges
+      172/173/314/315 (36 thick) tiled, straddling the logical window's border with a 15px overhang
+      on both sides (script 228's own −15 offsets) rather than sitting inside it; no filled title
+      band at all, the title text (BOLD_12, `0xFF981F`, shadowed, centred) sits directly on the
+      steel background; close button is sprites 2289/2290, 21x21 at (7,7) from the top-right. The
+      overhang is solved by growing the root, not by clipping or insetting: a new `CHROME = 15`
+      constant makes the root 542x364, `WindowPlacement` still computes the unchanged 512x334
+      logical placement, and the root's own applied origin subtracts `CHROME` on both axes
+      (`WindowPlacement.withChrome`, pure arithmetic, unit tested). The root itself no longer
+      carries `setNoClickThrough`; a new exactly-512x334 `window` LAYER at `(CHROME, CHROME)` inside
+      it carries that instead, so the 15px gutter around the window still passes clicks to the game
+      world. `header()`/`progressBar()`/`columns()` parent to that inner layer at coordinates
+      unchanged from before this decision; the chrome sprites are direct children of the enlarged
+      root, built (in root-local coordinates) before the inner window layer, so the window's own
+      content still draws over the frame's inward bleed, matching the "frame, then content" order
+      the old nine-slice frame already used. `Widgets.frame` (913-920) is untouched and still used
+      by `CollectionLogButton`; the window no longer calls it.
+    - **Data tweaks (no code).** `spawn-summon` shiftY nudged up 10px (62→52); `apocalypse`
+      zoom/shiftY tightened to a 0-margin fit (5350/43→4875/47); `deadly-dragonfire` and
+      `acid-phase` (Vorkath) moved off the shared idle animation (7948) back onto their own
+      mechanic animations (7960, 7957 respectively) with fit-zoom-recipe zoom/shiftY (3250/59 for
+      both) — both sequences have the same proven cache loop-shape as the other looping previews
+      already shipped, so the one-shot-vanish risk (D14) is low.
+    - **The Vent finding.** `respiratory-systems` (Abyssal Sire) detects on npc-spawn 5914, but
+      that npc ("Respiratory system") is an 8-vertex, group-less clickbox placeholder with
+      `standingAnim=-1` — genuinely nothing in the cache can animate it. The thing that actually
+      breathes in the fight is npc 5915 ("Vent", model 29429, standing anim 7103), confirmed against
+      the cache's own `NpcID` gameval names. The preview now targets 5915/7103; detection correctly
+      stays on the 5914 spawn trigger, since that is the id the game actually spawns. **The preview
+      npc need not be the trigger npc** — curate whichever variant actually carries the visible
+      model/animation (data/SCHEMA.md's preference-ladder section says this explicitly now).
+    - **`preview.modelId` override (code).** `Preview`/`PreviewSpec` gain an optional explicit cache
+      model id. When present, `MechanicsDetail`'s model-widget resolution uses it directly and never
+      calls the npc→model lookup lambda at all — some models (a base spotanim model, a secondary
+      model) have no npc to look them up from. No boss data sets it directly yet; secondary models
+      (below) are the first real consumer, through their own modelId/npcId field.
+    - **Bundled sprite previews, replacing an earlier plan to render distinctly-coloured 3D
+      projectiles.** Investigated first: the entire dragonfire family — regular, toxic, ice,
+      lightning, venomous, corrupting — shares one base model (17550) and animation (1990); colour
+      is entirely a spotanim-level recolor table, which the `Widget` API has no path to apply (full
+      surface enumerated for the #15 upstream-gap list: `setModelId` takes a cache id only,
+      `setModelType` is one of `NULL`/`MODEL`/`NPC_CHATHEAD`/`LOCAL_PLAYER_CHATHEAD`/`ITEM`/`PLAYER`/
+      `NPC_INDEX_CHATHEAD`, and `client.loadModelData(id).recolor(...)`'s output only ever attaches
+      to a scene `RuneLiteObject`, never a widget). Evidence, read directly from the cache
+      (`SpotAnimDefinition`): every dragonfire variant shares `recolorToFind = [3755, 6055, 5931,
+      5807, 5935]` against base model 17550/anim 1990, and only `recolorToReplace` differs per
+      variant — venomous (spotanim 1470) replaces with `[26512, 26386, 26388, 26264, 25114]` (deep
+      greens), corrupting (1471) with `[56105, 56233, 56107, 56235, 57261]` (pinks — corrupting
+      dragonfire is pink in game, not white, correcting an earlier assumption), and the ice/freeze
+      variant (396) with `[43955, 43709, 43592, 43474, 43228]` (icy blues). With no runtime path to
+      recolor a widget's model, Andrew exported the three variants from the cache himself with each
+      one's recolors applied and supplied color-true rendered images. `Preview` gains an optional
+      `sprite` field (a bundled resource name); the preference ladder is now **sprite > modelId >
+      npcId+animationId > the npc's own idle > a raw static pose (`staticFallback`)** — when
+      `sprite` is present every model field is ignored, no validator error. `venomous-dragonfire`,
+      `corrupting-dragonfire` and `zombified-spawn` (Vorkath) now use their curated sprite images.
+      **Sprite pipeline**: `client.createSpritePixels`/`getSpriteOverrides`/`getWidgetSpriteCache`
+      and `ImageUtil.loadImageResource`/`getImageSpritePixels` all verified present and unchanged in
+      runelite-api/-client 1.12.33. `BossMechanicsPlugin.startUp` scans loaded boss data (never the
+      classpath, D16) for distinct `preview.sprite` names, loads each bundled PNG via `ImageUtil`,
+      and registers it in `client.getSpriteOverrides()` under a reserved negative id
+      (`SPRITE_BASE = -3_517_000`, allocated downward); `shutDown` removes exactly the ids it added
+      and calls `client.getWidgetSpriteCache().reset()`. The plugin hands `BossMechanicsWindow` a
+      `name -> id` lookup lambda (`setSpriteIdForName`, same seam style as `modelForNpc`), which
+      forwards it to `MechanicsDetail`, keeping `com.bossmechanics.ui` `ImageUtil`-free.
+      `ImageUtil.getImageSpritePixels` flattens to RGB where pixel value 0 is transparent at draw
+      time, so every bundled PNG must avoid opaque `#000000` (bump to `#010101`) or it becomes a
+      hole; each is exactly 287x136 (the model box's own interior inside its 2px section border)
+      with binary alpha (fully opaque or fully transparent, no soft edges). The sprite widget is a
+      GRAPHIC child of the model box, pool-keyed by resolved sprite id exactly like the model pool
+      is keyed by animation id — `setSpriteId` is called once, at creation; GRAPHIC widgets carry no
+      frame counter so D24's ban doesn't technically bind, but the same set-once shape was kept for
+      consistency rather than reasoning about a second pattern. **Open, to confirm in the live
+      pass**: sprite overrides live in a RuneLite-side map, not game state, so they are expected to
+      survive a world hop without re-registering — if the live pass shows otherwise, the fallback is
+      a one-line re-register on `GameStateChanged HOPPING`/`LOGIN_SCREEN`, mirroring the pattern
+      `DiscoveryState.reload()` already uses for its own post-transition rebuild (D18).
+    - **Secondary models (code + data, shape (a)).** `Preview` gains an optional `secondary` object
+      (`modelId|npcId, animationId, zoom, shiftX, shiftY`) for the two demonstrated two-model cases:
+      Miasma Pools (the Sire's body plus the pool's own model, spotanim 1275 → model 29475/anim
+      7115) and Scions (the grown scion plus the spawn npc — 5916, anim 4524 — it matures from). The
+      rejected alternative, a `models[]` array, would have restructured every existing preview for a
+      case that only ever needs two. The primary preview also gains `shiftX`, a horizontal analogue
+      of D26's vertical `shiftY`: the pool widget's rect grows by `2 * abs(shiftX)` and its origin
+      moves by `shiftX - abs(shiftX)`, so the model's own centre moves sideways without the rect ever
+      losing coverage of the box. `MechanicsDetail`'s single model pool is refactored into a small
+      `ModelSlot` (pool-plus-visible-widget) used identically for the primary and a new, independent
+      secondary slot, so the two never share a widget even when they curate the same animation id —
+      the existing tree-wide invariant (no widget ever receives `setAnimationId` twice) guards both.
+      `miasma-pools` ships `shiftX: -50` (primary) / secondary `{modelId:29475, animationId:7115,
+      zoom:1100, shiftX:90, shiftY:33}`; `scions` ships `shiftX: -60` / secondary `{npcId:5916,
+      animationId:4524, zoom:650, shiftX:70, shiftY:50}` (its zoom is close to the spawn's own
+      curated zoom, so the pair reads at near-true relative scale). Layering between the two is
+      pool-creation order (primary first); they are curated not to overlap once shifted apart, not
+      enforced by any z-index mechanism.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
