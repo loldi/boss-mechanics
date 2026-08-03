@@ -24,7 +24,7 @@
       "detection": [
         { "type": "npc-spawn", "id": 5914 }
       ],
-      "preview": { "npcId": 5914, "staticFallback": true, "zoom": 1200, "shiftY": 63 }
+      "preview": { "npcId": 5915, "animationId": 7103, "zoom": 1267, "shiftY": 64 }
     },
     {
       "id": "miasma-pools",
@@ -35,7 +35,10 @@
         { "type": "animation", "id": 4531 },
         { "type": "animation", "id": 5367 }
       ],
-      "preview": { "animationId": 4531, "staticFallback": false, "zoom": 4425, "shiftY": 63 }
+      "preview": {
+        "animationId": 4531, "staticFallback": false, "zoom": 4425, "shiftY": 63, "shiftX": -50,
+        "secondary": { "modelId": 29475, "animationId": 7115, "zoom": 1100, "shiftX": 90, "shiftY": 33 }
+      }
     },
     {
       "id": "spawn-summon",
@@ -47,7 +50,7 @@
         { "type": "animation", "id": 7095 },
         { "type": "npc-spawn", "id": 5916 }
       ],
-      "preview": { "animationId": 4530, "staticFallback": false, "zoom": 3550, "shiftY": 62 }
+      "preview": { "animationId": 4530, "staticFallback": false, "zoom": 3550, "shiftY": 52 }
     },
     {
       "id": "scions",
@@ -57,7 +60,10 @@
       "detection": [
         { "type": "npc-spawn", "id": 5918 }
       ],
-      "preview": { "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 61 }
+      "preview": {
+        "animationId": 7125, "npcId": 5918, "staticFallback": false, "zoom": 635, "shiftY": 61, "shiftX": -60,
+        "secondary": { "npcId": 5916, "animationId": 4524, "zoom": 650, "shiftX": 70, "shiftY": 50 }
+      }
     },
     {
       "id": "melee-combo",
@@ -106,7 +112,7 @@
         { "type": "animation", "id": 7098 },
         { "type": "npc-spawn", "id": 5908 }
       ],
-      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 5350, "shiftY": 43 }
+      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 4875, "shiftY": 47 }
     }
   ],
   "_note": "IDs are taken from RuneLite's gameval NpcID/AnimationID constants, so the numbers themselves are authoritative cache values. What still needs one live fight to confirm is the mapping: that each listed animation is the one the Sire actually plays for that mechanic, and that every trigger fires. See issue #9."

@@ -140,6 +140,24 @@ public class BossDataLoaderTest
 		assertTrue(errorContaining(result, "animationId"));
 	}
 
+	/**
+	 * docs/DECISIONS.md D27, sprite tier: a sprite preview carries no model fields at all, so it
+	 * must not trip the "animationId required" rule above -- the sprite wins over every model
+	 * field, including the requirement that one of them be present.
+	 */
+	@Test
+	public void spritePreviewNeedsNoAnimationId()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"sprite\": \"zombified-spawn.png\" }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue("expected no errors but got: " + result.getErrors(), result.getErrors().isEmpty());
+		assertEquals(1, result.getBosses().size());
+	}
+
 	@Test
 	public void malformedJsonYieldsErrorNotException()
 	{

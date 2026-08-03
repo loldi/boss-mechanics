@@ -61,4 +61,15 @@ final class WindowPlacement
 		}
 		return total;
 	}
+
+	/**
+	 * The full steel chrome (docs/DECISIONS.md D27, G2 fork resolved: full) makes the root
+	 * {@code chrome} pixels larger on every edge than the 512x334 logical window {@link #origin}
+	 * placed, so the root's own origin has to sit {@code chrome} pixels up and to the left of the
+	 * logical origin for the logical window inside it to still land exactly there.
+	 */
+	static int withChrome(int logicalOrigin, int chrome)
+	{
+		return logicalOrigin - chrome;
+	}
 }

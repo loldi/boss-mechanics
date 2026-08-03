@@ -52,4 +52,15 @@ public class WindowPlacementTest
 		// One function, called twice. 314-tall log, 334-tall window.
 		assertEquals(-6, WindowPlacement.origin(4, 314, 0, 334));
 	}
+
+	/**
+	 * The full steel chrome (docs/DECISIONS.md D27, G2) makes the root 15px larger on every edge
+	 * than the 512x334 logical window it wraps, so the root's own origin has to sit 15px up-left
+	 * of wherever {@link WindowPlacement#origin} placed the logical window itself.
+	 */
+	@Test
+	public void withChromeSubtractsTheChromeMargin()
+	{
+		assertEquals(113, WindowPlacement.withChrome(128, 15));
+	}
 }

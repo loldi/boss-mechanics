@@ -87,6 +87,36 @@ public class BossMechanicsWindowLayoutTest
 			Collections.singletonList(boss.getId()), reportedBossIds);
 	}
 
+	/**
+	 * The full steel CA chrome (docs/DECISIONS.md D27, G2 fork resolved: full) drops the title's
+	 * old filled band and paints the text directly on the steel background, orange, matching
+	 * script 228/4836's own title recipe rather than the old white-on-0x585040.
+	 */
+	@Test
+	public void titleTextIsSteelChromeOrange() throws Exception
+	{
+		Widget host = RecordingWidget.create();
+		Client client = fakeClient(host);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		MechanicsView view = MechanicsView.of(boss, new DiscoveryState(), false);
+		window.open(boss, view);
+
+		Widget title = findWidgetWithText(host, view.title());
+		assertNotNull("expected a widget somewhere in the tree carrying the window's own title "
+			+ "text (\"" + view.title() + "\")", title);
+
+		assertEquals("the title must be steel-chrome orange (docs/DECISIONS.md D27, G2), not the "
+				+ "old white-on-filled-band",
+			Widgets.ORANGE,
+			((Integer) RecordingWidget.lastArgsOf(title, "setTextColor")[0]).intValue());
+	}
+
 	/** Depth-first search for the widget whose most recent {@code setAction(0, action)} matches. */
 	private static Widget findWidgetWithAction(Widget widget, String action)
 	{
@@ -98,6 +128,25 @@ public class BossMechanicsWindowLayoutTest
 		for (Widget child : RecordingWidget.childrenOf(widget))
 		{
 			Widget found = findWidgetWithAction(child, action);
+			if (found != null)
+			{
+				return found;
+			}
+		}
+		return null;
+	}
+
+	/** Depth-first search for the widget whose most recent {@code setText(...)} matches. */
+	private static Widget findWidgetWithText(Widget widget, String text)
+	{
+		Object[] args = RecordingWidget.lastArgsOf(widget, "setText");
+		if (args != null && args.length == 1 && text.equals(args[0]))
+		{
+			return widget;
+		}
+		for (Widget child : RecordingWidget.childrenOf(widget))
+		{
+			Widget found = findWidgetWithText(child, text);
 			if (found != null)
 			{
 				return found;

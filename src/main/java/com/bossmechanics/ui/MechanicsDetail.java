@@ -2,9 +2,11 @@ package com.bossmechanics.ui;
 
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
+import com.bossmechanics.view.SecondaryPreviewSpec;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
+import java.util.function.ToIntFunction;
 import net.runelite.api.FontID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
@@ -69,17 +71,47 @@ final class MechanicsDetail
 	/** {@link IntUnaryOperator#applyAsInt} result meaning "no model resolved for this npc". */
 	private static final int UNKNOWN_MODEL = -1;
 
-	private static final int NAME_Y = 144;
+	/**
+	 * Sprite previews (docs/DECISIONS.md D27): a bundled PNG shown in place of a model, exactly
+	 * filling the model box's own interior inside its 2px section border (287x136 = 291x140 minus
+	 * a 2px inset on every edge).
+	 */
+	private static final int SPRITE_X = 2;
+	private static final int SPRITE_Y = 2;
+	private static final int SPRITE_WIDTH = COLUMN_WIDTH - (2 * SPRITE_X);
+	private static final int SPRITE_HEIGHT = MODEL_HEIGHT - (2 * SPRITE_Y);
+
+	/** {@link ToIntFunction#applyAsInt} result meaning "no sprite registered for this name". */
+	private static final int UNKNOWN_SPRITE = -1;
+
+	/**
+	 * G1 fix (docs/DECISIONS.md D27): the text area's own section border starts here, one pixel
+	 * above the old {@code NAME_Y}, so the name's top row of glyphs no longer shares a scanline
+	 * with the border's top edge.
+	 */
+	private static final int TEXT_AREA_Y = 140;
+	private static final int TEXT_AREA_HEIGHT = COLUMN_HEIGHT - TEXT_AREA_Y;
+
+	/**
+	 * The section border draws a 2px frame ({@code Widgets.sectionBorder}: a 1px outer line then a
+	 * 1px inner line one pixel in), so the real usable interior is 2px tighter on every edge than
+	 * the raw {@link #TEXT_AREA_Y}/{@link #TEXT_AREA_HEIGHT} box. Package-visible so
+	 * {@code MechanicsDetailPreviewTest} can assert the text block ends inside it, not just inside
+	 * the raw column height.
+	 */
+	static final int TEXT_AREA_INTERIOR_BOTTOM = TEXT_AREA_Y + TEXT_AREA_HEIGHT - 2;
+
+	/** G1 fix (docs/DECISIONS.md D27): every text widget is inset this far from the border. */
+	private static final int TEXT_X = 4;
+	private static final int TEXT_WIDTH = COLUMN_WIDTH - (2 * TEXT_X);
+
+	private static final int NAME_Y = 143;
 	private static final int NAME_HEIGHT = 15;
-	private static final int DESCRIPTION_Y = 161;
+	private static final int DESCRIPTION_Y = 159;
 	private static final int DESCRIPTION_HEIGHT = 36;
-	static final int COUNTERPLAY_Y = 199;
+	static final int COUNTERPLAY_Y = 197;
 	static final int COUNTERPLAY_HEIGHT = 36;
 	private static final int LINE_HEIGHT = 12;
-
-	/** The text block's own section frame starts where the name text does, just below the box. */
-	private static final int TEXT_AREA_Y = NAME_Y;
-	private static final int TEXT_AREA_HEIGHT = COLUMN_HEIGHT - TEXT_AREA_Y;
 
 	/**
 	 * Script 4808's own idiom for a locked Combat Achievements entry: a black fill at
@@ -90,19 +122,36 @@ final class MechanicsDetail
 
 	private final Widget column;
 	private final IntUnaryOperator modelForNpc;
+	private final ToIntFunction<String> spriteIdForName;
 
 	/** The LAYER every pool widget is created under (D19: nested dynamic children need a LAYER). */
 	private Widget modelBox;
 
 	/**
-	 * One MODEL widget per distinct animation id ({@link PreviewSpec#NO_ANIMATION} included, for
-	 * static-fallback poses), created lazily on first use. Never cleared out from under a live
-	 * widget — see the class doc for why this map's lifetime is safe.
+	 * The primary preview's MODEL-widget slot (docs/DECISIONS.md D24). {@link #showModel} mutates
+	 * only this and {@link #secondaryModel}; both share the pool-plus-visible shape in
+	 * {@link ModelSlot} rather than duplicating it.
 	 */
-	private final Map<Integer, Widget> modelPool = new HashMap<>();
+	private final ModelSlot primaryModel = new ModelSlot();
 
-	/** The pool widget the previous {@link #show} left on screen, or null if none is. */
-	private Widget visibleModel;
+	/**
+	 * A second, independent MODEL-widget slot for {@link PreviewSpec#getSecondary()} (docs/
+	 * DECISIONS.md D27, secondary models, shape (a)) — its own pool, so the primary and secondary
+	 * previews never share a widget even when they curate the same animation id.
+	 */
+	private final ModelSlot secondaryModel = new ModelSlot();
+
+	/**
+	 * One GRAPHIC widget per distinct resolved sprite id (docs/DECISIONS.md D27), created lazily
+	 * on first use, mirroring the model pool's discipline: {@code setSpriteId} is called once, at
+	 * creation, and never again. GRAPHIC widgets carry no frame counter, so D24's ban doesn't
+	 * technically bind here, but keeping the same set-once shape avoids a second pattern to reason
+	 * about for what is otherwise the model pool's twin.
+	 */
+	private final Map<Integer, Widget> spritePool = new HashMap<>();
+
+	/** The sprite pool widget the previous {@link #show} left on screen, or null if none is. */
+	private Widget visibleSprite;
 
 	private Widget name;
 	private Widget description;
@@ -114,11 +163,15 @@ final class MechanicsDetail
 	 * @param modelForNpc resolves an npc id to the cache model id to render ({@link #UNKNOWN_MODEL}
 	 *     if none); supplied as a lambda so this package never imports
 	 *     {@code client.getNpcDefinition()}
+	 * @param spriteIdForName resolves a bundled sprite resource name to its registered (negative)
+	 *     sprite id ({@link #UNKNOWN_SPRITE} if none); supplied as a lambda so this package never
+	 *     imports {@code ImageUtil} or {@code client.getSpriteOverrides()} (docs/DECISIONS.md D27)
 	 */
-	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc)
+	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc, ToIntFunction<String> spriteIdForName)
 	{
 		this.column = column;
 		this.modelForNpc = modelForNpc;
+		this.spriteIdForName = spriteIdForName;
 	}
 
 	void build()
@@ -171,7 +224,20 @@ final class MechanicsDetail
 		set(description, row == null ? "" : row.getDescription());
 		set(counterplay, row == null ? "" : row.getCounterplay());
 
-		showModel(row == null ? PreviewSpec.hidden() : row.getPreview());
+		PreviewSpec preview = row == null ? PreviewSpec.hidden() : row.getPreview();
+
+		// Sprite tier (docs/DECISIONS.md D27): wins over the model slot entirely. Only one of the
+		// two is ever shown, so switching between them hides whichever one the new spec doesn't use.
+		if (preview.getSprite() != null)
+		{
+			hideVisibleModel();
+			showSprite(preview.getSprite());
+		}
+		else
+		{
+			hideVisibleSprite();
+			showModel(preview);
+		}
 
 		dim.setHidden(row == null || !row.isLocked());
 		dim.revalidate();
@@ -180,87 +246,191 @@ final class MechanicsDetail
 	}
 
 	/**
-	 * Gets or creates the pool widget for this spec's animation id (D24) and mutates only
-	 * {@code setModelId}/{@code setModelZoom}/{@code setHidden}/the rect (below) on it — never
-	 * {@code setAnimationId}, which is set exactly once, at creation, in {@link #poolWidgetFor}.
-	 * Hides whatever pool widget was previously visible first, so at most one is ever shown at a
-	 * time; hides outright for a locked row or an npc this client has no model for, so a locked
-	 * mechanic can never leak through the preview.
-	 *
-	 * <p><b>The vertical anchor correction (docs/DECISIONS.md D26).</b> The engine anchors an if3
-	 * MODEL widget's ground line (y=0) at the widget's own vertical centre, body extending
-	 * upward — not the centre of its animated bounds, which D25 assumed. A curated
-	 * {@code shiftY} moves that centre down by growing the widget's rect downward:
-	 * {@code setOriginalHeight(MODEL_HEIGHT + 2*shiftY)} with {@code setOriginalY} pinned at 0, so
-	 * the extra height only ever extends past the box's own bottom edge, never its top. This is
-	 * mutated every {@code show()} rather than only at pool-widget creation, because two specs
-	 * sharing one animation id (and so one pool widget) could in principle curate different
-	 * {@code shiftY} values.
+	 * Shows the primary model, plus the secondary one if the spec curates one (docs/DECISIONS.md
+	 * D27, shape (a)); hides both for a hidden spec. Hidden specs carry a sentinel npc id, so
+	 * resolving a model for one is at best a wasted cache lookup and at worst a spurious
+	 * no-model warning, hence the early return.
 	 */
 	private void showModel(PreviewSpec preview)
 	{
-		// Hidden specs carry a sentinel npc id, so resolving a model for one is at best a wasted
-		// cache lookup and at worst a spurious no-model warning. Hide whatever was visible and stop.
 		if (!preview.isVisible())
 		{
-			hideVisibleModel();
+			primaryModel.hide();
+			secondaryModel.hide();
 			return;
 		}
 
-		Widget widget = poolWidgetFor(preview.getAnimationId());
+		primaryModel.show(preview.getAnimationId(), preview.getModelId(), preview.getNpcId(),
+			preview.getZoom(), preview.getShiftX(), preview.getShiftY());
 
-		if (visibleModel != null && visibleModel != widget)
+		SecondaryPreviewSpec secondary = preview.getSecondary();
+		if (secondary == null)
 		{
-			visibleModel.setHidden(true);
-			visibleModel.revalidate();
+			secondaryModel.hide();
 		}
-
-		int modelId = modelForNpc.applyAsInt(preview.getNpcId());
-
-		widget.setModelId(modelId);
-		widget.setModelZoom(preview.getZoom());
-		widget.setOriginalY(0);
-		widget.setOriginalHeight(MODEL_HEIGHT + 2 * preview.getShiftY());
-		widget.setHidden(modelId == UNKNOWN_MODEL);
-		widget.revalidate();
-
-		visibleModel = widget;
+		else
+		{
+			secondaryModel.show(secondary.getAnimationId(), secondary.getModelId(), secondary.getNpcId(),
+				secondary.getZoom(), secondary.getShiftX(), secondary.getShiftY());
+		}
 	}
 
 	private void hideVisibleModel()
 	{
-		if (visibleModel != null)
+		primaryModel.hide();
+		secondaryModel.hide();
+	}
+
+	/**
+	 * One MODEL-widget slot in the model box: a pool keyed by animation id (docs/DECISIONS.md
+	 * D24), plus which pool widget is currently visible. Used identically for the primary and
+	 * secondary (D27) previews — both are "a MODEL widget resolved from either an explicit modelId
+	 * or an npc lookup, with its own zoom and shiftX/shiftY rect" — so this is the one place that
+	 * logic lives, rather than two near-identical copies.
+	 */
+	private final class ModelSlot
+	{
+		/**
+		 * One MODEL widget per distinct animation id ({@link PreviewSpec#NO_ANIMATION} included,
+		 * for static-fallback poses), created lazily on first use. Never cleared out from under a
+		 * live widget — see the class doc for why this map's lifetime is safe.
+		 */
+		private final Map<Integer, Widget> pool = new HashMap<>();
+
+		/** The pool widget the previous {@link #show} left on screen, or null if none is. */
+		private Widget visible;
+
+		/** Hides whatever is visible in this slot, for a hidden spec or an absent secondary. */
+		void hide()
 		{
-			visibleModel.setHidden(true);
-			visibleModel.revalidate();
-			visibleModel = null;
+			if (visible != null)
+			{
+				visible.setHidden(true);
+				visible.revalidate();
+				visible = null;
+			}
+		}
+
+		/**
+		 * Gets or creates the pool widget for {@code animationId} (D24) and mutates only
+		 * {@code setModelId}/{@code setModelZoom}/{@code setHidden}/the rect on it afterward —
+		 * never {@code setAnimationId} again after creation, in {@link #create}. Hides whatever
+		 * was previously visible in this slot first, so at most one widget per slot is ever shown;
+		 * hides outright when the resolved model id is unknown, so a locked mechanic (which never
+		 * reaches here at all) or a model-less npc can never leak through the preview.
+		 *
+		 * <p><b>The {@code modelId} override (docs/DECISIONS.md D27).</b> When
+		 * {@code explicitModelId} is present it is used directly and {@link #modelForNpc} is never
+		 * called at all — a base spotanim model or a secondary model has no npc to look it up from.
+		 *
+		 * <p><b>The shiftX/shiftY anchor correction (docs/DECISIONS.md D26/D27).</b> The engine
+		 * anchors an if3 MODEL widget's ground line at the widget's own centre (vertically) and its
+		 * own centre (horizontally) too, so growing the rect by twice the (absolute) shift and
+		 * offsetting its origin moves that centre without ever losing coverage of the box:
+		 * {@code setOriginalX(shiftX - |shiftX|)}, {@code setOriginalWidth(COLUMN_WIDTH +
+		 * 2*|shiftX|)} horizontally; {@code setOriginalY(0)}, {@code setOriginalHeight(MODEL_HEIGHT
+		 * + 2*shiftY)} vertically, since a model only ever needs to move down from its own ground
+		 * line, never up. Mutated every {@code show()} rather than only at creation, because two
+		 * specs sharing one animation id (and so one pool widget) could curate different shifts.
+		 */
+		void show(int animationId, Integer explicitModelId, int npcId, int zoom, int shiftX, int shiftY)
+		{
+			Widget widget = pool.computeIfAbsent(animationId, this::create);
+
+			if (visible != null && visible != widget)
+			{
+				visible.setHidden(true);
+				visible.revalidate();
+			}
+
+			int modelId = explicitModelId != null ? explicitModelId : modelForNpc.applyAsInt(npcId);
+			int absShiftX = Math.abs(shiftX);
+
+			widget.setModelId(modelId);
+			widget.setModelZoom(zoom);
+			widget.setOriginalX(shiftX - absShiftX);
+			widget.setOriginalWidth(COLUMN_WIDTH + (2 * absShiftX));
+			widget.setOriginalY(0);
+			widget.setOriginalHeight(MODEL_HEIGHT + (2 * shiftY));
+			widget.setHidden(modelId == UNKNOWN_MODEL);
+			widget.revalidate();
+
+			visible = widget;
+		}
+
+		/**
+		 * A freshly created MODEL widget's frame counter starts at zero (D24), so
+		 * {@code setAnimationId} is called here, once, and never again for this widget's
+		 * lifetime — that invariant is the entire fix.
+		 */
+		private Widget create(int animationId)
+		{
+			Widget widget = modelBox.createChild(-1, WidgetType.MODEL);
+			widget.setModelType(WidgetModelType.MODEL);
+			// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes
+			// must stay within 0-2047 or the client crashes, which a constant zero trivially
+			// satisfies.
+			widget.setRotationX(0);
+			widget.setRotationY(0);
+			widget.setRotationZ(0);
+			widget.setOriginalX(0);
+			widget.setOriginalY(0);
+			widget.setOriginalWidth(COLUMN_WIDTH);
+			widget.setOriginalHeight(MODEL_HEIGHT);
+			widget.setAnimationId(animationId);
+			widget.revalidate();
+			return widget;
 		}
 	}
 
 	/**
-	 * The pool entry for {@code animationId}, creating it on first use. A freshly created MODEL
-	 * widget's frame counter starts at zero (D24), so {@code setAnimationId} is called here, once,
-	 * and never again for this widget's lifetime — that invariant is the entire fix.
+	 * Gets or creates the sprite pool entry for {@code spriteName}'s resolved id and shows it,
+	 * hiding whatever sprite widget was previously visible first (mirroring {@link #showModel}).
+	 * An unknown name resolves to {@link #UNKNOWN_SPRITE}, which hides the widget instead of
+	 * drawing garbage — the same sentinel-hides idiom {@link #showModel} uses for
+	 * {@link #UNKNOWN_MODEL} (docs/DECISIONS.md D27).
 	 */
-	private Widget poolWidgetFor(int animationId)
+	private void showSprite(String spriteName)
 	{
-		return modelPool.computeIfAbsent(animationId, this::createPoolWidget);
+		int spriteId = spriteIdForName.applyAsInt(spriteName);
+		Widget widget = spritePool.computeIfAbsent(spriteId, this::createSpriteWidget);
+
+		if (visibleSprite != null && visibleSprite != widget)
+		{
+			visibleSprite.setHidden(true);
+			visibleSprite.revalidate();
+		}
+
+		widget.setHidden(spriteId == UNKNOWN_SPRITE);
+		widget.revalidate();
+
+		visibleSprite = widget;
 	}
 
-	private Widget createPoolWidget(int animationId)
+	private void hideVisibleSprite()
 	{
-		Widget widget = modelBox.createChild(-1, WidgetType.MODEL);
-		widget.setModelType(WidgetModelType.MODEL);
-		// Rotation is fixed at what the spike validated (docs/DECISIONS.md D14); both axes must
-		// stay within 0-2047 or the client crashes, which a constant zero trivially satisfies.
-		widget.setRotationX(0);
-		widget.setRotationY(0);
-		widget.setRotationZ(0);
-		widget.setOriginalX(0);
-		widget.setOriginalY(0);
-		widget.setOriginalWidth(COLUMN_WIDTH);
-		widget.setOriginalHeight(MODEL_HEIGHT);
-		widget.setAnimationId(animationId);
+		if (visibleSprite != null)
+		{
+			visibleSprite.setHidden(true);
+			visibleSprite.revalidate();
+			visibleSprite = null;
+		}
+	}
+
+	/**
+	 * The pool entry for {@code spriteId}, creating it on first use. {@code setSpriteId} is called
+	 * here, once, mirroring the model pool's set-once discipline (D24) even though a GRAPHIC
+	 * widget carries no frame counter to corrupt.
+	 */
+	private Widget createSpriteWidget(int spriteId)
+	{
+		Widget widget = modelBox.createChild(-1, WidgetType.GRAPHIC);
+		widget.setOriginalX(SPRITE_X);
+		widget.setOriginalY(SPRITE_Y);
+		widget.setOriginalWidth(SPRITE_WIDTH);
+		widget.setOriginalHeight(SPRITE_HEIGHT);
+		widget.setSpriteTiling(false);
+		widget.setSpriteId(spriteId);
 		widget.revalidate();
 		return widget;
 	}
@@ -274,8 +444,9 @@ final class MechanicsDetail
 	private Widget text(String content, int fontId, int color, int y, int height)
 	{
 		Widget widget = Widgets.text(column, content, fontId, color);
+		widget.setOriginalX(TEXT_X);
 		widget.setOriginalY(y);
-		widget.setOriginalWidth(COLUMN_WIDTH);
+		widget.setOriginalWidth(TEXT_WIDTH);
 		widget.setOriginalHeight(height);
 		widget.setLineHeight(LINE_HEIGHT);
 		widget.revalidate();

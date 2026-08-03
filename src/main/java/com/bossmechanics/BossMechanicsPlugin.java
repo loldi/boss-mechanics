@@ -4,6 +4,8 @@ import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.BossDataLoader;
 import com.bossmechanics.data.BossPageIndex;
 import com.bossmechanics.data.LoadResult;
+import com.bossmechanics.data.Mechanic;
+import com.bossmechanics.data.Preview;
 import com.bossmechanics.detection.DetectionEngine;
 import com.bossmechanics.detection.Discovery;
 import com.bossmechanics.data.TriggerType;
@@ -13,10 +15,14 @@ import com.bossmechanics.ui.CollectionLogButton;
 import com.bossmechanics.view.MechanicsView;
 import com.google.inject.Provides;
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +32,7 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Projectile;
+import net.runelite.api.SpritePixels;
 import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GraphicsObjectCreated;
@@ -45,6 +52,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
 
 @Slf4j
@@ -95,6 +103,20 @@ public class BossMechanicsPlugin extends Plugin
 	// A plugin field, not a local, so #5's reveal UI can reach isRevealed/setRevealed.
 	private ProfileStateStore profileStateStore;
 
+	/**
+	 * Sprite previews (docs/DECISIONS.md D27): reserved base for the negative ids every bundled
+	 * preview sprite registers under in {@code client.getSpriteOverrides()}, well clear of any
+	 * real (non-negative) cache sprite id and of the resource-pack-style negative ids other
+	 * plugins commonly use.
+	 */
+	private static final int SPRITE_BASE = -3_517_000;
+
+	/** {@link BossMechanicsWindow#setSpriteIdForName}'s "nothing registered" sentinel. */
+	private static final int UNKNOWN_SPRITE = -1;
+
+	/** Every id this plugin registered, so {@link #unregisterSprites()} only ever removes its own. */
+	private Map<String, Integer> spriteIdByName = Collections.emptyMap();
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -132,9 +154,15 @@ public class BossMechanicsPlugin extends Plugin
 		eventBus.register(collectionLogButton);
 		collectionLogButton.onPluginStart();
 
+		// The override map and the widget sprite cache are read by the render loop, so both the
+		// register here and the unregister in shutDown() hop to the client thread rather than
+		// mutating them from the EDT that runs these two methods.
+		clientThread.invokeLater(this::registerSprites);
+
 		bossMechanicsWindow.setOnRevealToggled(this::setRevealed);
 		bossMechanicsWindow.setOnWikiOpened(this::openWiki);
 		bossMechanicsWindow.setOnMechanicSelected(mechanicId -> log.debug("Mechanic selected: {}", mechanicId));
+		bossMechanicsWindow.setSpriteIdForName(this::spriteIdForName);
 		eventBus.register(bossMechanicsWindow);
 		bossMechanicsWindow.onPluginStart();
 	}
@@ -149,6 +177,67 @@ public class BossMechanicsPlugin extends Plugin
 
 		bossMechanicsWindow.onPluginStop();
 		eventBus.unregister(bossMechanicsWindow);
+
+		clientThread.invokeLater(this::unregisterSprites);
+	}
+
+	/**
+	 * Registers every distinct {@code preview.sprite} name found in the loaded boss data (docs/
+	 * DECISIONS.md D27) -- data-driven, never classpath scanning (D16) -- as a custom sprite under
+	 * a negative id in {@code client.getSpriteOverrides()}. {@code ImageUtil} and the override map
+	 * stay here, in the plugin, so {@code com.bossmechanics.ui} never imports either.
+	 */
+	private void registerSprites()
+	{
+		Set<String> spriteNames = new LinkedHashSet<>();
+		for (Boss boss : bosses)
+		{
+			for (Mechanic mechanic : boss.getMechanics())
+			{
+				Preview preview = mechanic.getPreview();
+				if (preview != null && preview.getSprite() != null)
+				{
+					spriteNames.add(preview.getSprite());
+				}
+			}
+		}
+
+		Map<Integer, SpritePixels> overrides = client.getSpriteOverrides();
+		Map<String, Integer> idByName = new HashMap<>();
+		int nextId = SPRITE_BASE;
+		for (String name : spriteNames)
+		{
+			BufferedImage image = ImageUtil.loadImageResource(BossMechanicsPlugin.class, "/sprites/" + name);
+			if (image == null)
+			{
+				log.warn("Boss Mechanics: bundled sprite resource not found: {}", name);
+				continue;
+			}
+
+			int spriteId = nextId--;
+			overrides.put(spriteId, ImageUtil.getImageSpritePixels(image, client));
+			idByName.put(name, spriteId);
+		}
+
+		spriteIdByName = idByName;
+		log.info("Boss Mechanics: registered {} sprite preview(s)", spriteIdByName.size());
+	}
+
+	/** Undoes {@link #registerSprites()}: removes only the ids this plugin added, by identity of name. */
+	private void unregisterSprites()
+	{
+		Map<Integer, SpritePixels> overrides = client.getSpriteOverrides();
+		for (int spriteId : spriteIdByName.values())
+		{
+			overrides.remove(spriteId);
+		}
+		client.getWidgetSpriteCache().reset();
+		spriteIdByName = Collections.emptyMap();
+	}
+
+	private int spriteIdForName(String name)
+	{
+		return spriteIdByName.getOrDefault(name, UNKNOWN_SPRITE);
 	}
 
 	@Provides
