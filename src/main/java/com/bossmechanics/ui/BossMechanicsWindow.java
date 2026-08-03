@@ -531,20 +531,20 @@ public class BossMechanicsWindow
 	}
 
 	/**
-	 * 717's two columns and their two header bands: the mechanics list on the left, the selected
-	 * mechanic's detail on the right. Four sibling layers rather than two nested ones, because
-	 * that is how the Combat Achievements screen is built and it keeps each header band's
-	 * right-aligned button measured from its own column's edge.
+	 * Three sibling layers, not four (docs/DECISIONS.md D25, Fork 1 resolved: Option B): the list
+	 * keeps its own header band, since "Mechanic" and the reveal toggle still need one, but the
+	 * detail column's separate header band is gone now that the WIKI button lives in the title
+	 * bar instead. The detail column starts at {@link #COLUMN_HEADER_Y}, where that band used to,
+	 * and its height ({@link MechanicsDetail#COLUMN_HEIGHT}) folds the band's space in rather than
+	 * leaving it empty.
 	 */
 	private void columns(Widget parent, MechanicsView view)
 	{
 		Widget listHeader = band(parent, COLUMN_HEADER_Y, MechanicsList.COLUMN_WIDTH,
 			COLUMN_HEADER_HEIGHT, false);
 		Widget list = band(parent, COLUMN_Y, MechanicsList.COLUMN_WIDTH, COLUMN_HEIGHT, false);
-		// Empty now that the WIKI button has moved to the title bar (D25); removed in the
-		// geometry slice that folds this band's height into the detail column below it.
-		band(parent, COLUMN_HEADER_Y, MechanicsDetail.COLUMN_WIDTH, COLUMN_HEADER_HEIGHT, true);
-		Widget detail = band(parent, COLUMN_Y, MechanicsDetail.COLUMN_WIDTH, COLUMN_HEIGHT, true);
+		Widget detail = band(parent, COLUMN_HEADER_Y, MechanicsDetail.COLUMN_WIDTH,
+			MechanicsDetail.COLUMN_HEIGHT, true);
 
 		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal);
 		mechanicsList.build();

@@ -1,6 +1,7 @@
 package com.bossmechanics.ui;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
@@ -81,6 +82,45 @@ public class MechanicsDetailPreviewTest
 		Widget model = findModelWidget(column);
 		assertEquals("a locked row must hide the model widget so nothing spoils through it (issue #6)",
 			Boolean.TRUE, RecordingWidget.lastArgsOf(model, "setHidden")[0]);
+	}
+
+	/**
+	 * The enlarged model box (Fork 2, resolved: accept Vorkath's wide aspect, docs/DECISIONS.md
+	 * D25) grew from 110 to 140 tall, which pushed name/description/counterplay down with it. This
+	 * pins the new numbers against each other rather than the client: the text block must still
+	 * fit inside the 235-tall column the window now hands this class, with nothing left over to
+	 * silently clip.
+	 */
+	@Test
+	public void textBlockFitsInsideTheColumn()
+	{
+		assertTrue("the text block (name, description, counterplay) must fit inside the "
+				+ "291x235 detail column without overrunning its bottom edge",
+			MechanicsDetail.COUNTERPLAY_Y + MechanicsDetail.COUNTERPLAY_HEIGHT <= MechanicsDetail.COLUMN_HEIGHT);
+	}
+
+	/**
+	 * The model box IS the frame the engine centres a MODEL widget's above-ground bounds inside,
+	 * every frame (docs/DECISIONS.md D25) — a pool widget whose own size drifts from the box's
+	 * would silently mis-centre, with no crash to catch it.
+	 */
+	@Test
+	public void modelPoolWidgetMatchesTheModelBoxSize()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10);
+		detail.build();
+
+		detail.show(unlockedRow("m1", 1, 500));
+
+		Widget model = findModelWidget(column);
+		assertEquals("a pool widget's width must match the model box it is centered inside",
+			MechanicsDetail.COLUMN_WIDTH,
+			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalWidth")[0]).intValue());
+		assertEquals("a pool widget's height must match the model box it is centered inside",
+			MechanicsDetail.MODEL_HEIGHT,
+			((Integer) RecordingWidget.lastArgsOf(model, "setOriginalHeight")[0]).intValue());
 	}
 
 	private static long countCreateChild(List<String> calls)

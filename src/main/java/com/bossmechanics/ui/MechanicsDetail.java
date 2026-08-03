@@ -41,19 +41,36 @@ final class MechanicsDetail
 	/** 717 child 13 scaled to our 494-wide content: the right column is 291 wide. */
 	static final int COLUMN_WIDTH = 291;
 
-	private static final int MODEL_HEIGHT = 110;
+	/**
+	 * The whole right column's height, header band folded in (docs/DECISIONS.md D25, Fork 1
+	 * resolved: Option B) — the column now starts where that band used to and runs to the same
+	 * bottom margin the list column does: {@code CONTENT_HEIGHT - COLUMN_HEADER_Y - COLUMN_INSET}
+	 * in {@link BossMechanicsWindow}, which builds the band this size. Package-visible so
+	 * {@code MechanicsDetailPreviewTest} can assert the text block still fits inside it without a
+	 * live widget tree.
+	 */
+	static final int COLUMN_HEIGHT = 235;
+
+	/**
+	 * Fit-zoom recipe territory (docs/DECISIONS.md D25, Fork 2 resolved: accept Vorkath's wide
+	 * aspect): grown from 110 to 140 so a tall animation's above-ground bounds — which the engine
+	 * re-centres on the box every frame — has enough vertical room that a wide boss's zoom doesn't
+	 * have to be pulled out so far it reads as a smear.
+	 */
+	static final int MODEL_HEIGHT = 140;
+
 	private static final int MODEL_FILL = 0x0E0E0C;
 	private static final int MODEL_BORDER = 0x474645;
 
 	/** {@link IntUnaryOperator#applyAsInt} result meaning "no model resolved for this npc". */
 	private static final int UNKNOWN_MODEL = -1;
 
-	private static final int NAME_Y = 116;
+	private static final int NAME_Y = 144;
 	private static final int NAME_HEIGHT = 15;
-	private static final int DESCRIPTION_Y = 133;
+	private static final int DESCRIPTION_Y = 161;
 	private static final int DESCRIPTION_HEIGHT = 36;
-	private static final int COUNTERPLAY_Y = 171;
-	private static final int COUNTERPLAY_HEIGHT = 41;
+	static final int COUNTERPLAY_Y = 199;
+	static final int COUNTERPLAY_HEIGHT = 36;
 	private static final int LINE_HEIGHT = 12;
 
 	/**
