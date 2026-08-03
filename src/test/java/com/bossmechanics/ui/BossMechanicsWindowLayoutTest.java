@@ -77,7 +77,7 @@ public class BossMechanicsWindowLayoutTest
 
 		Widget wikiButton = findWidgetWithAction(host, "Open");
 		assertNotNull("expected a widget somewhere in the tree carrying the WIKI button's "
-			+ "action string (\"Open\", MechanicsDetail.wikiButton() on HEAD)", wikiButton);
+			+ "action string (\"Open\", BossMechanicsWindow.wikiButton())", wikiButton);
 
 		JavaScriptCallback listener =
 			(JavaScriptCallback) RecordingWidget.listenerOf(wikiButton, "setOnOpListener");

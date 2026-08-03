@@ -34,9 +34,9 @@ import net.runelite.client.input.KeyManager;
  * shaped like the Combat Achievements boss screen it is reached the same way as
  * (docs/DECISIONS.md D3, D20, D21).
  *
- * <p>This class owns the shell — the frame, the title bar, the progress bar, the four column
- * layers and the selection — and hands each column to {@link MechanicsList} and
- * {@link MechanicsDetail}.
+ * <p>This class owns the shell — the frame, the title bar with its WIKI and close buttons, the
+ * progress bar, the three column layers and the selection — and hands the columns to
+ * {@link MechanicsList} and {@link MechanicsDetail}.
  *
  * <p>Deliberately dumb, like {@link CollectionLogButton}. It positions rectangles and copies
  * strings; every decision that could be wrong about what a mechanic *says* was already made in
@@ -639,10 +639,10 @@ public class BossMechanicsWindow
 	}
 
 	/**
-	 * Moved here from {@code MechanicsDetail}'s right-column header band (docs/DECISIONS.md D25,
-	 * Fork 1 resolved: Option B), which is otherwise empty after this change and removed entirely
-	 * once the geometry slice lands. {@code openWiki()} is the same plugin seam the old button
-	 * used, just wired directly rather than through a constructor-supplied {@code Runnable}.
+	 * Lives in the title bar beside the close button (docs/DECISIONS.md D25, Fork 1 resolved:
+	 * Option B); the right-column header band it used to occupy is gone, its 23px folded into
+	 * the model box. {@code openWiki()} is the same plugin seam the old button used, just wired
+	 * directly rather than through a constructor-supplied {@code Runnable}.
 	 */
 	private void wikiButton(Widget header)
 	{
