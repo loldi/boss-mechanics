@@ -127,10 +127,14 @@ final class MechanicsDetail
 	 */
 	private static final int TEXT_WIDTH = COLUMN_WIDTH - (2 * TEXT_X) - MechanicsScrollbar.WIDTH;
 
-	/** Vertical breathing room between the stacked name/description/counterplay blocks. */
-	private static final int TEXT_LINE_GAP = 2;
-
 	private static final int LINE_HEIGHT = 12;
+
+	/**
+	 * A full blank line between the stacked name/description/counterplay blocks, not a hairline
+	 * gap: at 2px the three blocks read as one crunched paragraph (Andrew's pass on #49). This can
+	 * push a long mechanic past the viewport, which is fine now that the box actually scrolls.
+	 */
+	private static final int TEXT_LINE_GAP = LINE_HEIGHT;
 
 	/**
 	 * Script 4808's own idiom for a locked Combat Achievements entry: a black fill at

@@ -36,7 +36,7 @@
         { "type": "animation", "id": 5367 }
       ],
       "preview": {
-        "animationId": 4531, "staticFallback": false, "zoom": 4027, "shiftY": 69, "shiftX": -40,
+        "animationId": 4531, "staticFallback": false, "zoom": 4350, "shiftY": 64, "shiftX": -40,
         "secondary": { "modelId": 29475, "animationId": 7115, "zoom": 1100, "shiftX": 75, "shiftY": 33, "rotationX": 512 }
       }
     },
@@ -112,7 +112,7 @@
         { "type": "animation", "id": 7098 },
         { "type": "npc-spawn", "id": 5908 }
       ],
-      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 5350, "shiftY": 43 }
+      "preview": { "animationId": 7098, "staticFallback": false, "zoom": 4950, "shiftY": 44 }
     }
   ],
   "_note": "IDs are taken from RuneLite's gameval NpcID/AnimationID constants, so the numbers themselves are authoritative cache values. What still needs one live fight to confirm is the mapping: that each listed animation is the one the Sire actually plays for that mechanic, and that every trigger fires. See issue #9."
