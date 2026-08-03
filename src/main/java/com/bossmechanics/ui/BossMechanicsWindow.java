@@ -626,13 +626,21 @@ public class BossMechanicsWindow
 		handle.setDragDeadTime(DRAG_DEAD_TIME);
 		handle.setOnDragListener((JavaScriptCallback) event -> logDragProbe("drag", event));
 		handle.setOnDragCompleteListener((JavaScriptCallback) event -> logDragProbe("dragComplete", event));
+
+		// So that silence in the log can only ever mean "the engine never fired", never "the
+		// handle was never built" -- the probe is worthless if those two are indistinguishable.
+		log.info("Boss Mechanics: drag probe armed, handle {}x{} clickMask={}",
+			DRAG_HANDLE_WIDTH, HEADER_HEIGHT, handle.getClickMask());
 	}
 
 	/** @see #dragHandle */
 	private void logDragProbe(String phase, ScriptEvent event)
 	{
 		Point canvasPosition = client.getMouseCanvasPosition();
-		log.debug("Boss Mechanics: drag probe #{} {} event.getMouseX()={} event.getMouseY()={} "
+		// info, not debug: silence is this probe's most important possible result, and at debug
+		// level "no output" would be ambiguous between the engine never firing and the log level
+		// swallowing it. Goes back to debug (or away) when the probe becomes the real feature.
+		log.info("Boss Mechanics: drag probe #{} {} event.getMouseX()={} event.getMouseY()={} "
 				+ "client.getMouseCanvasPosition()=({},{})",
 			++dragProbeSequence, phase, event.getMouseX(), event.getMouseY(),
 			canvasPosition == null ? "null" : canvasPosition.getX(),
