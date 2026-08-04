@@ -615,6 +615,12 @@ public class BossMechanicsWindow
 			// open() starts clean.
 			dragHidden.clear();
 			contentsHiddenForDrag = false;
+			// The gesture itself dies with the tree too. close() has always cleared these (D29,
+			// D30); this path never did, so hopping worlds mid-drag left `dragging` true and the
+			// first event of the next gesture skipped its baseline capture and jumped the window
+			// from a dead reference point.
+			dragging = false;
+			holdSeen = false;
 		}
 	}
 
