@@ -1,0 +1,137 @@
+{
+  "id": "doom-of-mokhaiotl",
+  "name": "Doom of Mokhaiotl",
+  "npcIds": [14707, 14708, 14709],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Doom_of_Mokhaiotl/Strategies",
+  "mechanics": [
+    {
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "Doom throws a single orb whose colour names the style: blue for magic, green for ranged, red for melee. The colour is only readable once the orb is already in the air.",
+      "counterplay": "Swap to the matching protection prayer as the orb launches. Red orbs only start appearing one delve down.",
+      "detection": [
+        { "type": "animation", "id": 12406 },
+        { "type": "projectile", "id": 3379 },
+        { "type": "projectile", "id": 3380 },
+        { "type": "projectile", "id": 3378 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12406, "zoom": 1698, "shiftY": 60 }
+    },
+    {
+      "id": "tongue-lash",
+      "name": "Tongue Lash",
+      "description": "Doom whips its tongue at anyone standing in melee range, in place of the orb it would otherwise throw.",
+      "counterplay": "Keep Protect from Melee up any time you fight it from melee distance.",
+      "detection": [
+        { "type": "animation", "id": 12416 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12416, "zoom": 1698, "shiftY": 60 }
+    },
+    {
+      "id": "rock-throw",
+      "name": "Rock Throw",
+      "description": "Doom hurls a rock at your tile that shatters after a few ticks and rains styled projectiles across the marked ground. Deeper delves pack more projectiles into the same throw.",
+      "counterplay": "Step off the shadowed tile before the rock lands. Then pray against each projectile in the order it arrives.",
+      "detection": [
+        { "type": "animation", "id": 12407 },
+        { "type": "projectile", "id": 3384 },
+        { "type": "projectile", "id": 3385 },
+        { "type": "projectile", "id": 3386 },
+        { "type": "projectile", "id": 3387 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12407, "zoom": 1698, "shiftY": 60 }
+    },
+    {
+      "id": "beam-cannon",
+      "name": "Special Beam Cannon",
+      "description": "A yellow bar charges above Doom and fires a beam that no prayer stops. While it charges it protects itself from whichever styles you are not punishing it with.",
+      "counterplay": "Break the charge before the bar fills; melee punishes hardest. Once it shields, only demonbane weapons interrupt it.",
+      "detection": [
+        { "type": "animation", "id": 12408 },
+        { "type": "animation", "id": 12411 },
+        { "type": "graphic", "id": 3412 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12408, "zoom": 1698, "shiftY": 60 }
+    },
+    {
+      "id": "demonic-larvae",
+      "name": "Demonic Larvae",
+      "description": "Grubs surface beside you and crawl for the centre of the arena. Any that reach Doom heal it and feed its charge; deeper delves colour them by prayer and eventually send giants.",
+      "counterplay": "Kill every grub before it arrives. A demonbane weapon drops one per hit, anything else takes two.",
+      "detection": [
+        { "type": "npc-spawn", "id": 14710 },
+        { "type": "npc-spawn", "id": 14711 },
+        { "type": "npc-spawn", "id": 14712 },
+        { "type": "npc-spawn", "id": 14713 },
+        { "type": "npc-spawn", "id": 14788 },
+        { "type": "npc-spawn", "id": 14789 }
+      ],
+      "preview": { "npcId": 14713, "animationId": 12456, "zoom": 140, "shiftY": 59 }
+    },
+    {
+      "id": "shockwave",
+      "name": "Shockwave",
+      "description": "Doom slams the arena and rolls shockwaves outward across the whole floor. Deeper delves stack more waves onto the one slam.",
+      "counterplay": "Be behind an earthen shield before the slam lands. Nothing else in the arena blocks a wave.",
+      "detection": [
+        { "type": "animation", "id": 12412 },
+        { "type": "animation", "id": 12414 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12414, "zoom": 1698, "shiftY": 60 }
+    },
+    {
+      "id": "volatile-earth",
+      "name": "Volatile Earth",
+      "description": "Glowing earth erupts around the arena ahead of a shockwave. Striking two of them raises an earthen shield that walks toward the second.",
+      "counterplay": "Attack two nodes early and shelter behind the shield they raise. It clears acid off any tile it crosses.",
+      "detection": [
+        { "type": "npc-spawn", "id": 14714 },
+        { "type": "npc-spawn", "id": 14715 }
+      ],
+      "preview": { "npcId": 14714, "animationId": 12431, "zoom": 704, "shiftY": 34 }
+    },
+    {
+      "id": "acid-blood",
+      "name": "Acid Blood",
+      "description": "Doom sprays acidic blood onto the tiles around itself, and standing in it venoms you. The pools outlast the fight and only clear on the way down to the next delve.",
+      "phase": "Delve 3+",
+      "counterplay": "Walk around the splatter. Earthen shields and the holy water from a melee punish both wipe it away.",
+      "detection": [
+        { "type": "projectile", "id": 3445 },
+        { "type": "graphic", "id": 3429 },
+        { "type": "graphic", "id": 3430 },
+        { "type": "graphic", "id": 3431 },
+        { "type": "graphic", "id": 3432 }
+      ],
+      "preview": { "modelId": 56412, "animationId": 12469, "zoom": 290, "shiftY": 26 }
+    },
+    {
+      "id": "demonic-shield",
+      "name": "Demonic Shield",
+      "description": "Partway down its health Doom raises a demonic shield, charges its beam without pause and keeps feeding grubs into itself.",
+      "phase": "Delve 3+",
+      "counterplay": "Break the shield with demonbane weapons and let exploding grubs chip it. Interrupt every charge until it drops.",
+      "detection": [
+        { "type": "npc-spawn", "id": 14708 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12409, "zoom": 1698, "shiftY": 60 }
+    },
+    {
+      "id": "burrow-charge",
+      "name": "Burrow Charge",
+      "description": "Doom digs under the arena, marks a spot with a yellow eye and charges it, trampling anything on the way. Rocks drop from the ceiling while it is under.",
+      "phase": "Delve 5+",
+      "counterplay": "Put a fallen rock between you and the charge, or stand clear of the line entirely.",
+      "detection": [
+        { "type": "npc-spawn", "id": 14709 },
+        { "type": "animation", "id": 12420 },
+        { "type": "animation", "id": 12417 },
+        { "type": "animation", "id": 12419 }
+      ],
+      "preview": { "modelId": 56455, "animationId": 12420, "zoom": 1698, "shiftY": 60 }
+    }
+  ],
+  "_ids": "Every id here is named, not guessed: they come from Jagex's own gameval names (NpcID DOM_BOSS/DOM_BOSS_SHIELDED/DOM_BOSS_BURROWED/DOM_DEMONIC_ENERGY_*/DOM_SHOCKWAVE_PATH_NODE/DOM_SHOCKWAVE_SHIELD, AnimationID DOM_* and NPC_DEMONIC_GRUB_*, SpotanimID VFX_STANDARD_PROJECTILE_*/VFX_ROCK_PROJECTILE_*/VFX_BEAM_CHARGE_UP_01/VFX_DOOM_BOSS_BLOOD_SPLAT_*). The live cache's GAMEVALS index is not downloaded by the game client, and runelite-api 1.12.33 predates this boss entirely, so the names were read from RuneLite master's generated gameval sources and cross-checked against the ids present in the cache.",
+  "_previews": "Doom is the first boss whose body animations are SKELETAL (sequence config opcode 13, zero classic frames), so FitZoom can only measure the static bind pose and the framemap compat check says nothing. The previews use model 56455 rather than the npc: 14707's models[0] is only the 1515-vertex centre body (X +/-142), while 56455 is the merged 1901-vertex whole boss (X +/-322) that Jagex's own Combat Achievements screen uses (struct 4933: model 56455, anim 12453 NPC_DOOM_BOSS_IDLE_CA, zoom 2500). Both carry the same 83-bone animaya rig, which is why the per-mechanic DOM_* animations are expected to play on it. zoom/shiftY are the static-pose fit plus 10%; they need an in-game look because the animated envelope is not measurable offline. Larva recolor tables were checked against the model's face colours (D28): they repaint 0% of the faces, so a model preview is colour-true and no sprite is needed.",
+  "_note": "Trigger ids are NOT yet verified in a live delve; they are cache-derived. Enable 'Log boss trigger ids' and run a delve to confirm, particularly: whether the standard-attack projectiles fire under the ids above at every delve level, and whether the beam charge-up graphic 3412 is boss-only (it is a trigger on the assumption that a player cannot produce it). Alternate preview animations to try if the shipped ones read poorly: 12409 DOM_BEAM_CHARGE_LOOP or 12411 DOM_BEAM_FIRE for beam-cannon, 12413/12415 for shockwave, 12417 DOM_BURROWED_MOVEMENT or 12418 DOM_BURROWED_EMERGE for burrow-charge, and 12453 NPC_DOOM_BOSS_IDLE_CA as a neutral fallback for any of them. See issue #61."
+}
