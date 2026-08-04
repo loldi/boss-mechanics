@@ -360,6 +360,24 @@ public class BossMechanicsWindow
 	private int dragLiveX;
 	private int dragLiveY;
 
+	/**
+	 * Issue #48, Slice 6 (the probe, D30's deferred hide-while-dragging question): whether the
+	 * window has already been hidden for the CURRENT gesture. Guards {@link #onDrag}'s
+	 * {@code root.setHidden(true)} to once per gesture rather than every ~7Hz event, and is
+	 * cleared at the start of the next gesture and by {@link #restoreProbeHide}.
+	 */
+	private boolean probeGestureHidden;
+
+	/** Issue #48, Slice 6: per-gesture counter for the "still firing after the hide" log lines. */
+	private int probeDragSequence;
+
+	/**
+	 * Issue #48, Slice 6: whether {@link #onDragHandleHold} has already logged for the current
+	 * press, so Q3 ("does {@code setOnHoldListener} fire at all") gets one line per press rather
+	 * than one per repeat. Cleared at the start of a new drag gesture and on mouse-leave.
+	 */
+	private boolean probeHoldLogged;
+
 	/** What "View All" / "Hide All" does: persist the new reveal state and rebuild (D18, D20). */
 	public void setOnRevealToggled(BiConsumer<String, Boolean> onRevealToggled)
 	{
@@ -533,6 +551,13 @@ public class BossMechanicsWindow
 		// could otherwise be left visible, floating, after the window it belongs to is gone.
 		hideOutline();
 
+		// Issue #48, Slice 6 (the probe): same reasoning as the outline above, but for the window
+		// itself. If hiding root mid-drag turns out to kill the engine's drag events entirely
+		// (the question this probe exists to answer), a gesture interrupted by Esc or the log
+		// closing would otherwise strand the window invisible with no way to get it back -- the
+		// one way this probe could actually ruin a play session.
+		restoreProbeHide();
+
 		if (root != null)
 		{
 			root.setHidden(true);
@@ -568,6 +593,9 @@ public class BossMechanicsWindow
 			// invalid. Drop it without touching it, but still give the key listener back.
 			unregisterEscape();
 			windowOpen = false;
+			// Issue #48, Slice 6 (the probe): see close() for why this restore happens even though
+			// the interface tree (and root along with it) is about to be discarded regardless.
+			restoreProbeHide();
 			root = null;
 			outline = null;
 			mechanicsList = null;
@@ -853,8 +881,15 @@ public class BossMechanicsWindow
 		dragHandleTint = Widgets.sprite(handle, SPRITE_HANDLE_TINT, 0, 0, DRAG_HANDLE_WIDTH,
 			HEADER_HEIGHT, true, TINT_IDLE);
 		handle.setOnMouseRepeatListener((JavaScriptCallback) event -> onDragHandleMouseRepeat());
-		handle.setOnMouseLeaveListener((JavaScriptCallback) event -> setDragHandleTint(TINT_IDLE));
+		handle.setOnMouseLeaveListener((JavaScriptCallback) event -> onDragHandleMouseLeave());
 		handle.setOnHoldListener((JavaScriptCallback) event -> onDragHandleHold());
+
+		// Issue #48, Slice 6 (the probe): silence is this probe's most important possible result,
+		// same precedent as PR #51's own "armed" line, so this one-shot line proves the handle was
+		// actually built -- silence in client.log can then only mean "the engine never fired",
+		// never "the handle was never created".
+		log.info("Boss Mechanics: PROBE armed, hide-while-dragging probe active on handle {}x{}",
+			DRAG_HANDLE_WIDTH, HEADER_HEIGHT);
 	}
 
 	/**
@@ -875,7 +910,26 @@ public class BossMechanicsWindow
 	 */
 	private void onDragHandleHold()
 	{
+		// Issue #48, Slice 6 (the probe, Q3): logged once per press, not once per repeat -- a hold
+		// fires every frame the button stays down, and D30 already leans on this listener for the
+		// pressed tint, so a per-repeat log here would just be noise on top of an answer this one
+		// line already gives.
+		if (!probeHoldLogged)
+		{
+			probeHoldLogged = true;
+			log.info("Boss Mechanics: PROBE setOnHoldListener fired (Q3)");
+		}
 		holdSeen = true;
+	}
+
+	/**
+	 * Issue #48, Slice 6 (the probe): resets {@link #probeHoldLogged} so the next press onto the
+	 * handle logs Q3 again, then does the D30 tint reset this listener always did.
+	 */
+	private void onDragHandleMouseLeave()
+	{
+		setDragHandleTint(TINT_IDLE);
+		probeHoldLogged = false;
 	}
 
 	/** Guards the actual {@code setOpacity} call behind a changed-value check (mouse-repeat is per-frame). */
@@ -931,6 +985,11 @@ public class BossMechanicsWindow
 	 * (docs/DECISIONS.md D29): the event's own coordinates are relative to the handle widget's own
 	 * origin, which moves as the window does, so using them would feed back on itself and the
 	 * window would accelerate or judder. The canvas position is absolute and immune.
+	 *
+	 * <p><b>Issue #48, Slice 6 (the probe):</b> also hides {@link #root} once per gesture and logs
+	 * every event after that, since our drag handle lives inside {@code root}'s own subtree and
+	 * whether hiding it kills the engine's drag events entirely (D30's deferred question) can only
+	 * be answered in the live client.
 	 */
 	private void onDrag()
 	{
@@ -953,12 +1012,47 @@ public class BossMechanicsWindow
 			// a tap would jump the window back toward the old raw origin.
 			dragLiveX = dragStartWindowX;
 			dragLiveY = dragStartWindowY;
+
+			// Issue #48, Slice 6 (the probe): reset once per gesture, right where every other
+			// gesture-scoped field above already resets. probeHoldLogged is also reset on
+			// mouse-leave (below), since a hold can happen without ever turning into a drag.
+			probeGestureHidden = false;
+			probeDragSequence = 0;
+			probeHoldLogged = false;
 			return;
 		}
 
 		dragLiveX = dragStartWindowX + (mouse.getX() - dragMouseStartX);
 		dragLiveY = dragStartWindowY + (mouse.getY() - dragMouseStartY);
 		showOutlineAtLiveOffset();
+
+		// Issue #48, Slice 6 (the probe): the biggest open question left from D30 -- our drag
+		// handle lives inside root's own subtree, so hiding root here answers, in the live client,
+		// whether the engine's drag listener family keeps firing once the tree carrying the handle
+		// is hidden (Q1). Once per gesture, on the first event that reaches this branch (the
+		// gesture's second event overall, since the first only captures the baseline above).
+		if (!probeGestureHidden)
+		{
+			probeGestureHidden = true;
+			if (root != null)
+			{
+				root.setHidden(true);
+				root.revalidate();
+			}
+			log.info("Boss Mechanics: PROBE hid the window for this drag gesture, "
+					+ "mouse canvas=({},{})",
+				mouse.getX(), mouse.getY());
+		}
+		else
+		{
+			// Every event after the hide. At info, not debug (same reasoning as the "armed" line):
+			// if the drag listener family dies the moment root is hidden, this line simply stops
+			// appearing after the "hid the window" line above -- that silence IS the answer to Q1.
+			probeDragSequence++;
+			log.info("Boss Mechanics: PROBE drag event #{} fired while the window was hidden, "
+					+ "mouse canvas=({},{})",
+				probeDragSequence, mouse.getX(), mouse.getY());
+		}
 	}
 
 	/**
@@ -999,6 +1093,15 @@ public class BossMechanicsWindow
 	 */
 	private void onDragComplete()
 	{
+		// Issue #48, Slice 6 (the probe, Q2): logged and restored BEFORE the dragging check below,
+		// so a completion event that fires with no live gesture is never silently swallowed --
+		// whether the engine still delivers this event once the window was hidden is exactly what
+		// Q2 asks, and Jagex's own 3-frame landing timer (script 2802, D30) may exist because of
+		// whatever the answer turns out to be.
+		boolean probeWasHidden = probeGestureHidden;
+		log.info("Boss Mechanics: PROBE dragComplete fired, window was hidden={}", probeWasHidden);
+		restoreProbeHide();
+
 		if (!dragging)
 		{
 			return;
@@ -1025,6 +1128,25 @@ public class BossMechanicsWindow
 			outline.setHidden(true);
 			outline.revalidate();
 		}
+	}
+
+	/**
+	 * Issue #48, Slice 6 (the probe): un-hides {@link #root} and clears {@link #probeGestureHidden}.
+	 * Called from every path a gesture can end on -- {@link #onDragComplete}, {@link #close}, and
+	 * the {@code GameStateChanged} handler -- because if hiding the tree turns out to kill the
+	 * engine's drag events entirely (Q1), a gesture interrupted before it reaches
+	 * {@link #onDragComplete} would otherwise strand the window invisible with no way to get it
+	 * back. That is the one way this probe could actually ruin a play session, so every exit path
+	 * restores unconditionally rather than relying on {@link #onDragComplete} alone.
+	 */
+	private void restoreProbeHide()
+	{
+		if (probeGestureHidden && root != null)
+		{
+			root.setHidden(false);
+			root.revalidate();
+		}
+		probeGestureHidden = false;
 	}
 
 	/**
