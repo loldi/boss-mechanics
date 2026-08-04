@@ -130,6 +130,12 @@ public class BossMechanicsWindowLayoutTest
 	 * {@code setClickMask(... | WidgetConfig.DRAG)} is what actually makes the engine's drag
 	 * listener family fire, independent of {@code setOnDragListener} itself. Nothing about
 	 * placement is asserted here; that is deliberately deferred past this slice.
+	 *
+	 * <p>Three widgets carry {@code setOnDragListener} now, not one (docs/DECISIONS.md D35): the
+	 * title-bar drag handle plus one drag-capture layer per scrollbar thumb (the list column's and
+	 * the text box's). {@link #dragHandleWidget} still resolves the handle correctly -- it is
+	 * discovered first in tree order, since {@code header()} (and its {@code dragHandle()} call)
+	 * builds before {@code columns()} does -- so only the count below changes.
 	 */
 	@Test
 	public void dragHandleIsWiredForDragging() throws Exception
@@ -148,11 +154,12 @@ public class BossMechanicsWindowLayoutTest
 		List<Widget> dragWidgets = new ArrayList<>();
 		collectWidgetsWithDragListener(host, dragWidgets);
 
-		assertEquals("expected exactly one widget wired with setOnDragListener "
-				+ "(BossMechanicsWindow.dragHandle())",
-			1, dragWidgets.size());
+		assertEquals("expected exactly three widgets wired with setOnDragListener: the title-bar "
+				+ "drag handle (BossMechanicsWindow.dragHandle()) plus one drag-capture layer per "
+				+ "scrollbar thumb (docs/DECISIONS.md D35)",
+			3, dragWidgets.size());
 
-		Widget dragHandle = dragWidgets.get(0);
+		Widget dragHandle = dragHandleWidget(host);
 		Object[] clickMaskArgs = RecordingWidget.lastArgsOf(dragHandle, "setClickMask");
 		assertNotNull("the drag handle must call setClickMask", clickMaskArgs);
 
@@ -887,7 +894,13 @@ public class BossMechanicsWindowLayoutTest
 		return (JavaScriptCallback) RecordingWidget.listenerOf(dragHandleWidget(host), "setOnDragCompleteListener");
 	}
 
-	/** The one widget in the tree wired with {@code setOnDragListener} (BossMechanicsWindow.dragHandle()). */
+	/**
+	 * The title-bar drag handle (BossMechanicsWindow.dragHandle()), the first widget wired with
+	 * {@code setOnDragListener} found in tree order. Correct even after docs/DECISIONS.md D35 added
+	 * two more (one per scrollbar thumb's drag-capture layer): {@code header()} -- and its
+	 * {@code dragHandle()} call -- builds before {@code columns()} does, so the handle is always
+	 * discovered first in this depth-first, creation-order search.
+	 */
 	private static Widget dragHandleWidget(Widget host)
 	{
 		List<Widget> dragWidgets = new ArrayList<>();

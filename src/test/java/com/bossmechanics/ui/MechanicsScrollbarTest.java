@@ -6,6 +6,7 @@ import static org.junit.Assert.assertFalse;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import net.runelite.api.Point;
 import net.runelite.api.ScriptEvent;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
@@ -29,7 +30,7 @@ public class MechanicsScrollbarTest
 		Widget bar = RecordingWidget.create(calls);
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
-			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE, () -> null);
 		scrollbar.build();
 
 		JavaScriptCallback wheel =
@@ -56,7 +57,7 @@ public class MechanicsScrollbarTest
 		Widget bar = RecordingWidget.create(calls);
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
-			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE, () -> null);
 		scrollbar.build();
 		long createChildCallsAfterBuild = countCreateChild(calls);
 
@@ -80,7 +81,7 @@ public class MechanicsScrollbarTest
 		Widget bar = RecordingWidget.create();
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
-			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE, () -> null);
 		scrollbar.build();
 
 		scrollbar.setContentHeight(100);
@@ -103,7 +104,7 @@ public class MechanicsScrollbarTest
 		Widget bar = RecordingWidget.create();
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 200, 200, 400,
-			MechanicsScrollbar.Chrome.ALWAYS);
+			MechanicsScrollbar.Chrome.ALWAYS, () -> null);
 		scrollbar.build();
 
 		scrollbar.setContentHeight(100);
@@ -116,9 +117,156 @@ public class MechanicsScrollbarTest
 			RecordingWidget.lastArgsOf(widgetNamed(bar, SPRITE_THUMB_MIDDLE_SPRITE_ID), "setHidden")[0]);
 	}
 
+	/**
+	 * docs/DECISIONS.md D35: dragging the capture layer over the track scrolls the list
+	 * proportionally. {@code barHeight} 122 -> {@code trackHeight} 90 (122 - 2*16); content 180
+	 * over a 90px viewport -> {@code thumbHeight} 45 ({@code trackHeight * viewportHeight /
+	 * contentHeight}), so {@code travel} is 45 and {@code maxScroll} is 90. The first drag event
+	 * only captures the gesture's baseline (mouse canvas position and starting scroll) and must
+	 * not scroll anything itself; the second, a 10px move, scrolls proportionally and repositions
+	 * the thumb sprite to match.
+	 */
+	@Test
+	public void draggingTheThumbScrollsProportionally()
+	{
+		Widget list = RecordingWidget.create();
+		Widget bar = RecordingWidget.create();
+		Point[] mouse = new Point[1];
+
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 122, 90, 180,
+			MechanicsScrollbar.Chrome.ALWAYS, () -> mouse[0]);
+		scrollbar.build();
+		long scrollYCallsAfterBuild = countSetScrollY(list);
+
+		JavaScriptCallback drag = dragListenerOf(bar);
+
+		mouse[0] = new Point(0, 100);
+		drag.run(fakeScriptEvent());
+		assertEquals("the first drag event of a gesture must only capture a baseline, never scroll",
+			scrollYCallsAfterBuild, countSetScrollY(list));
+
+		mouse[0] = new Point(0, 110);
+		drag.run(fakeScriptEvent());
+
+		assertEquals("a 10px drag over a 45px travel / 90px maxScroll must scroll proportionally",
+			20, ((Integer) RecordingWidget.lastArgsOf(list, "setScrollY")[0]).intValue());
+		assertEquals("the thumb sprite must reposition to match: ARROW_SIZE (16) + travel(45) * "
+				+ "scrollY(20) / maxScroll(90) = 26",
+			26, ((Integer) RecordingWidget.lastArgsOf(widgetNamed(bar, SPRITE_THUMB_TOP_ID),
+				"setOriginalY")[0]).intValue());
+	}
+
+	/**
+	 * Dragging past either end of the track clamps rather than overshooting, and -- because scroll
+	 * state is clamped and applied on every event, with no committed-vs-live split to protect
+	 * (docs/DECISIONS.md D35) -- picking the cursor back up mid-gesture scrolls immediately from
+	 * the gesture's original baseline rather than first "unwinding" a phantom offset.
+	 */
+	@Test
+	public void draggingPastTheTrackEndClampsAndNeverLeavesAPhantom()
+	{
+		Widget list = RecordingWidget.create();
+		Widget bar = RecordingWidget.create();
+		Point[] mouse = new Point[1];
+
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 122, 90, 180,
+			MechanicsScrollbar.Chrome.ALWAYS, () -> mouse[0]);
+		scrollbar.build();
+
+		JavaScriptCallback drag = dragListenerOf(bar);
+
+		mouse[0] = new Point(0, 100);
+		drag.run(fakeScriptEvent());
+		mouse[0] = new Point(0, 1100);
+		drag.run(fakeScriptEvent());
+
+		assertEquals("a drag far past the track end must clamp to maxScroll, never overshoot it",
+			90, ((Integer) RecordingWidget.lastArgsOf(list, "setScrollY")[0]).intValue());
+
+		mouse[0] = new Point(0, 120);
+		drag.run(fakeScriptEvent());
+
+		assertEquals("dragging back from a clamped position must respond immediately from the "
+				+ "gesture's original baseline (100), not unwind a phantom offset first: delta 20 "
+				+ "over 45 travel / 90 maxScroll = 40",
+			40, ((Integer) RecordingWidget.lastArgsOf(list, "setScrollY")[0]).intValue());
+	}
+
+	/** The D22 pin (revalidateScroll banned, no rebuild-shaped createChild) extended to the drag path. */
+	@Test
+	public void thumbDragCreatesNoChildrenAndNeverCallsRevalidateScroll()
+	{
+		List<String> calls = new ArrayList<>();
+		Widget list = RecordingWidget.create(calls);
+		Widget bar = RecordingWidget.create(calls);
+		Point[] mouse = new Point[1];
+
+		MechanicsScrollbar scrollbar = new MechanicsScrollbar(list, bar, 122, 90, 180,
+			MechanicsScrollbar.Chrome.ALWAYS, () -> mouse[0]);
+		scrollbar.build();
+		long createChildCallsAfterBuild = countCreateChild(calls);
+
+		JavaScriptCallback drag = dragListenerOf(bar);
+		JavaScriptCallback dragComplete = dragCompleteListenerOf(bar);
+
+		mouse[0] = new Point(0, 100);
+		drag.run(fakeScriptEvent());
+		mouse[0] = new Point(0, 130);
+		drag.run(fakeScriptEvent());
+		dragComplete.run(fakeScriptEvent());
+
+		assertEquals("a thumb drag must never create a new child (D22): the capture layer and the "
+				+ "thumb sprites it moves are all created once, in build()",
+			createChildCallsAfterBuild, countCreateChild(calls));
+		assertFalse("revalidateScroll must never be called on any widget of ours (D22), including "
+				+ "from the drag path",
+			calls.contains("revalidateScroll"));
+	}
+
+	private static final int SPRITE_THUMB_TOP_ID = 789;
 	private static final int SPRITE_THUMB_MIDDLE_SPRITE_ID = 790;
 	private static final int SPRITE_TRACK_ID = 792;
 	private static final int SPRITE_ARROW_UP_ID = 773;
+
+	/** The lone widget in {@code bar}'s children wired with {@code setOnDragListener}. */
+	private static JavaScriptCallback dragListenerOf(Widget bar)
+	{
+		for (Widget child : RecordingWidget.childrenOf(bar))
+		{
+			Object listener = RecordingWidget.listenerOf(child, "setOnDragListener");
+			if (listener != null)
+			{
+				return (JavaScriptCallback) listener;
+			}
+		}
+		return null;
+	}
+
+	/** @see #dragListenerOf */
+	private static JavaScriptCallback dragCompleteListenerOf(Widget bar)
+	{
+		for (Widget child : RecordingWidget.childrenOf(bar))
+		{
+			Object listener = RecordingWidget.listenerOf(child, "setOnDragCompleteListener");
+			if (listener != null)
+			{
+				return (JavaScriptCallback) listener;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * A dummy stand-in, the {@code BossMechanicsWindowLayoutTest} idiom: production code reads the
+	 * drag position from the supplied {@code Supplier<Point>}, never the event itself (D29/D35), so
+	 * nothing here needs to answer any particular method.
+	 */
+	private static ScriptEvent fakeScriptEvent()
+	{
+		return (ScriptEvent) Proxy.newProxyInstance(ScriptEvent.class.getClassLoader(),
+			new Class<?>[] { ScriptEvent.class },
+			(proxy, method, args) -> RecordingWidget.defaultFor(method.getReturnType()));
+	}
 
 	/** The thumb-middle widget is the only child whose {@code setSpriteId} is 790 (tiled). */
 	private static Widget widgetNamed(Widget bar, int spriteId)
@@ -137,6 +285,11 @@ public class MechanicsScrollbarTest
 	private static long countCreateChild(List<String> calls)
 	{
 		return calls.stream().filter("createChild"::equals).count();
+	}
+
+	private static long countSetScrollY(Widget widget)
+	{
+		return RecordingWidget.callsOf(widget).stream().filter("setScrollY"::equals).count();
 	}
 
 	private static ScriptEvent scriptEventWithMouseY(int mouseY)
