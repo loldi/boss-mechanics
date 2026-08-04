@@ -309,42 +309,56 @@ public class BossMechanicsWindow
 	private final Set<Integer> warnedModelIds = new HashSet<>();
 
 	/**
-	 * The player's dragged window offset, composed into {@link #place} before
-	 * {@link WindowPlacement#withChrome} (docs/DECISIONS.md D29). Session state, not a config key:
-	 * same lifetime as {@link #selectedMechanicId} (fork 1, resolved) -- survives close/reopen, a
-	 * boss switch and a "View All" rebuild, forgotten only when the plugin instance itself does not
-	 * survive (a client restart), which needs no explicit reset here since that starts a fresh
+	 * The window's own absolute logical origin, in host coordinates (docs/DECISIONS.md D32, which
+	 * unanchors D29/D30's offset model). Session state, not a config key: same lifetime as
+	 * {@link #selectedMechanicId} (D29 fork 1, unchanged) -- survives close/reopen, a boss switch
+	 * and a "View All" rebuild, forgotten only when the plugin instance itself does not survive (a
+	 * client restart), which needs no explicit reset here since that starts a fresh
 	 * {@link BossMechanicsWindow} with fresh fields anyway.
+	 *
+	 * <p>Seeded from the collection log's own rectangle by {@link #open} every time
+	 * {@link #draggedThisSession} is still false, so an undragged window always opens covering
+	 * wherever the log currently is; once the player drags, the log is never consulted again this
+	 * session (D32, fork 1 resolved: unanchor ALWAYS).
 	 */
-	private int dragOffsetX;
-	private int dragOffsetY;
+	private int windowX;
+	private int windowY;
+
+	/**
+	 * Whether the player has completed a drag this session (docs/DECISIONS.md D32). Set once, by
+	 * {@link #onDragComplete}, and never cleared: it is the switch between {@link #open}'s two
+	 * seeding behaviours for {@link #windowX}/{@link #windowY}, described there.
+	 */
+	private boolean draggedThisSession;
 
 	/**
 	 * Transient drag-gesture state, live only between a gesture's first {@code setOnDragListener}
 	 * event and its {@code setOnDragCompleteListener} (D29). {@link #dragging} tells the first
 	 * event of a gesture apart from every one after it: the first only captures
-	 * {@link #dragMouseStartX}/{@link #dragMouseStartY} and {@link #dragOffsetStartX}/
-	 * {@link #dragOffsetStartY} (what {@link #dragOffsetX}/{@link #dragOffsetY} already held before
-	 * this gesture began); every later event derives the new offset from the delta against those.
+	 * {@link #dragMouseStartX}/{@link #dragMouseStartY} and {@link #dragStartWindowX}/
+	 * {@link #dragStartWindowY} (what {@link #windowX}/{@link #windowY} already held before this
+	 * gesture began); every later event derives the new candidate origin from the delta against
+	 * those.
 	 */
 	private boolean dragging;
 	private int dragMouseStartX;
 	private int dragMouseStartY;
-	private int dragOffsetStartX;
-	private int dragOffsetStartY;
+	private int dragStartWindowX;
+	private int dragStartWindowY;
 
 	/**
-	 * The current gesture's un-committed candidate offset (docs/DECISIONS.md D30) -- what
-	 * {@link #dragOffsetX}/{@link #dragOffsetY} would become <b>if</b> the gesture ended right now.
-	 * Deliberately a separate pair of fields, never read by {@link #place}/{@link #replaceIfChanged}:
-	 * the whole point of the outline fork is that the window itself does not move mid-gesture, so
-	 * nothing that positions the window may consult these. {@link #onDrag} writes them every event
-	 * after the first (to show/move the outline); {@link #onDragComplete} reads them once, to commit
-	 * the final clamped value into {@link #dragOffsetX}/{@link #dragOffsetY}, and does not clear
-	 * them afterward -- {@link #dragging} alone gates whether they mean anything.
+	 * The current gesture's un-committed candidate origin (docs/DECISIONS.md D30, D32) -- an
+	 * ABSOLUTE origin, what {@link #windowX}/{@link #windowY} would become <b>if</b> the gesture
+	 * ended right now, not an offset. Deliberately a separate pair of fields, never read by
+	 * {@link #place}/{@link #replaceIfChanged}: the whole point of the outline fork is that the
+	 * window itself does not move mid-gesture, so nothing that positions the window may consult
+	 * these. {@link #onDrag} writes them every event after the first (to show/move the outline);
+	 * {@link #onDragComplete} reads them once, to commit the final clamped value into
+	 * {@link #windowX}/{@link #windowY}, and does not clear them afterward -- {@link #dragging}
+	 * alone gates whether they mean anything.
 	 */
-	private int dragLiveOffsetX;
-	private int dragLiveOffsetY;
+	private int dragLiveX;
+	private int dragLiveY;
 
 	/** What "View All" / "Hide All" does: persist the new reveal state and rebuild (D18, D20). */
 	public void setOnRevealToggled(BiConsumer<String, Boolean> onRevealToggled)
@@ -410,6 +424,15 @@ public class BossMechanicsWindow
 		this.previousBossId = view.getBossId();
 		this.view = view;
 		this.windowOpen = true;
+
+		// The unanchor rule (docs/DECISIONS.md D32): an undragged window re-seeds from the log's
+		// current position on every open, so it always opens covering wherever the log now is; once
+		// draggedThisSession flips true, the log is never consulted again for the rest of the
+		// session and windowX/Y are left exactly as the player last dragged them.
+		if (!draggedThisSession)
+		{
+			seedWindowPosition(host);
+		}
 
 		if (!stillAttached(host))
 		{
@@ -498,10 +521,10 @@ public class BossMechanicsWindow
 		// selectedMechanicId and previousBossId deliberately survive: reopening the same boss's
 		// screen puts you back on the row you were reading, and Selection resets it for any other.
 
-		// dragOffsetX/Y survive too (D29, session lifetime), but the in-progress flag must not: a
-		// gesture interrupted by Esc or by the log closing never gets its completion event, and a
-		// stale `dragging` would make the next gesture's first event continue from a dead baseline
-		// and jump the window.
+		// windowX/Y and draggedThisSession survive too (D29 fork 1, D32, session lifetime), but the
+		// in-progress flag must not: a gesture interrupted by Esc or by the log closing never gets
+		// its completion event, and a stale `dragging` would make the next gesture's first event
+		// continue from a dead baseline and jump the window.
 		dragging = false;
 		// Same reasoning for the press tint: a hold that was never released would otherwise paint
 		// the first hover after reopening at the pressed level.
@@ -560,53 +583,75 @@ public class BossMechanicsWindow
 	}
 
 	/**
-	 * Sits the root exactly over the collection log, offset by however far the player has dragged
-	 * it (docs/DECISIONS.md D29). See {@link WindowPlacement} for why {@code ABSOLUTE_CENTER} on
-	 * the host is not the same thing and shipped 125px off.
+	 * Seeds {@link #windowX}/{@link #windowY} from the collection log's current on-screen rectangle
+	 * (docs/DECISIONS.md D32), or from the host's own centre when there is no log to seed from (the
+	 * window can outlive a log rebuild for a tick; centring is wrong by the sidebar/chatbox delta,
+	 * but on screen and temporary, matching D20's old no-log fallback). Only ever called from
+	 * {@link #open}, and only while {@link #draggedThisSession} is false -- this is the ONE place
+	 * the log's rectangle is read at all; every other placement below uses the stored origin as-is.
+	 */
+	private void seedWindowPosition(Widget host)
+	{
+		Widget collectionLog = client.getWidget(InterfaceID.Collection.UNIVERSE);
+		if (collectionLog == null)
+		{
+			windowX = (host.getWidth() - WINDOW_WIDTH) / 2;
+			windowY = (host.getHeight() - WINDOW_HEIGHT) / 2;
+			return;
+		}
+
+		windowX = computedOriginX(host, collectionLog);
+		windowY = computedOriginY(host, collectionLog);
+	}
+
+	/**
+	 * Draws the root at the session's stored absolute origin (docs/DECISIONS.md D32), clamped to
+	 * whatever the host's current size is. The collection log is never read here -- {@link #open}
+	 * via {@link #seedWindowPosition} is the only place that happens -- so a client resize or a
+	 * collection-log move can only ever re-clamp {@link #windowX}/{@link #windowY} for drawing;
+	 * neither ever mutates the stored value itself.
 	 *
 	 * @return true if anything moved, so callers can skip the revalidate when nothing did
 	 */
 	private boolean place(Widget host)
 	{
-		Widget collectionLog = client.getWidget(InterfaceID.Collection.UNIVERSE);
-		if (collectionLog == null)
-		{
-			// Nothing to cover (the window can outlive a log rebuild for a tick). Centring on the
-			// host is wrong by the sidebar/chatbox delta, but it is on screen and it is temporary.
-			// The drag offset is deliberately ignored here: this branch is a one-tick transient,
-			// not a real placement worth clamping against.
-			return move(WidgetPositionMode.ABSOLUTE_CENTER, 0, 0);
-		}
-
-		int x = WindowDrag.clampedOrigin(computedOriginX(host, collectionLog), dragOffsetX,
-			WINDOW_WIDTH, host.getWidth());
-		int y = WindowDrag.clampedOrigin(computedOriginY(host, collectionLog), dragOffsetY,
-			WINDOW_HEIGHT, host.getHeight());
+		int x = WindowDrag.visibleOrigin(windowX, WINDOW_WIDTH, host.getWidth());
+		int y = WindowDrag.visibleOrigin(windowY, WINDOW_HEIGHT, host.getHeight());
 
 		// The steel-chrome root is CHROME px larger on every edge than the 512x334 logical window
 		// this origin covers the log with (docs/DECISIONS.md D27, G2): the root's own origin has
 		// to sit CHROME px up-left of it, so the logical window inside the root still lands here.
-		return move(WidgetPositionMode.ABSOLUTE_LEFT,
-			WindowPlacement.withChrome(x, CHROME), WindowPlacement.withChrome(y, CHROME));
+		return move(WindowPlacement.withChrome(x, CHROME), WindowPlacement.withChrome(y, CHROME));
 	}
 
-	/** Where {@link WindowPlacement#origin} would put the window on the x axis, drag aside. */
+	/**
+	 * Where {@link WindowPlacement#origin} would put the window on the x axis, used only by
+	 * {@link #seedWindowPosition} (docs/DECISIONS.md D32).
+	 */
 	private int computedOriginX(Widget host, Widget collectionLog)
 	{
 		return WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, false),
 			collectionLog.getWidth(), WindowPlacement.offsetInRoot(host, false), WINDOW_WIDTH);
 	}
 
-	/** Where {@link WindowPlacement#origin} would put the window on the y axis, drag aside. */
+	/**
+	 * Where {@link WindowPlacement#origin} would put the window on the y axis, used only by
+	 * {@link #seedWindowPosition} (docs/DECISIONS.md D32).
+	 */
 	private int computedOriginY(Widget host, Widget collectionLog)
 	{
 		return WindowPlacement.origin(WindowPlacement.offsetInRoot(collectionLog, true),
 			collectionLog.getHeight(), WindowPlacement.offsetInRoot(host, true), WINDOW_HEIGHT);
 	}
 
-	private boolean move(int positionMode, int x, int y)
+	/**
+	 * The window's position mode is always {@code ABSOLUTE_LEFT} now (docs/DECISIONS.md D32): there
+	 * is no longer an {@code ABSOLUTE_CENTER} fallback mode to juggle, since {@link #place} always
+	 * has a stored origin to draw at.
+	 */
+	private boolean move(int x, int y)
 	{
-		if (root.getXPositionMode() == positionMode && root.getOriginalX() == x
+		if (root.getXPositionMode() == WidgetPositionMode.ABSOLUTE_LEFT && root.getOriginalX() == x
 			&& root.getOriginalY() == y)
 		{
 			return false;
@@ -614,9 +659,9 @@ public class BossMechanicsWindow
 
 		root.setOriginalX(x);
 		root.setOriginalY(y);
-		root.setXPositionMode(positionMode);
+		root.setXPositionMode(WidgetPositionMode.ABSOLUTE_LEFT);
 		// ABSOLUTE_LEFT and ABSOLUTE_TOP are both 0, so one mode value serves both axes.
-		root.setYPositionMode(positionMode);
+		root.setYPositionMode(WidgetPositionMode.ABSOLUTE_LEFT);
 		return true;
 	}
 
@@ -876,10 +921,10 @@ public class BossMechanicsWindow
 	/**
 	 * Every {@code setOnDragListener} firing of one gesture, continuous rather than snap-on-release
 	 * (the probe measured seven events inside one second of a single drag). The first event of a
-	 * gesture only captures a baseline; every one after composes a candidate offset from the delta
-	 * since that baseline and shows the outline at it -- the window itself stays put until
-	 * {@link #onDragComplete} (docs/DECISIONS.md D30, Fork A(a) resolved): {@link #dragOffsetX}/
-	 * {@link #dragOffsetY}, which {@link #place}/{@link #replaceIfChanged} actually read, are
+	 * gesture only captures a baseline; every one after composes a candidate absolute origin from
+	 * the delta since that baseline and shows the outline at it -- the window itself stays put
+	 * until {@link #onDragComplete} (docs/DECISIONS.md D30, Fork A(a) resolved; D32): {@link
+	 * #windowX}/{@link #windowY}, which {@link #place}/{@link #replaceIfChanged} actually read, are
 	 * untouched here.
 	 *
 	 * <p>Reads {@code client.getMouseCanvasPosition()}, never {@code event.getMouseX()/getMouseY()}
@@ -900,43 +945,42 @@ public class BossMechanicsWindow
 			dragging = true;
 			dragMouseStartX = mouse.getX();
 			dragMouseStartY = mouse.getY();
-			dragOffsetStartX = dragOffsetX;
-			dragOffsetStartY = dragOffsetY;
+			dragStartWindowX = windowX;
+			dragStartWindowY = windowY;
 			// Seeded, not left over: a gesture short enough to fire one event and then complete
-			// would otherwise commit the PREVIOUS gesture's live offset. Clamping usually makes
+			// would otherwise commit the PREVIOUS gesture's live origin. Clamping usually makes
 			// that idempotent, but not after a clamped-at-edge release followed by a resize, where
-			// a tap would jump the window back toward the old raw offset.
-			dragLiveOffsetX = dragOffsetStartX;
-			dragLiveOffsetY = dragOffsetStartY;
+			// a tap would jump the window back toward the old raw origin.
+			dragLiveX = dragStartWindowX;
+			dragLiveY = dragStartWindowY;
 			return;
 		}
 
-		dragLiveOffsetX = dragOffsetStartX + (mouse.getX() - dragMouseStartX);
-		dragLiveOffsetY = dragOffsetStartY + (mouse.getY() - dragMouseStartY);
+		dragLiveX = dragStartWindowX + (mouse.getX() - dragMouseStartX);
+		dragLiveY = dragStartWindowY + (mouse.getY() - dragMouseStartY);
 		showOutlineAtLiveOffset();
 	}
 
 	/**
-	 * Moves and shows the outline at the clamped candidate offset (docs/DECISIONS.md D30). Deliberately
-	 * <b>no</b> {@link WindowPlacement#withChrome}: the outline is logical-window sized (512x334, not
-	 * the chrome-inflated root), so it lands at the same coordinates the window's own content will
-	 * once {@link #onDragComplete} places {@code root} there. Every widget here was created once by
-	 * {@link #ensureOutline} (D22); this only ever calls {@code setOriginalX/Y}/{@code setHidden}/
-	 * {@code revalidate} on it, so the 7Hz drag-event rate this fires at can never leak a widget.
+	 * Moves and shows the outline at the clamped candidate origin (docs/DECISIONS.md D30, D32).
+	 * Deliberately <b>no</b> {@link WindowPlacement#withChrome}: the outline is logical-window sized
+	 * (512x334, not the chrome-inflated root), so it lands at the same coordinates the window's own
+	 * content will once {@link #onDragComplete} places {@code root} there. Never reads the
+	 * collection log (D32): {@link #dragLiveX}/{@link #dragLiveY} are already absolute. Every widget
+	 * here was created once by {@link #ensureOutline} (D22); this only ever calls {@code
+	 * setOriginalX/Y}/{@code setHidden}/{@code revalidate} on it, so the 7Hz drag-event rate this
+	 * fires at can never leak a widget.
 	 */
 	private void showOutlineAtLiveOffset()
 	{
 		Widget host = host();
-		Widget collectionLog = host == null ? null : client.getWidget(InterfaceID.Collection.UNIVERSE);
-		if (host == null || collectionLog == null || outline == null)
+		if (host == null || outline == null)
 		{
 			return;
 		}
 
-		int x = WindowDrag.clampedOrigin(computedOriginX(host, collectionLog), dragLiveOffsetX,
-			WINDOW_WIDTH, host.getWidth());
-		int y = WindowDrag.clampedOrigin(computedOriginY(host, collectionLog), dragLiveOffsetY,
-			WINDOW_HEIGHT, host.getHeight());
+		int x = WindowDrag.visibleOrigin(dragLiveX, WINDOW_WIDTH, host.getWidth());
+		int y = WindowDrag.visibleOrigin(dragLiveY, WINDOW_HEIGHT, host.getHeight());
 
 		outline.setOriginalX(x);
 		outline.setOriginalY(y);
@@ -945,12 +989,13 @@ public class BossMechanicsWindow
 	}
 
 	/**
-	 * Commits the gesture: normalizes the stored offset to the position the window actually landed
-	 * at, clamped, rather than the raw accumulated delta -- otherwise a release past an edge would
-	 * leave a phantom off-screen offset that the next drag has to silently "unwind" before the
-	 * window visibly moves at all (docs/DECISIONS.md D29) -- then places the window there and hides
-	 * the outline (D30): the window itself never moved during the gesture, so this is the one point
-	 * that actually relays it.
+	 * Commits the gesture: clamps the candidate origin to whatever it actually landed at, rather
+	 * than storing the raw accumulated delta -- otherwise a release past an edge would leave a
+	 * phantom off-screen origin that the next drag has to silently "unwind" before the window
+	 * visibly moves at all (docs/DECISIONS.md D29) -- then places the window there and hides the
+	 * outline (D30): the window itself never moved during the gesture, so this is the one point
+	 * that actually relays it. Also flips {@link #draggedThisSession} (D32): the log is never
+	 * consulted again this session once this runs.
 	 */
 	private void onDragComplete()
 	{
@@ -961,15 +1006,11 @@ public class BossMechanicsWindow
 		dragging = false;
 
 		Widget host = host();
-		Widget collectionLog = host == null ? null : client.getWidget(InterfaceID.Collection.UNIVERSE);
-		if (host != null && collectionLog != null)
+		if (host != null)
 		{
-			int computedX = computedOriginX(host, collectionLog);
-			int computedY = computedOriginY(host, collectionLog);
-			dragOffsetX =
-				WindowDrag.clampedOrigin(computedX, dragLiveOffsetX, WINDOW_WIDTH, host.getWidth()) - computedX;
-			dragOffsetY =
-				WindowDrag.clampedOrigin(computedY, dragLiveOffsetY, WINDOW_HEIGHT, host.getHeight()) - computedY;
+			windowX = WindowDrag.visibleOrigin(dragLiveX, WINDOW_WIDTH, host.getWidth());
+			windowY = WindowDrag.visibleOrigin(dragLiveY, WINDOW_HEIGHT, host.getHeight());
+			draggedThisSession = true;
 		}
 
 		replaceIfChanged();

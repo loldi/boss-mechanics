@@ -988,6 +988,70 @@ so new decisions are appended here rather than inserted in a themed section.
     - Unpinned deliberately: two engine-tuning constants whose only real test is the live pass, same
       precedent as the divider in D30.
 
+32. **Unanchoring the draggable window: an absolute position, seeded from the collection log only
+    at open (issue #48 follow-up).** Andrew's live pass on D29-31's shipped drag feature: the
+    window still moved when you dragged or resized the collection log underneath it. The cause is
+    that D20's `place()`/`onClientTick` re-derived the window's origin from the log's live
+    rectangle every client tick, with D29's drag offset merely composed on top of that
+    recomputation rather than replacing it — dragging the window and dragging the log both fed the
+    same "computed origin" input, so the log could always yank the window regardless of the drag
+    offset. This decision supersedes D20's "re-places every tick to follow the log" and D29's
+    offset model outright: the window's position is now `windowX`/`windowY`
+    (`ui.BossMechanicsWindow`), absolute host-coordinate state, and `place()` never reads the
+    collection log at all — only `open()` does, once, to seed it.
+
+    - **Fork 1, resolved by Andrew: option (a), unanchor ALWAYS.** Position is seeded from the
+      collection log at open and is absolute thereafter; while the window has never been dragged,
+      *each* open re-seeds from the log's current position so it always opens covering the log;
+      after the first drag, the dragged position wins for the rest of the session. **Rejected:
+      option (b), unanchor only after the first drag** — keep `place()`/`onClientTick` tracking the
+      log's live rectangle every tick, exactly as D20 always has, for as long as the window has
+      never been dragged, and only switch to the absolute model once the player drags it once. That
+      would have reproduced the reported bug for the entire pre-drag lifetime of every single
+      session — the window would still visibly chase the log around right up until the moment the
+      player happened to drag it — which is *exactly* the behaviour Andrew reported as wrong, merely
+      deferred rather than fixed. (a) instead stops tracking the log the instant the window opens,
+      every time, with no dependency on drag history for that part: the log's rectangle is read
+      exactly once per `open()` call, never from `onClientTick` or a drag gesture.
+    - **The seed-on-every-open-until-first-drag rule.** `open()` re-seeds `windowX`/`windowY` from
+      the log's current rectangle whenever `!draggedThisSession`; once `onDragComplete` sets
+      `draggedThisSession = true` (never cleared), no later `open()` this session reads the log
+      again — same session lifetime D29 fork 1 already gave the dragged position. An undragged
+      window therefore still opens covering wherever the log currently is (a first-time player's
+      expectation, and what a "View All" flip or boss switch before any drag still needs), but no
+      longer chases the log around while it stays open.
+    - **`view.WindowDrag.clampedOrigin` is replaced, not extended, by `visibleOrigin(origin,
+      windowSize, hostSize)`.** `clampedOrigin`'s "never clamp tighter than `computedOrigin`" bound
+      existed purely because `computedOrigin` was itself re-derived from the log every tick (D29);
+      under the absolute model there is no such reference left to protect, so the clamp collapses to
+      an ordinary two-sided bound, `[min(0, hostSize - windowSize), max(0, hostSize - windowSize)]`,
+      which also correctly pins the window to the host's own origin edge when the host is smaller
+      than the window (the pair inverts to both-non-positive in that case, rather than throwing or
+      silently doing nothing). `WindowPlacement.origin`/`offsetInRoot`/`withChrome` are untouched and
+      still do the open-time seeding and the chrome offset; `com.bossmechanics.view` stays
+      RuneLite-free (D19's split).
+    - **Accepted edge case, recorded so it is not re-litigated:** a seeded origin that
+      `WindowPlacement.origin` computes as negative (the log within 6px of the host edge, D20's
+      legitimate overhang) now clamps to 0 instead of reproducing exactly. D29's `clampedOrigin`
+      deliberately protected this case (`min(0, computedOrigin)` folded the negative value into its
+      own lower bound); `visibleOrigin`'s lower bound is `min(0, hostSize - windowSize)`, which for
+      any host at least as wide as the window is exactly 0, clamping a small negative overhang away.
+      Accepted because no shipped layout (D20's six top-level layouts) puts the log within 6px of
+      `UI_HIGHLIGHTS`' own edge — a ≤6px shift in a configuration no launch client actually produces.
+    - Pinned by `view.WindowDragTest`, rewritten (in-bounds identity, right-edge clamp, left-edge
+      clamp, and host-smaller-than-window pinning to the host's own origin), and four cases added to
+      `BossMechanicsWindowLayoutTest`: `movingTheCollectionLogDoesNotMoveTheWindow`,
+      `undraggedReopenSeedsFromTheLogsCurrentPosition`, `draggedReopenIgnoresTheLog`, and
+      `shrinkingTheClientClampsTheWindowAndGrowingItBackRestoresIt` (the last proving the clamp only
+      changes what gets drawn and never mutates the stored origin — shrinking and regrowing the host
+      restores the exact pre-shrink position). D30's four drag tests are unchanged, exact pinned
+      numbers and all (168 / 253 / 238 / 228 / 153): they were written against the root's observable
+      origin, and that observable behaviour is identical under the new model.
+    - **Deliberately not built here: hiding the window mid-drag, and the in-game probe that would
+      gate it.** Andrew's live pass also asked whether the window should hide (or ghost) while being
+      dragged, matching some of the collection log's own chrome. That is a separate PR, gated behind
+      its own probe, same precedent as D28 deferring this whole feature past its own live pass.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
