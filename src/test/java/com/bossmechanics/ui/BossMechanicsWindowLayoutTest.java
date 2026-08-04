@@ -130,6 +130,12 @@ public class BossMechanicsWindowLayoutTest
 	 * {@code setClickMask(... | WidgetConfig.DRAG)} is what actually makes the engine's drag
 	 * listener family fire, independent of {@code setOnDragListener} itself. Nothing about
 	 * placement is asserted here; that is deliberately deferred past this slice.
+	 *
+	 * <p>Three widgets carry {@code setOnDragListener} now, not one (docs/DECISIONS.md D35): the
+	 * title-bar drag handle plus one drag-capture layer per scrollbar thumb (the list column's and
+	 * the text box's). {@link #dragHandleWidget} still resolves the handle correctly -- it is
+	 * discovered first in tree order, since {@code header()} (and its {@code dragHandle()} call)
+	 * builds before {@code columns()} does -- so only the count below changes.
 	 */
 	@Test
 	public void dragHandleIsWiredForDragging() throws Exception
@@ -148,11 +154,17 @@ public class BossMechanicsWindowLayoutTest
 		List<Widget> dragWidgets = new ArrayList<>();
 		collectWidgetsWithDragListener(host, dragWidgets);
 
-		assertEquals("expected exactly one widget wired with setOnDragListener "
-				+ "(BossMechanicsWindow.dragHandle())",
-			1, dragWidgets.size());
+		assertEquals("expected exactly three widgets wired with setOnDragListener: the title-bar "
+				+ "drag handle (BossMechanicsWindow.dragHandle()) plus one drag-capture layer per "
+				+ "scrollbar thumb (docs/DECISIONS.md D35)",
+			3, dragWidgets.size());
 
-		Widget dragHandle = dragWidgets.get(0);
+		Widget dragHandle = dragHandleWidget(host);
+		assertNotNull("expected to resolve the title-bar handle among the three drag-wired widgets "
+				+ "by its hold listener; a null here means the discriminator broke, and every "
+				+ "gesture test in this file would otherwise be driving whichever widget it found",
+			dragHandle);
+
 		Object[] clickMaskArgs = RecordingWidget.lastArgsOf(dragHandle, "setClickMask");
 		assertNotNull("the drag handle must call setClickMask", clickMaskArgs);
 
@@ -887,12 +899,35 @@ public class BossMechanicsWindowLayoutTest
 		return (JavaScriptCallback) RecordingWidget.listenerOf(dragHandleWidget(host), "setOnDragCompleteListener");
 	}
 
-	/** The one widget in the tree wired with {@code setOnDragListener} (BossMechanicsWindow.dragHandle()). */
+	/**
+	 * The title-bar drag handle (BossMechanicsWindow.dragHandle()), identified by what makes it that
+	 * handle rather than by where it sits in the tree.
+	 *
+	 * <p>Since docs/DECISIONS.md D35 it is no longer the only drag-wired widget -- each scrollbar
+	 * thumb's capture layer carries byte-for-byte identical drag wiring (clickMask | DRAG, dead zone
+	 * 1, dead time 5). Taking the first in creation order would work today only because
+	 * {@code header()} happens to build before {@code columns()}, and D30 records this repo being
+	 * burned by exactly that idiom: a positional helper silently returned the outline the moment
+	 * the build order changed. Worse here, the three candidates are indistinguishable by wiring, so
+	 * a reorder would leave this test cheerfully asserting a scrollbar's wiring while every gesture
+	 * test in this file drove the wrong widget.
+	 *
+	 * <p>{@code setOnHoldListener} is the discriminator: only the title-bar handle carries one (it
+	 * drives the pressed tint, D30), and it is a property of what the handle IS.
+	 */
 	private static Widget dragHandleWidget(Widget host)
 	{
 		List<Widget> dragWidgets = new ArrayList<>();
 		collectWidgetsWithDragListener(host, dragWidgets);
-		return dragWidgets.get(0);
+
+		for (Widget candidate : dragWidgets)
+		{
+			if (RecordingWidget.listenerOf(candidate, "setOnHoldListener") != null)
+			{
+				return candidate;
+			}
+		}
+		return null;
 	}
 
 	/** The host child that is not {@code root} and has 4 unfilled-rectangle children -- the outline. */

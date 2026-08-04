@@ -1140,6 +1140,112 @@ so new decisions are appended here rather than inserted in a themed section.
       re-checking whether he actually saw the tint work during the live pass for this slice. Nothing
       about that code changed.
 
+34. **A text-descent pad for the description panel's clipped last line.** From the same
+    playtesting pass as D35 below: Tentacle Guard's counterplay text clipped a hair short of its
+    own bottom edge even scrolled fully down.
+
+    - **Root cause: `restackText` handed the raw stacked block height straight to
+      `setContentHeight`, with zero allowance for the font's own extent below the last baseline.**
+      A rendered PLAIN_12/BOLD_12 line is taller than its 12px advance -- descenders (g/y/p) plus
+      `setTextShadowed`'s own 1px drop extend past it. Between stacked blocks that overhang falls
+      harmlessly into the 12px `TEXT_LINE_GAP`; the FINAL block's overhang has nowhere to go, so
+      the viewport clips it even at max scroll. The other three candidates (scroll range, viewport
+      geometry, a `LineWrap`-vs-client wrap disagreement) were all ruled out: the symptom is a
+      horizontal cut through the last line's glyph bottoms, not a missing whole line or a
+      geometry mismatch, which only a below-baseline pad explains.
+    - **`MechanicsDetail.TEXT_DESCENT` is a labelled ESTIMATE, not a measured constant, and that
+      distinction is deliberate.** `FontTypeFace` exposes only `getTextWidth`/`getBaseline`
+      (javap-verified against runelite-api, no descent getter). Offline, `cachetool`'s
+      `DumpFontMetrics` (new) confirmed the underlying cache resource can't supply it either:
+      `p12_full`/`b12_full` (Djb2-hash-matched against the FONTS index, archives 495/496) load
+      through the same 257-byte format as every other font there -- 256 per-glyph advance widths
+      plus one scalar labelled "ascent" that equals the font's own nominal line height (12 for
+      both) rather than a true baseline-relative ascent -- and carry no glyph bitmap or bounding
+      box at all. There is nowhere left, offline or in the client API, to read a real below-
+      baseline extent from. `TEXT_DESCENT = 5`: 4px of raw descender allowance (typical for g/y/p
+      at a 12px em) plus 1px for the shadow, cited in the constant's own javadoc with this same
+      provenance so a future reader doesn't mistake it for a measured cache fact. If the live pass
+      (below) still shows clipping, this is the one number to bump.
+    - **Consequence, not a regression: content that used to "fit" at exactly ~90px now scrolls by
+      a few pixels and the bar appears.** Those pixels always genuinely contained glyphs; the old
+      behaviour was silently clipping them.
+    - Pinned by `MechanicsDetailPreviewTest.textScrollContentReservesTheFontsDescentBelowTheLastLine`
+      (asserts the scrollbar's `setScrollHeight` equals the stacked bottom plus `TEXT_DESCENT`, and
+      that `TEXT_DESCENT > 0`) and an amended
+      `textBlocksStackWithoutOverlappingAndScrollContentMatchesTheStackedHeight`, which now expects
+      the same `+ TEXT_DESCENT` pad rather than the raw stacked height.
+
+35. **Draggable thumbs for both scrollbars.** From the same playtesting pass as D34 above: neither
+    scrollbar's thumb could be grabbed, only indicated (D20's original limitation).
+
+    - **Both scrollbars get thumb dragging**, not just one -- they share `build()`, and
+      the Chrome policy (D28) does not interact with dragging, so splitting would need a second
+      policy enum for no user benefit. Shipped directly, no probe PR: D29's probe already validated
+      this exact listener family (`setClickMask(... | WidgetConfig.DRAG)`), click mask and
+      coordinate source (`client.getMouseCanvasPosition()`, never event coordinates) on the
+      title-bar handle, and the one new question -- does a gesture survive the cursor drifting off
+      a 16px-wide capture layer sideways -- is already answered by that same shipped handle, whose
+      own narrow dimension (39px tall) every real drag routinely leaves while still tracking
+      continuously.
+    - **A static drag-capture LAYER over the track is the load-bearing design choice, not listeners
+      on the moving thumb sprites.** D33 established the engine re-hit-tests under the cursor every
+      frame, so a capture surface that never moves and never hides mid-gesture is safe BY
+      CONSTRUCTION -- the same shape as the title-bar handle (stays put while the outline moves).
+      The thumb sprites stay pure visuals, repositioned by the existing `positionThumb`. Rejected:
+      listeners on the thumb sprites themselves, a moving and sometimes-clamped drag source, which
+      is precisely what D33 warns against. A fast flick cannot outrun the gesture either way: each
+      event recomputes from the ABSOLUTE mouse position against the gesture's own fixed baseline,
+      so the thumb converges every event with no lost gesture and no accumulated error.
+    - **The math is `view.ScrollThumbDrag.scrollY`, RuneLite-free like `WindowDrag`** (the D29
+      precedent), but the scrollbar's own gesture is NOT `WindowDrag`'s pattern reused as code:
+      the window's is entangled with the outline and D33's content-hiding; the scrollbar's has no
+      phantom-offset problem, because scroll state is clamped and applied on every drag event
+      rather than only committed on release, so `onDragComplete` only clears a flag. A shared
+      `DragGesture` helper between the two was rejected as YAGNI. `scrollY(scrollAtStart,
+      mouseDeltaPx, travelPx, maxScroll) = clamp(scrollAtStart + floorDiv(mouseDeltaPx * maxScroll,
+      travelPx), 0, maxScroll)`, `floorDiv` rather than `/` so a negative delta rounds the same
+      direction a positive one does; `travelPx <= 0` or `maxScroll <= 0` falls back to clamping the
+      starting scroll alone. Pinned by `ScrollThumbDragTest`.
+    - **`MechanicsScrollbar`'s constructor gains `Supplier<net.runelite.api.Point>
+      mouseCanvasPosition`**, threaded through unchanged by `MechanicsList` and `MechanicsDetail`'s
+      own constructors; `BossMechanicsWindow.columns()` supplies `client::getMouseCanvasPosition`
+      to both. No plugin-facing contract changed.
+    - **The capture layer is built once in `build()`, after the thumb sprites, spanning exactly the
+      track's own rect (`ARROW_SIZE` to `barHeight - ARROW_SIZE`) so it can never swallow the
+      arrows.** Reuses D31's dead zone/time (1px, 5 cycles) for the same reason D31 corrected the
+      title-bar handle's own values. `layout()` hides the capture whenever the bar isn't scrollable
+      (an inert bar must not start a dead gesture) and clears the in-flight flag, since a re-layout
+      mid-gesture means the content height the gesture started against no longer applies. `onDrag`
+      null-guards the mouse point, guards `maxScroll == 0 || travel <= 0`, captures the baseline on
+      the gesture's first event and returns, then on every later event goes through
+      `ScrollThumbDrag` and applies `setScrollY` + `positionThumb` behind a changed-value check, the
+      same idiom `scrollBy` (wheel/arrows) already used.
+    - **A thumb drag cannot trigger the window's own drag-and-hide (D33).** The window's `onDrag` is
+      wired only to the title-bar handle's own listener; a press on a scrollbar's capture layer
+      starts that scrollbar's own gesture, and `setNoClickThrough(true)` stops it reaching anything
+      behind. An interrupted thumb gesture needs no cleanup beyond the flag: `MechanicsList`/
+      `MechanicsDetail` (and their scrollbars) are discarded and rebuilt on every window `open()`/
+      close, taking `thumbDragging` with them -- unlike the window's own drag state, there is no
+      committed value that could be left stranded.
+    - Pinned by three new `MechanicsScrollbarTest` cases: `draggingTheThumbScrollsProportionally`
+      (the worked example: `barHeight` 122 -> `trackHeight` 90, content 180 over a 90px viewport ->
+      `thumbHeight` 45, `travel` 45, `maxScroll` 90; a 10px drag scrolls to 20 and repositions the
+      thumb sprite to `ARROW_SIZE(16) + 10 = 26`),
+      `draggingPastTheTrackEndClampsAndNeverLeavesAPhantom`, and
+      `thumbDragCreatesNoChildrenAndNeverCallsRevalidateScroll` (the D22 pin extended to the drag
+      path). The class comment's old "not draggable" paragraph is rewritten.
+    - **The title-bar handle is now resolved by identity in the tests, not by tree order.** These
+      capture layers are the first widgets other than that handle to carry drag wiring, and the
+      wiring is byte-for-byte identical (`clickMask | DRAG`, dead zone 1, dead time 5), so
+      `BossMechanicsWindowLayoutTest`'s "first drag-wired widget in creation order" helper would
+      have been correct only for as long as `header()` kept building before `columns()`. That is the
+      idiom D30 records being burned by, and it fails worse here: a reorder keeps the count at three
+      and every gesture test in the file silently drives a scrollbar instead of the window, so the
+      pinned 168/253/238/228/153 numbers break in five confusing places rather than one clear one.
+      The handle is now found by its `setOnHoldListener` — the only drag-wired widget that has one
+      (it drives the pressed tint, D30), and a property of what the handle *is* rather than where it
+      was built.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

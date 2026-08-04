@@ -6,8 +6,10 @@ import com.bossmechanics.view.MechanicsView;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
+import net.runelite.api.Point;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetPositionMode;
@@ -64,6 +66,7 @@ final class MechanicsList
 	private final MechanicsView view;
 	private final Consumer<String> onSelected;
 	private final Runnable onRevealToggled;
+	private final Supplier<Point> mouseCanvasPosition;
 
 	/** One per row, all hidden but the selected one. Rebuilt with the rows, so never stale. */
 	private final Map<String, Widget> selectionWashes = new HashMap<>();
@@ -73,15 +76,18 @@ final class MechanicsList
 	 * @param column the 190-wide column layer below it, already positioned
 	 * @param onSelected fired with the clicked row's mechanic id
 	 * @param onRevealToggled fired when "View All" / "Hide All" is clicked
+	 * @param mouseCanvasPosition passed through to the list's {@link MechanicsScrollbar}
+	 *     (docs/DECISIONS.md D35)
 	 */
 	MechanicsList(Widget header, Widget column, MechanicsView view, Consumer<String> onSelected,
-		Runnable onRevealToggled)
+		Runnable onRevealToggled, Supplier<Point> mouseCanvasPosition)
 	{
 		this.header = header;
 		this.column = column;
 		this.view = view;
 		this.onSelected = onSelected;
 		this.onRevealToggled = onRevealToggled;
+		this.mouseCanvasPosition = mouseCanvasPosition;
 	}
 
 	void build()
@@ -163,7 +169,7 @@ final class MechanicsList
 
 		MechanicsScrollbar scrollbar = new MechanicsScrollbar(
 			list, bar, height - (2 * SCROLLBAR_INSET), height, y,
-			MechanicsScrollbar.Chrome.ALWAYS);
+			MechanicsScrollbar.Chrome.ALWAYS, mouseCanvasPosition);
 		scrollbar.build();
 
 		// A wheel event over a row is not guaranteed to reach the list behind it, so every row

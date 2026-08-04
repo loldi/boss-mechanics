@@ -1,7 +1,11 @@
 package com.bossmechanics.ui;
 
+import com.bossmechanics.view.ScrollThumbDrag;
+import java.util.function.Supplier;
+import net.runelite.api.Point;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetConfig;
 
 /**
  * The mechanics list's scrollbar, built by hand from the collection log's own scrollbar sprites
@@ -15,8 +19,13 @@ import net.runelite.api.widgets.Widget;
  * Jagex's script delete and rebuild the children of the FLOATER itself, destroying our own window
  * root (and anything else floating). The plan named this fallback for exactly this risk.
  *
- * <p>Consequence: the thumb indicates position but is not draggable. The arrows and the mouse
- * wheel do the scrolling, which is what people use anyway.
+ * <p><b>The thumb is draggable (docs/DECISIONS.md D35)</b> via a static drag-capture LAYER built
+ * over the track, never listeners on the moving thumb sprites: D33 established that the engine
+ * re-hit-tests under the cursor every frame, so hiding or moving the drag source mid-gesture kills
+ * it, and a capture surface that never moves and never hides is safe by construction, the same
+ * shape as the title-bar drag handle (docs/DECISIONS.md D29). The thumb sprites stay pure visuals,
+ * repositioned by {@link #positionThumb} on every drag event; the arrows and the mouse wheel still
+ * do the rest of the scrolling exactly as before.
  *
  * <p><b>{@code Widget.revalidateScroll()} is forbidden on this list, permanently (docs/DECISIONS.md
  * D22).</b> It indexes the STATIC group array of the host's top-level interface, but bounds that
@@ -48,6 +57,16 @@ final class MechanicsScrollbar
 	/** One wheel notch. */
 	static final int WHEEL_STEP = 36;
 
+	/**
+	 * The collection log's own drag dead zone/time (script 2240, docs/DECISIONS.md D31), reused
+	 * here for the thumb's drag capture layer for the same reason D31 corrected the title-bar
+	 * handle's own values: nothing fires until the cursor has travelled this many pixels and this
+	 * many client cycles have passed, so a larger value trails the cursor by that much for the rest
+	 * of the gesture.
+	 */
+	private static final int DRAG_DEAD_ZONE = 1;
+	private static final int DRAG_DEAD_TIME = 5;
+
 	/** What the track and arrows do once the content already fits the viewport. */
 	enum Chrome
 	{
@@ -68,6 +87,7 @@ final class MechanicsScrollbar
 	private final int barHeight;
 	private final int viewportHeight;
 	private final Chrome chrome;
+	private final Supplier<Point> mouseCanvasPosition;
 
 	/**
 	 * Mutable (docs/DECISIONS.md D28, issue #47 follow-up): the text scroll box re-derives this on
@@ -84,8 +104,27 @@ final class MechanicsScrollbar
 	private Widget thumbBottom;
 	private int thumbHeight;
 
+	/** The drag-capture LAYER over the track (docs/DECISIONS.md D35). See {@link #build}. */
+	private Widget dragCapture;
+
+	/**
+	 * Live only between a thumb-drag gesture's first {@code setOnDragListener} event and its
+	 * {@code setOnDragCompleteListener} (docs/DECISIONS.md D35, the D29 pattern): the first event
+	 * of a gesture captures {@link #dragMouseStartY}/{@link #dragScrollStart} and returns; every
+	 * later event recomputes the target scroll from that baseline via {@link ScrollThumbDrag}.
+	 */
+	private boolean thumbDragging;
+	private int dragMouseStartY;
+	private int dragScrollStart;
+
+	/**
+	 * @param mouseCanvasPosition {@code client.getMouseCanvasPosition()}, supplied as a lambda so
+	 *     this package stays testable without a real {@code Client} (docs/DECISIONS.md D29: canvas
+	 *     position, never the drag event's own coordinates, which are relative to the drag source
+	 *     and would feed back on themselves as it moves)
+	 */
 	MechanicsScrollbar(Widget list, Widget bar, int barHeight, int viewportHeight, int contentHeight,
-		Chrome chrome)
+		Chrome chrome, Supplier<Point> mouseCanvasPosition)
 	{
 		this.list = list;
 		this.bar = bar;
@@ -93,6 +132,7 @@ final class MechanicsScrollbar
 		this.viewportHeight = viewportHeight;
 		this.contentHeight = contentHeight;
 		this.chrome = chrome;
+		this.mouseCanvasPosition = mouseCanvasPosition;
 	}
 
 	/**
@@ -106,7 +146,7 @@ final class MechanicsScrollbar
 	{
 		listenForWheel(list);
 
-		int trackHeight = Math.max(0, barHeight - (2 * ARROW_SIZE));
+		int trackHeight = trackHeight();
 
 		track = sprite(SPRITE_TRACK, 0, ARROW_SIZE, WIDTH, trackHeight, true);
 		arrowUp = arrow(SPRITE_ARROW_UP, 0, -ARROW_STEP);
@@ -117,6 +157,19 @@ final class MechanicsScrollbar
 		thumbTop = sprite(SPRITE_THUMB_TOP, 0, ARROW_SIZE, WIDTH, CAP_HEIGHT, false);
 		thumbMiddle = sprite(SPRITE_THUMB_MIDDLE, 0, ARROW_SIZE + CAP_HEIGHT, WIDTH, CAP_HEIGHT, true);
 		thumbBottom = sprite(SPRITE_THUMB_BOTTOM, 0, ARROW_SIZE + CAP_HEIGHT, WIDTH, CAP_HEIGHT, false);
+
+		// docs/DECISIONS.md D35: created once, after the thumb sprites, spanning exactly the
+		// track's own rect (ARROW_SIZE to barHeight - ARROW_SIZE) so it can never swallow the
+		// arrows. A static LAYER, never moved and never hidden mid-gesture (D33), is the drag
+		// SOURCE; the thumb sprites above stay pure visuals, repositioned by positionThumb().
+		dragCapture = Widgets.layer(bar, 0, ARROW_SIZE, WIDTH, trackHeight);
+		dragCapture.setHasListener(true);
+		dragCapture.setNoClickThrough(true);
+		dragCapture.setClickMask(dragCapture.getClickMask() | WidgetConfig.DRAG);
+		dragCapture.setDragDeadZone(DRAG_DEAD_ZONE);
+		dragCapture.setDragDeadTime(DRAG_DEAD_TIME);
+		dragCapture.setOnDragListener((JavaScriptCallback) event -> onThumbDrag());
+		dragCapture.setOnDragCompleteListener((JavaScriptCallback) event -> onThumbDragComplete());
 
 		layout();
 		bar.revalidate();
@@ -145,7 +198,7 @@ final class MechanicsScrollbar
 		list.setScrollY(0);
 
 		boolean scrollable = maxScroll() > 0;
-		int trackHeight = Math.max(0, barHeight - (2 * ARROW_SIZE));
+		int trackHeight = trackHeight();
 
 		thumbHeight = scrollable
 			? Math.min(trackHeight, Math.max(MIN_THUMB_HEIGHT, trackHeight * viewportHeight / Math.max(1, contentHeight)))
@@ -159,6 +212,11 @@ final class MechanicsScrollbar
 		setHidden(thumbTop, !showThumb);
 		setHidden(thumbMiddle, !showThumb);
 		setHidden(thumbBottom, !showThumb);
+		// An inert bar must not start a dead gesture (docs/DECISIONS.md D35): scrollable, not
+		// showThumb, gates the capture layer, and a re-layout (setContentHeight) drops whatever
+		// gesture was in flight against the content height that no longer applies.
+		setHidden(dragCapture, !scrollable);
+		thumbDragging = false;
 
 		if (showThumb)
 		{
@@ -166,6 +224,11 @@ final class MechanicsScrollbar
 			thumbMiddle.revalidate();
 			positionThumb(0);
 		}
+	}
+
+	private int trackHeight()
+	{
+		return Math.max(0, barHeight - (2 * ARROW_SIZE));
 	}
 
 	private static void setHidden(Widget widget, boolean hidden)
@@ -200,11 +263,66 @@ final class MechanicsScrollbar
 		positionThumb(target);
 	}
 
+	/**
+	 * Every {@code setOnDragListener} firing of one thumb-drag gesture (docs/DECISIONS.md D35). The
+	 * first event only captures a baseline (the mouse's canvas Y and the scroll position at that
+	 * moment) and returns; every event after recomputes the target scroll from that baseline via
+	 * {@link ScrollThumbDrag}, so a fast flick or a release past the track end never loses the
+	 * gesture or accumulates error -- each event is absolute, not relative to the last one.
+	 *
+	 * <p>Reads the supplied canvas position, never the event's own coordinates (docs/DECISIONS.md
+	 * D29): the event's coordinates are relative to the drag source itself, which would feed back
+	 * on itself if the source ever moved (this one never does, D33/D35, but the seam is shared).
+	 */
+	private void onThumbDrag()
+	{
+		Point mouse = mouseCanvasPosition.get();
+		if (mouse == null)
+		{
+			return;
+		}
+
+		int travel = trackHeight() - thumbHeight;
+		int maxScroll = maxScroll();
+		if (maxScroll == 0 || travel <= 0)
+		{
+			return;
+		}
+
+		if (!thumbDragging)
+		{
+			thumbDragging = true;
+			dragMouseStartY = mouse.getY();
+			dragScrollStart = list.getScrollY();
+			return;
+		}
+
+		int target = ScrollThumbDrag.scrollY(dragScrollStart, mouse.getY() - dragMouseStartY, travel, maxScroll);
+		if (target == list.getScrollY())
+		{
+			return;
+		}
+
+		list.setScrollY(target);
+		positionThumb(target);
+	}
+
+	/**
+	 * Clears the in-flight flag (docs/DECISIONS.md D35). Scroll state is clamped and applied on
+	 * every drag event above, not just on completion, so there is no committed value left to
+	 * relay here -- unlike the window's own drag (D29/D30), a thumb drag interrupted by Esc or the
+	 * window closing leaves nothing stranded: {@link MechanicsList}/{@link MechanicsDetail} (and
+	 * this scrollbar with them) are discarded on close, taking {@link #thumbDragging} with them.
+	 */
+	private void onThumbDragComplete()
+	{
+		thumbDragging = false;
+	}
+
 	/** Only ever called while the thumb is shown (docs/DECISIONS.md D28): {@link #layout} gates it. */
 	private void positionThumb(int scrollY)
 	{
-		int trackHeight = Math.max(0, barHeight - (2 * ARROW_SIZE));
-		int travel = trackHeight - thumbHeight;
+		int travel = trackHeight() - thumbHeight;
 		int y = ARROW_SIZE + (maxScroll() == 0 ? 0 : travel * scrollY / maxScroll());
 
 		thumbTop.setOriginalY(y);
