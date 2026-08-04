@@ -326,7 +326,7 @@ public class BossMechanicsWindowLayoutTest
 		Boss boss = emptyBoss();
 		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
 
-		Widget root = lastChildOf(host);
+		Widget root = windowRootOf(host);
 		Widget outline = outlineWidgetOf(RecordingWidget.childrenOf(host));
 		int rootOriginBeforeDrag =
 			((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue();
@@ -371,7 +371,7 @@ public class BossMechanicsWindowLayoutTest
 		Boss boss = emptyBoss();
 		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
 
-		Widget root = lastChildOf(host);
+		Widget root = windowRootOf(host);
 		Widget outline = outlineWidgetOf(RecordingWidget.childrenOf(host));
 		JavaScriptCallback onDrag = dragListenerOf(host);
 		JavaScriptCallback onDragComplete = dragCompleteListenerOf(host);
@@ -424,7 +424,7 @@ public class BossMechanicsWindowLayoutTest
 
 		window.open(emptyBoss(), MechanicsView.of(emptyBoss(), new DiscoveryState(), false));
 
-		Widget root = lastChildOf(host);
+		Widget root = windowRootOf(host);
 		assertEquals("a zero drag offset must reproduce today's placement exactly (D29)",
 			113, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
 	}
@@ -465,14 +465,14 @@ public class BossMechanicsWindowLayoutTest
 		onDrag.run(fakeScriptEvent());
 		onDragComplete.run(fakeScriptEvent());
 
-		Widget draggedRoot = lastChildOf(host);
+		Widget draggedRoot = windowRootOf(host);
 		assertEquals("computed origin 128 + delta 40, in bounds, minus 15 chrome",
 			153, ((Integer) RecordingWidget.lastArgsOf(draggedRoot, "setOriginalX")[0]).intValue());
 
 		// The "View All" rebuild path: open() again, same offset, same math.
 		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
 
-		Widget rebuiltRoot = lastChildOf(host);
+		Widget rebuiltRoot = windowRootOf(host);
 		assertEquals("a dragged offset must survive a View All rebuild (fork 1, session lifetime)",
 			153, ((Integer) RecordingWidget.lastArgsOf(rebuiltRoot, "setOriginalX")[0]).intValue());
 	}
@@ -497,11 +497,32 @@ public class BossMechanicsWindowLayoutTest
 		return collectionLog;
 	}
 
-	/** The most recently created immediate child of {@code host} -- the current window root. */
-	private static Widget lastChildOf(Widget host)
+	/**
+	 * The current window root: the most recently created immediate child of {@code host} that is
+	 * not the drag outline. Deliberately identity-based rather than "the last child": the outline
+	 * is built after root so that it draws over the window (D30), and a positional helper would
+	 * silently start returning the outline the next time that build order changes.
+	 */
+	private static Widget windowRootOf(Widget host)
 	{
 		List<Widget> children = RecordingWidget.childrenOf(host);
-		return children.get(children.size() - 1);
+		for (int i = children.size() - 1; i >= 0; i--)
+		{
+			// Every outline-shaped child, not just the first one found: a fixture that does not
+			// stub getDynamicChildren defeats the production identity scan, so a second open()
+			// leaves an orphaned outline behind as well as an orphaned root.
+			if (!isOutlineShaped(children.get(i)))
+			{
+				return children.get(i);
+			}
+		}
+		return null;
+	}
+
+	/** The outline is the only host child built as exactly four rectangles (D30). */
+	private static boolean isOutlineShaped(Widget child)
+	{
+		return RecordingWidget.childrenOf(child).size() == 4;
 	}
 
 	private static JavaScriptCallback dragListenerOf(Widget host)
@@ -527,7 +548,7 @@ public class BossMechanicsWindowLayoutTest
 	{
 		for (Widget child : hostChildren)
 		{
-			if (RecordingWidget.childrenOf(child).size() == 4)
+			if (isOutlineShaped(child))
 			{
 				return child;
 			}

@@ -927,6 +927,16 @@ so new decisions are appended here rather than inserted in a themed section.
       identity-scan reuse idiom (D19)**: built once by `ensureOutline`, hidden at creation, nulled in
       `onGameStateChanged`, hidden again in `close()` (a gesture interrupted by Esc or the log
       closing never reaches `onDragComplete`, so the outline could otherwise be left floating).
+    - **It must be created AFTER `root`, and that ordering is load-bearing, not incidental.** A
+      parent's dynamic children draw in creation order, so the last one created draws on top.
+      Because we keep the window visible during a gesture (the sub-fork above, unlike the collection
+      log which hides its content), an outline created first sits *underneath* the very window it is
+      positioning: for a short drag the offset is smaller than the window, so almost the entire
+      outline hides behind it and only a sliver protrudes. The affordance would be worth nothing
+      precisely when it is needed most. `BossMechanicsWindowLayoutTest` therefore identifies the
+      root by shape (the host child that is not four rectangles), never as "the last child" -- a
+      positional helper silently returns the outline the moment this order changes, which is exactly
+      how it was caught.
       Logical-window sized (512x334), **not** the chrome-inflated root's 542x364: it tracks where the
       window's own content will land, not its steel frame, so its position never goes through
       `WindowPlacement.withChrome`.

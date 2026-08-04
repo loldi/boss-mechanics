@@ -403,12 +403,6 @@ public class BossMechanicsWindow
 		this.view = view;
 		this.windowOpen = true;
 
-		// A second, independent persistent host child (D30), built before root so root stays the
-		// most-recently-created child of host: built once, same reuse idiom as root below, and
-		// otherwise untouched by the rest of open() -- only a drag gesture ever shows, moves or
-		// hides it (onDrag/onDragComplete/close).
-		ensureOutline(host);
-
 		if (!stillAttached(host))
 		{
 			root = host.createChild(-1, WidgetType.LAYER);
@@ -432,6 +426,15 @@ public class BossMechanicsWindow
 		root.setHidden(false);
 
 		place(host);
+
+		// A second, independent persistent host child (D30), built AFTER root so it is the
+		// most-recently-created child of host and therefore draws over the window. Order matters
+		// here: we deliberately keep the window visible during a drag (D30's sub-fork, unlike the
+		// collection log which hides its content), so an outline underneath would be occluded by
+		// the very window it is positioning -- for a short drag almost all of it would sit behind
+		// the window and the affordance would be pointless. Built once, same reuse idiom as root,
+		// and otherwise untouched by the rest of open(): only a gesture shows, moves or hides it.
+		ensureOutline(host);
 
 		// D22 correction of D14: revalidate() lays out only the receiver, immediately, against
 		// its parent's *current* computed size — it never recurses into children. A fresh root's
@@ -492,6 +495,9 @@ public class BossMechanicsWindow
 		// stale `dragging` would make the next gesture's first event continue from a dead baseline
 		// and jump the window.
 		dragging = false;
+		// Same reasoning for the press tint: a hold that was never released would otherwise paint
+		// the first hover after reopening at the pressed level.
+		holdSeen = false;
 		// A gesture interrupted this way never reaches onDragComplete either, so the outline (D30)
 		// could otherwise be left visible, floating, after the window it belongs to is gone.
 		hideOutline();
@@ -888,6 +894,12 @@ public class BossMechanicsWindow
 			dragMouseStartY = mouse.getY();
 			dragOffsetStartX = dragOffsetX;
 			dragOffsetStartY = dragOffsetY;
+			// Seeded, not left over: a gesture short enough to fire one event and then complete
+			// would otherwise commit the PREVIOUS gesture's live offset. Clamping usually makes
+			// that idempotent, but not after a clamped-at-edge release followed by a resize, where
+			// a tap would jump the window back toward the old raw offset.
+			dragLiveOffsetX = dragOffsetStartX;
+			dragLiveOffsetY = dragOffsetStartY;
 			return;
 		}
 
