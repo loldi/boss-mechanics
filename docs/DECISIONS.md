@@ -1234,6 +1234,17 @@ so new decisions are appended here rather than inserted in a themed section.
       `draggingPastTheTrackEndClampsAndNeverLeavesAPhantom`, and
       `thumbDragCreatesNoChildrenAndNeverCallsRevalidateScroll` (the D22 pin extended to the drag
       path). The class comment's old "not draggable" paragraph is rewritten.
+    - **The title-bar handle is now resolved by identity in the tests, not by tree order.** These
+      capture layers are the first widgets other than that handle to carry drag wiring, and the
+      wiring is byte-for-byte identical (`clickMask | DRAG`, dead zone 1, dead time 5), so
+      `BossMechanicsWindowLayoutTest`'s "first drag-wired widget in creation order" helper would
+      have been correct only for as long as `header()` kept building before `columns()`. That is the
+      idiom D30 records being burned by, and it fails worse here: a reorder keeps the count at three
+      and every gesture test in the file silently drives a scrollbar instead of the window, so the
+      pinned 168/253/238/228/153 numbers break in five confusing places rather than one clear one.
+      The handle is now found by its `setOnHoldListener` — the only drag-wired widget that has one
+      (it drives the pressed tint, D30), and a property of what the handle *is* rather than where it
+      was built.
 
 ## Open questions
 
