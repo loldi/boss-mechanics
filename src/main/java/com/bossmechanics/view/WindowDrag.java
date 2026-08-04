@@ -1,14 +1,12 @@
 package com.bossmechanics.view;
 
 /**
- * The clamp math behind issue #48's draggable window (docs/DECISIONS.md D29). RuneLite-free, like
- * every other decision in this package: the window's dragged offset is state, but where that
- * offset is allowed to land is a pure decision, resolved one axis at a time the same way
- * {@code WindowPlacement.origin} already does.
+ * The clamp math behind the draggable window (docs/DECISIONS.md D29, unanchored by D32).
+ * RuneLite-free, like every other decision in this package: {@code ui.BossMechanicsWindow} owns
+ * the window's absolute origin as state; this only answers "given this origin, where does the
+ * window actually land so it stays on screen."
  *
- * <p>Static, stateless, no RuneLite import — {@code ui.BossMechanicsWindow} owns the drag state
- * machine and the offset fields; this only answers "given this offset, where does the window's
- * origin actually land."
+ * <p>Static, stateless, no RuneLite import.
  */
 public final class WindowDrag
 {
@@ -17,25 +15,29 @@ public final class WindowDrag
 	}
 
 	/**
-	 * Clamps a dragged window origin so the window never goes fully off the host, without ever
-	 * clamping tighter than {@code computedOrigin} itself.
+	 * Clamps an absolute origin so the window stays fully on the host when it fits, and pinned to
+	 * the host's own span when it does not.
 	 *
-	 * <p>Bounds are {@code [min(0, computedOrigin), max(hostSize - windowSize, computedOrigin)]}. A
-	 * zero offset therefore always reproduces {@code computedOrigin} exactly — including a
-	 * legitimately negative one (D20's overhang) — because both bounds already include it before
-	 * the offset is even added. An offset can only ever move the origin back toward on-screen, never
-	 * push an already-out-of-bounds origin further out.
+	 * <p>Bounds are {@code [min(0, hostSize - windowSize), max(0, hostSize - windowSize)]}. When
+	 * the window fits ({@code hostSize >= windowSize}) that pair is {@code [<=0, >=0]}, an ordinary
+	 * clamp keeping the window fully on screen. When it does not fit, the pair inverts to
+	 * {@code [hostSize - windowSize, 0]}, both non-positive, and the window pins to the host's own
+	 * origin edge rather than the clamp throwing or doing nothing.
 	 *
-	 * @param computedOrigin where {@code WindowPlacement.origin} put the window before any drag
-	 * @param offset the player's accumulated drag offset on this axis
+	 * <p>Replaces D29's {@code clampedOrigin}, which existed to never clamp tighter than a
+	 * "computed origin" re-derived from the collection log every tick. Under D32's absolute
+	 * position model there is no such reference to protect: the window's origin is session state,
+	 * seeded once and then dragged, so the only question left is whether it currently fits.
+	 *
+	 * @param origin the window's own stored (or candidate) origin on this axis, in host coordinates
 	 * @param windowSize the window's own logical size on this axis (512 or 334)
 	 * @param hostSize the host's current size on this axis
-	 * @return the origin to actually place the window at
+	 * @return the origin to actually draw the window at
 	 */
-	public static int clampedOrigin(int computedOrigin, int offset, int windowSize, int hostSize)
+	public static int visibleOrigin(int origin, int windowSize, int hostSize)
 	{
-		int min = Math.min(0, computedOrigin);
-		int max = Math.max(hostSize - windowSize, computedOrigin);
-		return Math.max(min, Math.min(max, computedOrigin + offset));
+		int min = Math.min(0, hostSize - windowSize);
+		int max = Math.max(0, hostSize - windowSize);
+		return Math.max(min, Math.min(max, origin));
 	}
 }
