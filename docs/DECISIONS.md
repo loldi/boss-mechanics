@@ -962,6 +962,32 @@ so new decisions are appended here rather than inserted in a themed section.
       `holdingTheDragHandleBrightensTheTint` and `dragOutlineIsBuiltOnceAndHidden` are new; the
       divider is unpinned (purely visual, per the same precedent D21/D26 already set).
 
+31. **The drag dead zone and dead time drop to the collection log's own 1 and 5, correcting D29's
+    probe values and D30's decision to keep them.** Andrew's live pass on D30: "there is a lag
+    between clicking and dragging and when the box actually moves... the box is actually away from
+    your mouse now."
+
+    - **The cause is arithmetic, not a bug.** `setDragDeadZone`/`setDragDeadTime` gate when the
+      engine begins emitting drag events at all: none fire until the cursor has travelled the dead
+      zone in pixels *and* the dead time in client cycles (20ms each) has elapsed. At the probe's 8
+      and 10 that is 8px and ~200ms of a gesture in which the window is motionless. Worse, it is not
+      just a delay: `onDrag`'s first event captures the baseline (D29), and by then the cursor is
+      already 8px past where the player actually pressed, so the window trails the pointer by the
+      dead zone for the *rest* of the gesture rather than catching up. Both halves of Andrew's
+      report are the same constant.
+    - **1 and 5 are cache-verified, not tuned by feel**: script 2240 sets exactly those on the
+      collection log, the interface this window is imitating and the one Andrew compared it against.
+      D30 recorded them and then kept ours anyway — the probe picked 8/10 to be certain a dead zone
+      could not swallow clicks on the rows/WIKI/close (D29 finding 4), which was the right caution
+      for a probe and the wrong default to ship. The handle is a bare LAYER carrying no op of its
+      own, so a micro-drag across it does nothing, and Jagex runs 1/5 on a header hosting real
+      buttons.
+    - **Residual offset is now ≤1px** and no longer perceptible. Zeroing it entirely would need the
+      press position, which needs `setOnHoldListener` to fire — still unverified in the live client
+      (D30), and not worth chasing for one pixel.
+    - Unpinned deliberately: two engine-tuning constants whose only real test is the live pass, same
+      precedent as the divider in D30.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

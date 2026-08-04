@@ -127,8 +127,16 @@ public class BossMechanicsWindow
 	 */
 	private static final int DRAG_HANDLE_MARGIN = 6;
 	private static final int DRAG_HANDLE_WIDTH = WINDOW_WIDTH - (WIKI_X + WIKI_WIDTH) - DRAG_HANDLE_MARGIN;
-	private static final int DRAG_DEAD_ZONE = 8;
-	private static final int DRAG_DEAD_TIME = 10;
+	/**
+	 * The collection log's own values (script 2240), not the probe's (D31). These gate when the
+	 * engine starts emitting drag events at all: nothing fires until the cursor has travelled
+	 * {@code DRAG_DEAD_ZONE} px AND {@code DRAG_DEAD_TIME} client cycles have passed. The probe's 8
+	 * and 10 meant the window sat still for the first 8px and ~200ms of every gesture and then
+	 * started tracking from wherever the cursor had already reached, so it trailed the pointer by
+	 * the dead zone for the rest of the drag. 1 and 5 are what the interface we are imitating uses.
+	 */
+	private static final int DRAG_DEAD_ZONE = 1;
+	private static final int DRAG_DEAD_TIME = 5;
 
 	/**
 	 * The drag handle's hover tint (docs/DECISIONS.md D30), read from the collection log's own
