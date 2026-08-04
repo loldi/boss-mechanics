@@ -37,7 +37,10 @@ sprites), and a mechanic's preview can also be a bundled sprite image (for the
 few moves whose colour the Widget API can't render live) or a second model
 shown alongside the first. The window can be dragged by its title bar anywhere
 on screen (never fully off it), and remembers where you put it across a "View
-All" flip, a boss switch and a close/reopen for the rest of your session. See
+All" flip, a boss switch and a close/reopen for the rest of your session. It
+also remembers its own position full stop: dragging or resizing the collection
+log underneath no longer moves it, and an undragged window simply opens
+covering wherever the log currently is. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 

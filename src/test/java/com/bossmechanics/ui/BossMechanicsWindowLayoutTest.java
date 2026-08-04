@@ -477,6 +477,156 @@ public class BossMechanicsWindowLayoutTest
 			153, ((Integer) RecordingWidget.lastArgsOf(rebuiltRoot, "setOriginalX")[0]).intValue());
 	}
 
+	/**
+	 * The unanchoring itself (docs/DECISIONS.md D32, issue #48 follow-up, Slice 2): once the window
+	 * has opened, dragging or resizing the collection log must never move it again. Under the old
+	 * D29/D30 model the window's origin was re-derived from the log's rectangle every
+	 * {@code onClientTick}; under D32 it is absolute session state, seeded once at open, so moving
+	 * the log after that point has nothing left to feed into.
+	 */
+	@Test
+	public void movingTheCollectionLogDoesNotMoveTheWindow() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Client client = fakeClient(host, collectionLog, new Point[1]);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		window.open(emptyBoss(), MechanicsView.of(emptyBoss(), new DiscoveryState(), false));
+
+		// Re-stubbing overwrites cleanly -- the map does a put (RecordingWidget.returning).
+		RecordingWidget.returning(collectionLog, "getRelativeX", 200);
+		window.onClientTick(null);
+
+		Widget root = windowRootOf(host);
+		assertEquals("moving the collection log after open must never move the window (D32)",
+			113, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Reopen semantics (docs/DECISIONS.md D32, fork 1 resolved: unanchor ALWAYS, Slice 3): while
+	 * the window has never been dragged this session, EACH open re-seeds from the log's current
+	 * position, so it always opens covering wherever the log now is.
+	 */
+	@Test
+	public void undraggedReopenSeedsFromTheLogsCurrentPosition() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Client client = fakeClient(host, collectionLog, new Point[1]);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+		window.close();
+
+		RecordingWidget.returning(collectionLog, "getRelativeX", 200);
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		Widget root = windowRootOf(host);
+		assertEquals("an undragged reopen must seed from the log's CURRENT position "
+				+ "(computed origin 194 = 200 + (500-512)/2, minus 15 chrome)",
+			179, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Reopen semantics (docs/DECISIONS.md D32, fork 1 resolved: unanchor ALWAYS, Slice 3): once the
+	 * player has dragged and completed a gesture this session, the log's position is never
+	 * consulted again -- not even across a close/reopen.
+	 */
+	@Test
+	public void draggedReopenIgnoresTheLog() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		JavaScriptCallback onDragComplete = dragCompleteListenerOf(host);
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(340, 225);
+		onDrag.run(fakeScriptEvent());
+		onDragComplete.run(fakeScriptEvent());
+
+		window.close();
+
+		RecordingWidget.returning(collectionLog, "getRelativeX", 200);
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		Widget root = windowRootOf(host);
+		assertEquals("a dragged reopen must ignore the log's new position entirely "
+				+ "(D32, fork 1: unanchor ALWAYS)",
+			153, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * The resize clamp (docs/DECISIONS.md D32, issue #48 follow-up, Slice 4): the clamp only ever
+	 * changes what gets DRAWN, never the stored {@code windowX}, so shrinking the client and
+	 * growing it back restores the exact pre-shrink position rather than losing it to the clamp.
+	 */
+	@Test
+	public void shrinkingTheClientClampsTheWindowAndGrowingItBackRestoresIt() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		JavaScriptCallback onDragComplete = dragCompleteListenerOf(host);
+		// Drag to the right edge (computed origin 128, host 765 wide, window 512 wide -- max 253).
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(700, 200);
+		onDrag.run(fakeScriptEvent());
+		onDragComplete.run(fakeScriptEvent());
+
+		Widget root = windowRootOf(host);
+		assertEquals(238, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+
+		// Re-stub getWidth on the SAME host proxy fakeClient closes over by reference -- do not
+		// rebuild the client.
+		RecordingWidget.returning(host, "getWidth", 600);
+		window.onClientTick(null);
+
+		assertEquals("shrinking the client clamps the DRAWN position (windowX 253 against a 600 "
+				+ "wide host -- visibleOrigin clamps to 88, minus 15 chrome)",
+			73, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+
+		RecordingWidget.returning(host, "getWidth", 765);
+		window.onClientTick(null);
+
+		assertEquals("growing the client back restores the exact pre-shrink position: windowX "
+				+ "(253) was never mutated by the clamp",
+			238, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
 	/** Host: 765x503, at the coordinate-space origin, with no parent (D29's slice 3 fixture). */
 	private static Widget hostWidget()
 	{
