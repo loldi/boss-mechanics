@@ -40,7 +40,10 @@ on screen (never fully off it), and remembers where you put it across a "View
 All" flip, a boss switch and a close/reopen for the rest of your session. It
 also remembers its own position full stop: dragging or resizing the collection
 log underneath no longer moves it, and an undragged window simply opens
-covering wherever the log currently is. See
+covering wherever the log currently is. While you drag it, the window hides
+to a plain grey outline that tracks the cursor, the same way the collection
+log's own drag does, and reappears at the outline's position the moment you
+let go. See
 [docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
 [data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
 
