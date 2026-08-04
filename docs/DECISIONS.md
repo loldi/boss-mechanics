@@ -1246,6 +1246,46 @@ so new decisions are appended here rather than inserted in a themed section.
       (it drives the pressed tint, D30), and a property of what the handle *is* rather than where it
       was built.
 
+36. **Curating a boss the cache can name but the tools cannot measure (Doom of Mokhaiotl, issue
+    #61).** The first boss whose own body animations are stored in the newer **skeletal** format:
+    sequence config opcode 13, zero classic frames. Everything the project had built for reading
+    animations offline assumes classic frames, so this is the recipe for the ones that follow.
+
+    - **Jagex's own symbolic names are the id source, and they are reachable even for content
+      newer than the compiled API.** `runelite-api` 1.12.33 has no constant mentioning this boss;
+      the cache's `GAMEVALS` index would have them, but the game client never downloads that index
+      (the live cache stops at index 22). The names were read from RuneLite master's generated
+      `gameval/{NpcID,AnimationID,SpotanimID}.java` and cross-checked against the ids actually
+      present in the cache. This is the same standard D-note the Vorkath curation set (a gameval
+      name describes one known use of an id, not an exclusive one) — it just needed a new fetch
+      path. Doom's animations are prefixed `DOM_`, not `DOOM_`, which no amount of guessing finds.
+    - **The framemap-compat check and `FitZoom`'s per-frame extents say nothing about a skeletal
+      boss.** A skeletal sequence has no `frameIDs`, so there is no framemap to group by and no
+      per-frame vertex extents to fit against; the offline fit collapses to the static bind pose.
+      The shipped `zoom`/`shiftY` are that pose plus 10%, and unlike every earlier boss they are
+      an *estimate that needs an in-game look*, not arithmetic. The rig substitute is
+      `ModelDefinition.animayaGroups` (bone ids per vertex) where `packedVertexGroups` used to be:
+      `cachetool/DumpModelRig` reports it, and matching bone sets between a model and the models a
+      known-good animation plays on is the nearest offline compatibility signal available.
+    - **Preview the Combat Achievements model, not the npc.** `Widget.setModelId` takes one cache
+      model and the npc has five parts, of which `models[0]` is only the centre body (1515 verts,
+      X +/-142) — the two large side pieces would simply be missing. Struct 4933, the CA screen's
+      own entry for this boss, pins model **56455**: the merged whole boss (1901 verts, X +/-322)
+      with the same 83-bone rig, alongside anim 12453 `NPC_DOOM_BOSS_IDLE_CA` and zoom 2500. That
+      the CA screen — a MODEL widget like ours — plays a *skeletal* animation on a raw model id is
+      also the evidence that this preview path works at all. `DumpStructs` already dumped these
+      structs (param 1322 = model, 1323 = anim, 1329 = zoom); a multi-part boss should be checked
+      against it before settling for `models[0]`.
+    - **New cachetool mains, all of which live outside the repo:** `ScanGameVal` (GAMEVALS index,
+      for a cache that has it), `NpcSearch` (npcs by name substring), `DumpSeqRaw` and
+      `ScanSkeletal` (which sequences are skeletal, and their opcode-13 payload), `DumpModelRig`
+      (extents + classic-vs-animaya rig), `ModelColors` (face-colour histogram and what share of
+      it an npc's recolor table repaints — the D28 rule, measured instead of eyeballed; Doom's
+      larvae recolor 0% of their faces, so they preview colour-true and need no sprite).
+    - **Detection stays cache-derived and unverified until a delve is actually run**, exactly as
+      #9 and #10 record for Sire and Vorkath. Ten mechanics, `phase` carrying the delve gating
+      ("Delve 3+", "Delve 5+") that D7 anticipated for archetype-spanning bosses.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
