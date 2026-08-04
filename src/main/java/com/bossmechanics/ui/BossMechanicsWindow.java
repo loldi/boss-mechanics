@@ -130,6 +130,36 @@ public class BossMechanicsWindow
 	private static final int DRAG_DEAD_ZONE = 8;
 	private static final int DRAG_DEAD_TIME = 10;
 
+	/**
+	 * The drag handle's hover tint (docs/DECISIONS.md D30), read from the collection log's own
+	 * chrome (script 2240 builds invisible tiled overlays over it; script 2601 sets their sprite to
+	 * 1040, the same steel texture D26 already uses; script 244 flips opacity on
+	 * {@code onmouserepeat}/{@code onmouseleave}). RuneLite opacity is inverted (D27), so a higher
+	 * number is more transparent -- {@link #TINT_IDLE} is fully invisible and {@link #TINT_HOVER} is
+	 * the CL's own faint value.
+	 */
+	private static final int SPRITE_HANDLE_TINT = 1040;
+	private static final int TINT_IDLE = 255;
+	private static final int TINT_HOVER = 200;
+
+	/**
+	 * The pressed tint (docs/DECISIONS.md D30). <b>No cache source</b> -- the collection log's own
+	 * chrome (script 244) only ever sets {@link #TINT_HOVER}; this is our own invention, a live-pass
+	 * tunable to confirm reads right against the hover value, not a Jagex-measured number.
+	 */
+	private static final int TINT_PRESSED = 160;
+
+	/**
+	 * The drag outline (docs/DECISIONS.md D29, D30): 4 concentric unfilled rectangles, insets 0-3px,
+	 * colour {@link Widgets#GREY} (0x9F9F9F), opacity stepping 100/110/120/130 -- the collection
+	 * log's own feathered-grey drag outline, script 2801's real drag mechanism (component 621:89).
+	 * Logical-window sized (512x334, {@link #WINDOW_WIDTH}/{@link #WINDOW_HEIGHT}), not the
+	 * chrome-inflated root size: it tracks where the window itself will land, not its steel frame.
+	 */
+	private static final int OUTLINE_RECT_COUNT = 4;
+	private static final int OUTLINE_OPACITY_BASE = 100;
+	private static final int OUTLINE_OPACITY_STEP = 10;
+
 	private static final int CONTENT_X = Widgets.FRAME;
 	private static final int CONTENT_Y = Widgets.FRAME;
 	private static final int CONTENT_WIDTH = WINDOW_WIDTH - (2 * Widgets.FRAME);
@@ -155,6 +185,25 @@ public class BossMechanicsWindow
 	private static final int HEADER_TITLE_Y = 6;
 	private static final int HEADER_TITLE_HEIGHT = 24;
 	private static final int HEADER_TITLE_INSET = 6;
+
+	/**
+	 * The header divider (docs/DECISIONS.md D30), group 713's own child 10: sprite 2546, x centred,
+	 * y 14, width {@code parent - 10}, height 26, tiled. Read directly from script 228 (called from
+	 * 713's onLoad, script 4835, with flags bit 2 clear).
+	 *
+	 * <p><b>The tiling trap that makes these numbers work.</b> Sprite 2546's raster is 36x6, but its
+	 * declared canvas is 36x36 with the raster drawn at {@code offsetY=15} inside it -- and the
+	 * engine tiles by the sprite's CANVAS size, not its trimmed raster size, which
+	 * {@code DumpSprites} prints only the latter of. A 26px-tall tiled band therefore shows exactly
+	 * one 36px canvas tile, clipped, and the 6px groove sits wherever {@code offsetY} put it inside
+	 * that tile -- here, window-space y 29-35 (14 + 15 through 14 + 21): below the title (which ends
+	 * at y 30) and level with the close button's own bottom edge (y 29), well above the progress bar
+	 * (y 48). Nothing existing moves; this only adds a line.
+	 */
+	private static final int SPRITE_HEADER_DIVIDER = 2546;
+	private static final int DIVIDER_X = 5;
+	private static final int DIVIDER_Y = 14;
+	private static final int DIVIDER_HEIGHT = 26;
 
 	/**
 	 * The Combat Achievements progress bar, script 4782, in draw order: an inner border, the
@@ -188,8 +237,33 @@ public class BossMechanicsWindow
 	 */
 	private Widget root;
 
+	/**
+	 * The drag outline (docs/DECISIONS.md D29, D30): a second persistent host child, sibling to
+	 * {@link #root} and built once with the exact same identity-scan reuse idiom (see
+	 * {@link #isAttached}) -- created hidden, then only ever shown/moved/hidden by
+	 * {@link #onDrag}/{@link #onDragComplete}/{@link #close}, never recreated (D22). Tracks the
+	 * gesture in flight so the window itself can stay put until the drag completes, matching Andrew's
+	 * approved fork: our own grey outline, not the collection log's hide-the-window-content half.
+	 */
+	private Widget outline;
+
 	private MechanicsList mechanicsList;
 	private MechanicsDetail mechanicsDetail;
+
+	/**
+	 * The drag handle's hover-tint overlay (docs/DECISIONS.md D30), mutated (never recreated) by
+	 * {@link #onDragHandleMouseRepeat}/mouse-leave. Rebuilt fresh every {@link #header}, the same
+	 * lifetime as {@link #mechanicsList}/{@link #mechanicsDetail} rather than {@link #root}'s -- the
+	 * whole header is rebuilt on every open() (D22).
+	 */
+	private Widget dragHandleTint;
+
+	/**
+	 * Whether {@code setOnHoldListener} fired since the last mouse-repeat (D30). No cache source has
+	 * a pressed state to model this against; it exists purely so {@link #onDragHandleMouseRepeat}
+	 * can tell a held repeat apart from a plain hovering one.
+	 */
+	private boolean holdSeen;
 
 	private MechanicsView view;
 	private String selectedMechanicId;
@@ -250,6 +324,19 @@ public class BossMechanicsWindow
 	private int dragMouseStartY;
 	private int dragOffsetStartX;
 	private int dragOffsetStartY;
+
+	/**
+	 * The current gesture's un-committed candidate offset (docs/DECISIONS.md D30) -- what
+	 * {@link #dragOffsetX}/{@link #dragOffsetY} would become <b>if</b> the gesture ended right now.
+	 * Deliberately a separate pair of fields, never read by {@link #place}/{@link #replaceIfChanged}:
+	 * the whole point of the outline fork is that the window itself does not move mid-gesture, so
+	 * nothing that positions the window may consult these. {@link #onDrag} writes them every event
+	 * after the first (to show/move the outline); {@link #onDragComplete} reads them once, to commit
+	 * the final clamped value into {@link #dragOffsetX}/{@link #dragOffsetY}, and does not clear
+	 * them afterward -- {@link #dragging} alone gates whether they mean anything.
+	 */
+	private int dragLiveOffsetX;
+	private int dragLiveOffsetY;
 
 	/** What "View All" / "Hide All" does: persist the new reveal state and rebuild (D18, D20). */
 	public void setOnRevealToggled(BiConsumer<String, Boolean> onRevealToggled)
@@ -340,6 +427,15 @@ public class BossMechanicsWindow
 
 		place(host);
 
+		// A second, independent persistent host child (D30), built AFTER root so it is the
+		// most-recently-created child of host and therefore draws over the window. Order matters
+		// here: we deliberately keep the window visible during a drag (D30's sub-fork, unlike the
+		// collection log which hides its content), so an outline underneath would be occluded by
+		// the very window it is positioning -- for a short drag almost all of it would sit behind
+		// the window and the affordance would be pointless. Built once, same reuse idiom as root,
+		// and otherwise untouched by the rest of open(): only a gesture shows, moves or hides it.
+		ensureOutline(host);
+
 		// D22 correction of D14: revalidate() lays out only the receiver, immediately, against
 		// its parent's *current* computed size — it never recurses into children. A fresh root's
 		// computed size is 0x0 until this runs, so it must run before any ABSOLUTE_CENTER or
@@ -399,6 +495,12 @@ public class BossMechanicsWindow
 		// stale `dragging` would make the next gesture's first event continue from a dead baseline
 		// and jump the window.
 		dragging = false;
+		// Same reasoning for the press tint: a hold that was never released would otherwise paint
+		// the first hover after reopening at the pressed level.
+		holdSeen = false;
+		// A gesture interrupted this way never reaches onDragComplete either, so the outline (D30)
+		// could otherwise be left visible, floating, after the window it belongs to is gone.
+		hideOutline();
 
 		if (root != null)
 		{
@@ -436,6 +538,7 @@ public class BossMechanicsWindow
 			unregisterEscape();
 			windowOpen = false;
 			root = null;
+			outline = null;
 			mechanicsList = null;
 			mechanicsDetail = null;
 			view = null;
@@ -550,7 +653,19 @@ public class BossMechanicsWindow
 	/** @see CollectionLogButton#stillAttached(Widget) — same self-healing identity scan. */
 	private boolean stillAttached(Widget host)
 	{
-		if (root == null)
+		return isAttached(host, root);
+	}
+
+	/**
+	 * Whether {@code widget} is still one of {@code host}'s dynamic children, by identity, the way
+	 * D19's {@link CollectionLogButton#stillAttached(Widget)} first established: a Jagex rebuild can
+	 * drop our child without telling us, so a stale field reference is never trusted on its own.
+	 * Shared by {@link #stillAttached} ({@link #root}) and the outline ({@link #outline}, D30) --
+	 * two independent persistent host children with the same reuse idiom.
+	 */
+	private static boolean isAttached(Widget host, Widget widget)
+	{
+		if (widget == null)
 		{
 			return false;
 		}
@@ -563,7 +678,7 @@ public class BossMechanicsWindow
 
 		for (Widget child : children)
 		{
-			if (child == root)
+			if (child == widget)
 			{
 				return true;
 			}
@@ -651,6 +766,11 @@ public class BossMechanicsWindow
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
 		title.revalidate();
 
+		// The CA header divider (docs/DECISIONS.md D30): see SPRITE_HEADER_DIVIDER for the
+		// canvas-vs-raster tiling trap that makes these numbers land at window-space y 29-35.
+		Widgets.sprite(header, SPRITE_HEADER_DIVIDER, DIVIDER_X, DIVIDER_Y, WINDOW_WIDTH - 10,
+			DIVIDER_HEIGHT, true);
+
 		wikiButton(header);
 		closeButton(header);
 	}
@@ -674,13 +794,85 @@ public class BossMechanicsWindow
 		handle.setDragDeadTime(DRAG_DEAD_TIME);
 		handle.setOnDragListener((JavaScriptCallback) event -> onDrag());
 		handle.setOnDragCompleteListener((JavaScriptCallback) event -> onDragComplete());
+
+		// One overlay, created once (D22), mutated by hover/leave rather than recreated -- the CL's
+		// own recipe (script 244), sprite 1040 (D26/D30), idle at TINT_IDLE (fully invisible).
+		dragHandleTint = Widgets.sprite(handle, SPRITE_HANDLE_TINT, 0, 0, DRAG_HANDLE_WIDTH,
+			HEADER_HEIGHT, true, TINT_IDLE);
+		handle.setOnMouseRepeatListener((JavaScriptCallback) event -> onDragHandleMouseRepeat());
+		handle.setOnMouseLeaveListener((JavaScriptCallback) event -> setDragHandleTint(TINT_IDLE));
+		handle.setOnHoldListener((JavaScriptCallback) event -> onDragHandleHold());
+	}
+
+	/**
+	 * Mouse-repeat fires every frame the cursor sits over the handle (D30). {@link #holdSeen} tells
+	 * a held repeat apart from a plain hovering one -- set by {@link #onDragHandleHold}, cleared
+	 * here every repeat, so a hold has to keep firing to keep the pressed tint alive.
+	 */
+	private void onDragHandleMouseRepeat()
+	{
+		setDragHandleTint(holdSeen ? TINT_PRESSED : TINT_HOVER);
+		holdSeen = false;
+	}
+
+	/**
+	 * Unverified in the live client whether an op-less widget ever fires {@code setOnHoldListener}
+	 * at all (D30) -- if it turns out inert, {@link #onDragHandleMouseRepeat} simply never sees
+	 * {@link #holdSeen} set and slice 2's hover tint alone still works.
+	 */
+	private void onDragHandleHold()
+	{
+		holdSeen = true;
+	}
+
+	/** Guards the actual {@code setOpacity} call behind a changed-value check (mouse-repeat is per-frame). */
+	private void setDragHandleTint(int opacity)
+	{
+		if (dragHandleTint.getOpacity() != opacity)
+		{
+			dragHandleTint.setOpacity(opacity);
+		}
+	}
+
+	/**
+	 * Builds the drag outline exactly once (docs/DECISIONS.md D22, D30), reusing {@link #outline}
+	 * across opens via the same identity-scan idiom {@link #stillAttached} uses for {@link #root}.
+	 * 4 concentric unfilled rectangles, insets 0-3px, {@link Widgets#GREY}, opacity stepping
+	 * {@link #OUTLINE_OPACITY_BASE} by {@link #OUTLINE_OPACITY_STEP} -- the collection log's own
+	 * feathered-grey drag outline (script 2801). Created hidden: nothing is dragging yet.
+	 */
+	private void ensureOutline(Widget host)
+	{
+		if (isAttached(host, outline))
+		{
+			return;
+		}
+
+		outline = host.createChild(-1, WidgetType.LAYER);
+		outline.setOriginalWidth(WINDOW_WIDTH);
+		outline.setOriginalHeight(WINDOW_HEIGHT);
+		outline.setWidthMode(WidgetSizeMode.ABSOLUTE);
+		outline.setHeightMode(WidgetSizeMode.ABSOLUTE);
+		outline.setHidden(true);
+		outline.revalidate();
+
+		for (int i = 0; i < OUTLINE_RECT_COUNT; i++)
+		{
+			Widget rect = Widgets.outline(outline, i, i, WINDOW_WIDTH - (2 * i), WINDOW_HEIGHT - (2 * i),
+				Widgets.GREY);
+			rect.setOpacity(OUTLINE_OPACITY_BASE + (i * OUTLINE_OPACITY_STEP));
+			rect.revalidate();
+		}
 	}
 
 	/**
 	 * Every {@code setOnDragListener} firing of one gesture, continuous rather than snap-on-release
 	 * (the probe measured seven events inside one second of a single drag). The first event of a
-	 * gesture only captures a baseline; every one after composes a new offset from the delta since
-	 * that baseline and re-places the window immediately.
+	 * gesture only captures a baseline; every one after composes a candidate offset from the delta
+	 * since that baseline and shows the outline at it -- the window itself stays put until
+	 * {@link #onDragComplete} (docs/DECISIONS.md D30, Fork A(a) resolved): {@link #dragOffsetX}/
+	 * {@link #dragOffsetY}, which {@link #place}/{@link #replaceIfChanged} actually read, are
+	 * untouched here.
 	 *
 	 * <p>Reads {@code client.getMouseCanvasPosition()}, never {@code event.getMouseX()/getMouseY()}
 	 * (docs/DECISIONS.md D29): the event's own coordinates are relative to the handle widget's own
@@ -702,19 +894,55 @@ public class BossMechanicsWindow
 			dragMouseStartY = mouse.getY();
 			dragOffsetStartX = dragOffsetX;
 			dragOffsetStartY = dragOffsetY;
+			// Seeded, not left over: a gesture short enough to fire one event and then complete
+			// would otherwise commit the PREVIOUS gesture's live offset. Clamping usually makes
+			// that idempotent, but not after a clamped-at-edge release followed by a resize, where
+			// a tap would jump the window back toward the old raw offset.
+			dragLiveOffsetX = dragOffsetStartX;
+			dragLiveOffsetY = dragOffsetStartY;
 			return;
 		}
 
-		dragOffsetX = dragOffsetStartX + (mouse.getX() - dragMouseStartX);
-		dragOffsetY = dragOffsetStartY + (mouse.getY() - dragMouseStartY);
-		replaceIfChanged();
+		dragLiveOffsetX = dragOffsetStartX + (mouse.getX() - dragMouseStartX);
+		dragLiveOffsetY = dragOffsetStartY + (mouse.getY() - dragMouseStartY);
+		showOutlineAtLiveOffset();
 	}
 
 	/**
-	 * Normalizes the stored offset to the position the window actually landed at, clamped, rather
-	 * than the raw accumulated delta -- otherwise a release past an edge would leave a phantom
-	 * off-screen offset that the next drag has to silently "unwind" before the window visibly moves
-	 * at all (docs/DECISIONS.md D29).
+	 * Moves and shows the outline at the clamped candidate offset (docs/DECISIONS.md D30). Deliberately
+	 * <b>no</b> {@link WindowPlacement#withChrome}: the outline is logical-window sized (512x334, not
+	 * the chrome-inflated root), so it lands at the same coordinates the window's own content will
+	 * once {@link #onDragComplete} places {@code root} there. Every widget here was created once by
+	 * {@link #ensureOutline} (D22); this only ever calls {@code setOriginalX/Y}/{@code setHidden}/
+	 * {@code revalidate} on it, so the 7Hz drag-event rate this fires at can never leak a widget.
+	 */
+	private void showOutlineAtLiveOffset()
+	{
+		Widget host = host();
+		Widget collectionLog = host == null ? null : client.getWidget(InterfaceID.Collection.UNIVERSE);
+		if (host == null || collectionLog == null || outline == null)
+		{
+			return;
+		}
+
+		int x = WindowDrag.clampedOrigin(computedOriginX(host, collectionLog), dragLiveOffsetX,
+			WINDOW_WIDTH, host.getWidth());
+		int y = WindowDrag.clampedOrigin(computedOriginY(host, collectionLog), dragLiveOffsetY,
+			WINDOW_HEIGHT, host.getHeight());
+
+		outline.setOriginalX(x);
+		outline.setOriginalY(y);
+		outline.setHidden(false);
+		outline.revalidate();
+	}
+
+	/**
+	 * Commits the gesture: normalizes the stored offset to the position the window actually landed
+	 * at, clamped, rather than the raw accumulated delta -- otherwise a release past an edge would
+	 * leave a phantom off-screen offset that the next drag has to silently "unwind" before the
+	 * window visibly moves at all (docs/DECISIONS.md D29) -- then places the window there and hides
+	 * the outline (D30): the window itself never moved during the gesture, so this is the one point
+	 * that actually relays it.
 	 */
 	private void onDragComplete()
 	{
@@ -726,15 +954,28 @@ public class BossMechanicsWindow
 
 		Widget host = host();
 		Widget collectionLog = host == null ? null : client.getWidget(InterfaceID.Collection.UNIVERSE);
-		if (host == null || collectionLog == null)
+		if (host != null && collectionLog != null)
 		{
-			return;
+			int computedX = computedOriginX(host, collectionLog);
+			int computedY = computedOriginY(host, collectionLog);
+			dragOffsetX =
+				WindowDrag.clampedOrigin(computedX, dragLiveOffsetX, WINDOW_WIDTH, host.getWidth()) - computedX;
+			dragOffsetY =
+				WindowDrag.clampedOrigin(computedY, dragLiveOffsetY, WINDOW_HEIGHT, host.getHeight()) - computedY;
 		}
 
-		int computedX = computedOriginX(host, collectionLog);
-		int computedY = computedOriginY(host, collectionLog);
-		dragOffsetX = WindowDrag.clampedOrigin(computedX, dragOffsetX, WINDOW_WIDTH, host.getWidth()) - computedX;
-		dragOffsetY = WindowDrag.clampedOrigin(computedY, dragOffsetY, WINDOW_HEIGHT, host.getHeight()) - computedY;
+		replaceIfChanged();
+		hideOutline();
+	}
+
+	/** @see #ensureOutline -- mutation only, never a new child, matching every other outline call. */
+	private void hideOutline()
+	{
+		if (outline != null)
+		{
+			outline.setHidden(true);
+			outline.revalidate();
+		}
 	}
 
 	/**
