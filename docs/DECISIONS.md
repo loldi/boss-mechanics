@@ -1052,6 +1052,94 @@ so new decisions are appended here rather than inserted in a themed section.
       dragged, matching some of the collection log's own chrome. That is a separate PR, gated behind
       its own probe, same precedent as D28 deferring this whole feature past its own live pass.
 
+33. **Hiding the window while dragging, Path B, promoting D32's deferred probe (issue #48) to the
+    real feature.** Slice 6's probe (PR #56, reverted in #57) hid `root` mid-gesture and logged
+    every subsequent drag event; the client log showed the arm-and-hide line once per gesture and
+    then silence -- no further `onDrag`, no `onDragComplete` -- across two separate live gestures:
+    ```
+    [Client] PROBE armed ... handle 431x39
+    [Client] PROBE hid the window for this drag gesture, mouse canvas=(381,125)
+    ```
+    Confirmed externally too: the window never returned on release, only on close/reopen.
+
+    - **Verified engine fact: the drag machinery re-hit-tests under the cursor every frame rather
+      than latching the drag target at press, so hiding any ancestor of the drag handle kills the
+      in-flight gesture.** This is not an assumption to re-litigate later; it is the reason Path A
+      (`root.setHidden(true)` for the whole gesture, which is what the probe tried) is dead, and the
+      reason every widget this slice hides is chosen specifically to avoid the handle's own
+      ancestor chain (`root -> window -> header -> handle`).
+    - **This also explains Jagex's own design.** The collection log genuinely can hide its window
+      content (component 621:88) during its own drag (script 2801, D30) -- but its drag handling
+      does not live inside that component; the log's outline-drag script owns the gesture from
+      outside the content it hides. Ours does live inside the tree it draws (the handle is a
+      descendant of the window it drags), so the same trick is unavailable to us, verified fact
+      above.
+    - **Path B: hide the leaves, keep the spine.** `root`, the inner `window` layer, `header` and
+      the drag handle stay unhidden for the whole gesture; everything the player can actually see
+      is hidden instead. `BossMechanicsWindow.dragHidden`, a `List<Widget>` populated fresh by
+      every `open()` (chosen over named fields per-widget: simpler to keep correct as the window
+      grows, and every consumer only ever needs "hide/show all of these," never one by name) holds:
+      the chrome layer (below), the progress bar layer, and the list header/list/detail column
+      layers -- none of those three sit on the handle's ancestor chain, so hiding each whole is
+      legal and is what D22's "one `setHidden` instead of eleven" idiom prefers over reaching into
+      every row/scrollbar/model widget individually. The header's own children (title, the divider
+      sprite, the WIKI button, the close button, and the drag handle's own tint overlay) are added
+      individually instead, because `header` itself is on the ancestor chain and can never be
+      hidden wholesale; the tint overlay is a child of the handle, not the handle itself, so hiding
+      it is legal by the same rule.
+    - **`steelChrome()`'s ~11 sprites (background, four corners, four tiled edges) are now built
+      inside one wrapping `chrome` LAYER** rather than as direct children of `root`, so the whole
+      frame hides with a single `setHidden` call. The wrapper is created in exactly the position in
+      `root`'s own child order the sprites used to occupy -- immediately, before the `window` layer
+      built right after `steelChrome()` returns -- so draw order is unchanged when visible: D27's
+      "frame, then content" ordering and D30's after-root outline ordering are both about root's
+      position among *its own siblings* and root's children relative to each other, neither of
+      which this touches. Sprite coordinates are untouched too, since they were always root-local
+      and the wrapper sits flush at root's own origin.
+    - **The guard is a boolean, not a read of `widget.isHidden()`.** `contentsHiddenForDrag` flips
+      true on the first `onDrag` event that actually shows the outline (the *second* event of a
+      gesture overall, since the first only captures a baseline and returns, D29) and flips false
+      again on `onDragComplete`/`close`/`open`, matching the register `dragging` already uses for
+      the outline itself. Every widget in `dragHidden` already exists -- built once by `open()` -- so
+      `setContentsHidden` only ever calls `setHidden`/`revalidate` on it, never `createChild`,
+      keeping the ~7Hz drag-event path exactly as D22-clean as the outline's own mutation-only
+      handling already is.
+    - **The restore paths, and why each one matters.** `onDragComplete` restores the content
+      *before* `replaceIfChanged()`, since the window is about to become visible again at its
+      landed position and the content has to already be back before that happens. `close()`
+      restores it too, even though `root` gets hidden entirely right after: a gesture interrupted
+      by Esc or by the collection log closing never reaches `onDragComplete`, and this is the exact
+      failure mode the probe just cost a client load to demonstrate is possible when the wrong
+      widget gets left hidden mid-gesture. `onGameStateChanged`'s teardown (LOGIN_SCREEN/HOPPING/
+      CONNECTION_LOST) resets the guard and clears `dragHidden` without touching the widgets
+      themselves, matching the existing "drop `root`/`outline` without touching them" precedent
+      there -- the interface tree is already gone on those transitions, so mutating widgets that
+      may no longer be valid would be the wrong instinct, not the safe one. `open()` unconditionally
+      clears `dragHidden` and resets the guard before rebuilding, regardless of whatever state a
+      previous gesture left things in, since every widget below that point is rebuilt fresh anyway
+      (D22) and a stale guard would otherwise suppress hiding on a legitimate next gesture.
+    - Pinned by three new `BossMechanicsWindowLayoutTest` cases:
+      `draggingHidesTheWindowContentsButNotTheDragHandle` (after the second drag event, every
+      `dragHidden` widget's last `setHidden` call is `true`, and root/the window layer/header/the
+      handle -- found by walking the tree for the drag-handle's actual parent chain, not assumed by
+      position -- never receive a `true` `setHidden` call at all: the regression guard for the
+      verified engine fact above), `releasingRestoresTheWindowContents` (release restores every
+      `dragHidden` widget to `false` and still lands the root at the clamped, chrome-adjusted origin
+      D30 already pinned), and `anInterruptedGestureDoesNotStrandAHiddenWindow` (two drag events,
+      `close()`, then a fresh `open()` -- nothing is left hidden at any point). The pinned drag
+      numbers (168 / 253 / 238 / 228 / 153) are unedited; a pre-existing D30 test
+      (`dragOutlineIsBuiltOnceAndHidden`) needed its own final assertion rewritten from a
+      child-count-of-4 heuristic to a direct host-child-count comparison, because collapsing the
+      chrome sprites into one wrapper widget incidentally made a reused root's accumulated child
+      count in that test's fixture equal 4 too -- a fixture artifact (`RecordingWidget` never trims a
+      reused root's child list the way the real client's `deleteChildrenOf` does), not a behaviour
+      change; the rewritten assertion checks the same "no duplicate top-level child" invariant
+      without depending on any widget's internal shape.
+    - **Issue #58 (the pressed tint, `TINT_PRESSED`/`holdSeen`/`onDragHandleHold`) is open and
+      deliberately untouched here.** The probe saw no `setOnHoldListener` firings; Andrew is
+      re-checking whether he actually saw the tint work during the live pass for this slice. Nothing
+      about that code changed.
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

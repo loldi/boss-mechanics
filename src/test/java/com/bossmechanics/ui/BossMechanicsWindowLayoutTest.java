@@ -1,6 +1,7 @@
 package com.bossmechanics.ui;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -296,10 +297,14 @@ public class BossMechanicsWindowLayoutTest
 
 		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
 
-		long outlineLayers = RecordingWidget.childrenOf(host).stream()
-			.filter(child -> RecordingWidget.childrenOf(child).size() == 4)
-			.count();
-		assertEquals("a second open() must not create a duplicate outline", 1, outlineLayers);
+		// Identity, not shape: a "child count == 4" heuristic would also match root itself once
+		// D33's chrome LAYER wrapper drops root's own per-open child count to 2 (chrome + window),
+		// since RecordingWidget never trims a reused root's accumulated child list the way the
+		// real client's own deleteChildrenOf does. Checking host's own child count directly proves
+		// the same thing -- neither root nor outline gained a duplicate top-level sibling -- without
+		// depending on how many children either one happens to have internally.
+		assertEquals("a second open() must not create a duplicate outline (or a duplicate root)",
+			hostChildrenAfterFirstOpen.size(), RecordingWidget.childrenOf(host).size());
 	}
 
 	/**
@@ -625,6 +630,203 @@ public class BossMechanicsWindowLayoutTest
 		assertEquals("growing the client back restores the exact pre-shrink position: windowX "
 				+ "(253) was never mutated by the clamp",
 			238, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Issue #48, Slice 7/8 (docs/DECISIONS.md D33, Path B): a drag gesture hides the window's
+	 * leaf content -- the chrome layer, the progress bar, the list header/list/detail columns,
+	 * and the header's own children (title, divider, WIKI, close, the handle's tint overlay) --
+	 * but must NEVER hide anything on the drag handle's own ancestor chain (root, the window
+	 * layer, header, the handle itself). That second half is the regression guard for the exact
+	 * engine fact the slice-6 probe cost a client load to establish: hiding an ancestor of the
+	 * handle kills the in-flight gesture.
+	 */
+	@Test
+	public void draggingHidesTheWindowContentsButNotTheDragHandle() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(340, 225);
+		onDrag.run(fakeScriptEvent());
+
+		List<Widget> dragHidden = dragHiddenOf(window);
+		assertFalse("expected at least one leaf content widget to hide during a drag (D33)",
+			dragHidden.isEmpty());
+		for (Widget widget : dragHidden)
+		{
+			assertEquals("every leaf content widget must be hidden by the second drag event (D33)",
+				Boolean.TRUE, RecordingWidget.lastArgsOf(widget, "setHidden")[0]);
+		}
+
+		Widget root = windowRootOf(host);
+		Widget handle = dragHandleWidget(host);
+		Widget header = parentOf(host, handle);
+		Widget windowLayer = parentOf(host, header);
+
+		assertNeverHiddenDuringDrag(root, "root");
+		assertNeverHiddenDuringDrag(windowLayer, "the window layer");
+		assertNeverHiddenDuringDrag(header, "header");
+		assertNeverHiddenDuringDrag(handle, "the drag handle");
+	}
+
+	/**
+	 * Issue #48, Slice 7/8 (docs/DECISIONS.md D33): {@code onDragComplete} restores every leaf
+	 * content widget before it relays the window out to its landed position.
+	 */
+	@Test
+	public void releasingRestoresTheWindowContents() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		JavaScriptCallback onDragComplete = dragCompleteListenerOf(host);
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(340, 225);
+		onDrag.run(fakeScriptEvent());
+		onDragComplete.run(fakeScriptEvent());
+
+		List<Widget> dragHidden = dragHiddenOf(window);
+		assertFalse(dragHidden.isEmpty());
+		for (Widget widget : dragHidden)
+		{
+			assertEquals("releasing must restore every leaf content widget (D33)",
+				Boolean.FALSE, RecordingWidget.lastArgsOf(widget, "setHidden")[0]);
+		}
+
+		Widget root = windowRootOf(host);
+		assertEquals("the root must still land at the clamped, chrome-adjusted origin on release",
+			153, ((Integer) RecordingWidget.lastArgsOf(root, "setOriginalX")[0]).intValue());
+	}
+
+	/**
+	 * Issue #48, Slice 7/8 (docs/DECISIONS.md D33): a gesture interrupted by Esc or by the
+	 * collection log closing never reaches {@code onDragComplete}, so {@code close()} has to
+	 * restore the leaf content itself -- and a fresh {@code open()} afterward must never inherit
+	 * anything left hidden. This is exactly the failure mode the slice-6 probe demonstrated is
+	 * possible when the wrong tree gets hidden mid-gesture.
+	 */
+	@Test
+	public void anInterruptedGestureDoesNotStrandAHiddenWindow() throws Exception
+	{
+		Widget host = hostWidget();
+		Widget collectionLog = collectionLogWidget();
+		Point[] mousePosition = new Point[1];
+		Client client = fakeClient(host, collectionLog, mousePosition);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = emptyBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		JavaScriptCallback onDrag = dragListenerOf(host);
+		mousePosition[0] = new Point(300, 200);
+		onDrag.run(fakeScriptEvent());
+		mousePosition[0] = new Point(340, 225);
+		onDrag.run(fakeScriptEvent());
+
+		List<Widget> hiddenDuringGesture = new ArrayList<>(dragHiddenOf(window));
+		assertFalse(hiddenDuringGesture.isEmpty());
+		for (Widget widget : hiddenDuringGesture)
+		{
+			assertEquals(Boolean.TRUE, RecordingWidget.lastArgsOf(widget, "setHidden")[0]);
+		}
+
+		// Interrupted: Esc / the collection log closing never fires onDragComplete.
+		window.close();
+
+		for (Widget widget : hiddenDuringGesture)
+		{
+			assertEquals("close() must restore a gesture interrupted mid-drag, or the window "
+					+ "would strand a half-invisible tree behind it (D33)",
+				Boolean.FALSE, RecordingWidget.lastArgsOf(widget, "setHidden")[0]);
+		}
+
+		// Real client's own dynamic children array reflects the identity-scan reuse idiom (D19),
+		// the same fixture pattern dragOutlineIsBuiltOnceAndHidden uses for a second open().
+		RecordingWidget.returning(host, "getDynamicChildren",
+			RecordingWidget.childrenOf(host).toArray(new Widget[0]));
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), false));
+
+		List<Widget> rebuiltDragHidden = dragHiddenOf(window);
+		assertFalse(rebuiltDragHidden.isEmpty());
+		for (Widget widget : rebuiltDragHidden)
+		{
+			Object[] args = RecordingWidget.lastArgsOf(widget, "setHidden");
+			assertTrue("nothing may be left hidden after a fresh open() following an interrupted "
+					+ "gesture (D33)",
+				args == null || Boolean.FALSE.equals(args[0]));
+		}
+	}
+
+	/** @see BossMechanicsWindow#dragHidden -- read by reflection, the {@code inject()} idiom in reverse. */
+	@SuppressWarnings("unchecked")
+	private static List<Widget> dragHiddenOf(BossMechanicsWindow window) throws Exception
+	{
+		Field field = BossMechanicsWindow.class.getDeclaredField("dragHidden");
+		field.setAccessible(true);
+		return (List<Widget>) field.get(window);
+	}
+
+	/** Asserts {@code widget}'s last {@code setHidden} call, if any, was never {@code true} (D33). */
+	private static void assertNeverHiddenDuringDrag(Widget widget, String label)
+	{
+		Object[] args = RecordingWidget.lastArgsOf(widget, "setHidden");
+		if (args != null)
+		{
+			assertEquals(label + " must never be hidden during a drag -- the probe proved hiding "
+					+ "any ancestor of the drag handle kills the in-flight gesture (D33)",
+				Boolean.FALSE, args[0]);
+		}
+	}
+
+	/**
+	 * Depth-first search for the direct parent of {@code target} within the subtree rooted at
+	 * {@code subtree}, since {@link RecordingWidget} tracks children but not parents.
+	 */
+	private static Widget parentOf(Widget subtree, Widget target)
+	{
+		for (Widget child : RecordingWidget.childrenOf(subtree))
+		{
+			if (child == target)
+			{
+				return subtree;
+			}
+			Widget found = parentOf(child, target);
+			if (found != null)
+			{
+				return found;
+			}
+		}
+		return null;
 	}
 
 	/** Host: 765x503, at the coordinate-space origin, with no parent (D29's slice 3 fixture). */

@@ -5,7 +5,9 @@ import com.bossmechanics.view.MechanicsView;
 import com.bossmechanics.view.Selection;
 import com.bossmechanics.view.WindowDrag;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -255,6 +257,20 @@ public class BossMechanicsWindow
 	 */
 	private Widget outline;
 
+	/**
+	 * Every leaf content widget the window is made of (docs/DECISIONS.md D33, Path B): the chrome
+	 * layer, the progress bar, the list header/list/detail column layers, and the header's own
+	 * title/divider/WIKI/close/tint children -- everything the player can see except {@link #root},
+	 * {@code window}, {@code header} and the drag handle itself, which the probe (D28's slice 6,
+	 * PR #56/#57) proved must never be hidden mid-gesture or the engine's drag events stop firing.
+	 * Rebuilt fresh by {@link #open} every time (cleared, then repopulated as each widget below is
+	 * built), so a stale reference from a previous build can never be mutated; {@link #onDrag}/
+	 * {@link #onDragComplete}/{@link #close} only ever call {@code setHidden}/{@code revalidate} on
+	 * widgets already in this list, never {@code createChild}, keeping the ~7Hz drag-event path
+	 * D22-clean.
+	 */
+	private final List<Widget> dragHidden = new ArrayList<>();
+
 	private MechanicsList mechanicsList;
 	private MechanicsDetail mechanicsDetail;
 
@@ -359,6 +375,14 @@ public class BossMechanicsWindow
 	 */
 	private int dragLiveX;
 	private int dragLiveY;
+
+	/**
+	 * Whether {@link #dragHidden} is currently hidden for the in-progress gesture (docs/
+	 * DECISIONS.md D33). A flag, deliberately, not a read of {@code widget.isHidden()}: guards
+	 * {@link #setContentsHidden} so it runs once per gesture rather than on every ~7Hz drag event,
+	 * the same register {@link #dragging} already uses for the outline itself.
+	 */
+	private boolean contentsHiddenForDrag;
 
 	/** What "View All" / "Hide All" does: persist the new reveal state and rebuild (D18, D20). */
 	public void setOnRevealToggled(BiConsumer<String, Boolean> onRevealToggled)
@@ -474,6 +498,13 @@ public class BossMechanicsWindow
 		root.revalidate();
 		host.revalidate();
 
+		// D33: every leaf content widget below is rebuilt fresh on every open() (D22), so any
+		// widget references from a previous build are stale the moment this runs. Also drops the
+		// gesture-hidden guard regardless of whatever state it was left in -- open() must leave
+		// everything visible, unconditionally, per D33's contract.
+		dragHidden.clear();
+		contentsHiddenForDrag = false;
+
 		// The steel chrome first, so the window's real content below draws over its inward
 		// overhang rather than the frame drawing over the content — the same "frame, then
 		// content" order Widgets.frame()/header()/progressBar()/columns() already relied on.
@@ -532,6 +563,11 @@ public class BossMechanicsWindow
 		// A gesture interrupted this way never reaches onDragComplete either, so the outline (D30)
 		// could otherwise be left visible, floating, after the window it belongs to is gone.
 		hideOutline();
+		// Same reasoning, for the leaf content itself (D33): root gets hidden entirely just below,
+		// but restoring the individual widgets too means a stale hidden flag can never survive
+		// onto whatever open() reuses or rebuilds next.
+		setContentsHidden(false);
+		contentsHiddenForDrag = false;
 
 		if (root != null)
 		{
@@ -573,6 +609,18 @@ public class BossMechanicsWindow
 			mechanicsList = null;
 			mechanicsDetail = null;
 			view = null;
+			// D33: the widgets in dragHidden are just as invalid as root itself here, so they are
+			// dropped the same way -- without being touched -- rather than mutated; only the
+			// bookkeeping (the list itself, the gesture-hidden guard) needs resetting so the next
+			// open() starts clean.
+			dragHidden.clear();
+			contentsHiddenForDrag = false;
+			// The gesture itself dies with the tree too. close() has always cleared these (D29,
+			// D30); this path never did, so hopping worlds mid-drag left `dragging` true and the
+			// first event of the next gesture skipped its baseline capture and jumped the window
+			// from a dead reference point.
+			dragging = false;
+			holdSeen = false;
 		}
 	}
 
@@ -818,11 +866,13 @@ public class BossMechanicsWindow
 		title.setXTextAlignment(WidgetTextAlignment.CENTER);
 		title.setYTextAlignment(WidgetTextAlignment.CENTER);
 		title.revalidate();
+		dragHidden.add(title);
 
 		// The CA header divider (docs/DECISIONS.md D30): see SPRITE_HEADER_DIVIDER for the
 		// canvas-vs-raster tiling trap that makes these numbers land at window-space y 29-35.
-		Widgets.sprite(header, SPRITE_HEADER_DIVIDER, DIVIDER_X, DIVIDER_Y, WINDOW_WIDTH - 10,
-			DIVIDER_HEIGHT, true);
+		Widget divider = Widgets.sprite(header, SPRITE_HEADER_DIVIDER, DIVIDER_X, DIVIDER_Y,
+			WINDOW_WIDTH - 10, DIVIDER_HEIGHT, true);
+		dragHidden.add(divider);
 
 		wikiButton(header);
 		closeButton(header);
@@ -852,6 +902,9 @@ public class BossMechanicsWindow
 		// own recipe (script 244), sprite 1040 (D26/D30), idle at TINT_IDLE (fully invisible).
 		dragHandleTint = Widgets.sprite(handle, SPRITE_HANDLE_TINT, 0, 0, DRAG_HANDLE_WIDTH,
 			HEADER_HEIGHT, true, TINT_IDLE);
+		// D33: a child of the handle, not the handle itself, so hiding it during a drag is legal --
+		// only the handle's own ancestors are forbidden to hide.
+		dragHidden.add(dragHandleTint);
 		handle.setOnMouseRepeatListener((JavaScriptCallback) event -> onDragHandleMouseRepeat());
 		handle.setOnMouseLeaveListener((JavaScriptCallback) event -> setDragHandleTint(TINT_IDLE));
 		handle.setOnHoldListener((JavaScriptCallback) event -> onDragHandleHold());
@@ -958,7 +1011,34 @@ public class BossMechanicsWindow
 
 		dragLiveX = dragStartWindowX + (mouse.getX() - dragMouseStartX);
 		dragLiveY = dragStartWindowY + (mouse.getY() - dragMouseStartY);
+
+		// D33: the first event that actually shows the outline (the second event of the gesture
+		// overall, since the branch above returns on the first) is also the one that hides the
+		// window's leaf content -- guarded so this runs once per gesture, not every ~7Hz event.
+		if (!contentsHiddenForDrag)
+		{
+			setContentsHidden(true);
+			contentsHiddenForDrag = true;
+		}
+
 		showOutlineAtLiveOffset();
+	}
+
+	/**
+	 * Hides or restores every widget in {@link #dragHidden} (docs/DECISIONS.md D33, Path B): the
+	 * window's own content, minus root/{@code window}/header/the drag handle, which must stay
+	 * visible and unhidden for the whole gesture or the engine's drag events stop firing (the
+	 * verified fact D33 records). Every widget here already exists -- built once by {@link #open}
+	 * -- so this only ever calls {@code setHidden}/{@code revalidate} on it, matching every other
+	 * mutate-not-recreate helper on this ~7Hz path ({@link #showOutlineAtLiveOffset}, D22).
+	 */
+	private void setContentsHidden(boolean hidden)
+	{
+		for (Widget widget : dragHidden)
+		{
+			widget.setHidden(hidden);
+			widget.revalidate();
+		}
 	}
 
 	/**
@@ -996,6 +1076,10 @@ public class BossMechanicsWindow
 	 * outline (D30): the window itself never moved during the gesture, so this is the one point
 	 * that actually relays it. Also flips {@link #draggedThisSession} (D32): the log is never
 	 * consulted again this session once this runs.
+	 *
+	 * <p>Restores the leaf content (D33) before {@link #replaceIfChanged()}: the window is about to
+	 * become visible again at its landed position, so the content has to already be back before
+	 * that happens, not after.
 	 */
 	private void onDragComplete()
 	{
@@ -1013,6 +1097,9 @@ public class BossMechanicsWindow
 			draggedThisSession = true;
 		}
 
+		setContentsHidden(false);
+		contentsHiddenForDrag = false;
+
 		replaceIfChanged();
 		hideOutline();
 	}
@@ -1029,36 +1116,44 @@ public class BossMechanicsWindow
 
 	/**
 	 * The full steel CA chrome (docs/DECISIONS.md D27, G2 fork resolved: full): background, four
-	 * corners, four tiled edges, all direct children of the enlarged {@code root} in root-local
-	 * coordinates so the edges' overhang (script 228's own −15 offsets) never clips against
-	 * anything outside our own tree. Purely visual — verified in the live pass, matching D26's own
-	 * precedent for the dim rectangle and the nine-slice frame, not with a color-pinning test.
+	 * corners, four tiled edges, all children of one wrapping {@code chrome} LAYER (D33) rather
+	 * than direct children of {@code root} -- so a drag gesture can hide the whole frame with one
+	 * {@code setHidden} instead of eleven. The wrapper is created here, in exactly the position in
+	 * {@code root}'s own child order the sprites used to occupy (before the {@code window} layer
+	 * built right after this returns), so draw order is unchanged when visible: the sprites'
+	 * coordinates are unchanged too, since they were always root-local and the wrapper sits at
+	 * root's own origin. Purely visual — verified in the live pass, matching D26's own precedent
+	 * for the dim rectangle and the nine-slice frame, not with a color-pinning test.
 	 */
 	private void steelChrome(Widget root)
 	{
-		Widgets.sprite(root, SPRITE_STEEL_BACKGROUND, CHROME + 1, CHROME + 1,
+		Widget chrome = Widgets.layer(root, 0, 0, ROOT_WIDTH, ROOT_HEIGHT);
+
+		Widgets.sprite(chrome, SPRITE_STEEL_BACKGROUND, CHROME + 1, CHROME + 1,
 			WINDOW_WIDTH - 2, WINDOW_HEIGHT - 2, false);
 
-		Widgets.sprite(root, SPRITE_STEEL_CORNER_TL, CHROME, CHROME,
+		Widgets.sprite(chrome, SPRITE_STEEL_CORNER_TL, CHROME, CHROME,
 			STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
-		Widgets.sprite(root, SPRITE_STEEL_CORNER_TR, ROOT_WIDTH - CHROME - STEEL_CORNER_WIDTH, CHROME,
+		Widgets.sprite(chrome, SPRITE_STEEL_CORNER_TR, ROOT_WIDTH - CHROME - STEEL_CORNER_WIDTH, CHROME,
 			STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
-		Widgets.sprite(root, SPRITE_STEEL_CORNER_BL, CHROME, ROOT_HEIGHT - CHROME - STEEL_CORNER_HEIGHT,
+		Widgets.sprite(chrome, SPRITE_STEEL_CORNER_BL, CHROME, ROOT_HEIGHT - CHROME - STEEL_CORNER_HEIGHT,
 			STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
-		Widgets.sprite(root, SPRITE_STEEL_CORNER_BR, ROOT_WIDTH - CHROME - STEEL_CORNER_WIDTH,
+		Widgets.sprite(chrome, SPRITE_STEEL_CORNER_BR, ROOT_WIDTH - CHROME - STEEL_CORNER_WIDTH,
 			ROOT_HEIGHT - CHROME - STEEL_CORNER_HEIGHT, STEEL_CORNER_WIDTH, STEEL_CORNER_HEIGHT, false);
 
 		int horizontalEdgeSpan = ROOT_WIDTH - (2 * (CHROME + STEEL_CORNER_WIDTH));
-		Widgets.sprite(root, SPRITE_STEEL_EDGE_TOP, CHROME + STEEL_CORNER_WIDTH, 0,
+		Widgets.sprite(chrome, SPRITE_STEEL_EDGE_TOP, CHROME + STEEL_CORNER_WIDTH, 0,
 			horizontalEdgeSpan, STEEL_EDGE_THICKNESS, true);
-		Widgets.sprite(root, SPRITE_STEEL_EDGE_BOTTOM, CHROME + STEEL_CORNER_WIDTH,
+		Widgets.sprite(chrome, SPRITE_STEEL_EDGE_BOTTOM, CHROME + STEEL_CORNER_WIDTH,
 			ROOT_HEIGHT - STEEL_EDGE_THICKNESS, horizontalEdgeSpan, STEEL_EDGE_THICKNESS, true);
 
 		int verticalEdgeSpan = ROOT_HEIGHT - (2 * (CHROME + STEEL_CORNER_HEIGHT));
-		Widgets.sprite(root, SPRITE_STEEL_EDGE_LEFT, 0, CHROME + STEEL_CORNER_HEIGHT,
+		Widgets.sprite(chrome, SPRITE_STEEL_EDGE_LEFT, 0, CHROME + STEEL_CORNER_HEIGHT,
 			STEEL_EDGE_THICKNESS, verticalEdgeSpan, true);
-		Widgets.sprite(root, SPRITE_STEEL_EDGE_RIGHT, ROOT_WIDTH - STEEL_EDGE_THICKNESS,
+		Widgets.sprite(chrome, SPRITE_STEEL_EDGE_RIGHT, ROOT_WIDTH - STEEL_EDGE_THICKNESS,
 			CHROME + STEEL_CORNER_HEIGHT, STEEL_EDGE_THICKNESS, verticalEdgeSpan, true);
+
+		dragHidden.add(chrome);
 	}
 
 	private void toggleReveal()
@@ -1098,6 +1193,8 @@ public class BossMechanicsWindow
 		label.revalidate();
 
 		Widgets.outline(bar, 0, 0, width, 31, PROGRESS_OUTER_BORDER);
+
+		dragHidden.add(bar);
 	}
 
 	/**
@@ -1121,6 +1218,14 @@ public class BossMechanicsWindow
 
 		mechanicsDetail = new MechanicsDetail(detail, this::modelForNpc, spriteIdForName);
 		mechanicsDetail.build();
+
+		// D33: all three column layers are visible content, hidden as whole units during a drag --
+		// none of them sit on the drag handle's ancestor chain (that is root/window/header/handle
+		// only), so hiding each in full is legal and is what D22's "single setHidden" idiom prefers
+		// over hiding every row/scrollbar/model widget individually.
+		dragHidden.add(listHeader);
+		dragHidden.add(list);
+		dragHidden.add(detail);
 	}
 
 	/**
@@ -1206,6 +1311,7 @@ public class BossMechanicsWindow
 		button.setOnMouseOverListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_CLOSE_HOVER));
 		button.setOnMouseLeaveListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_CLOSE));
 		button.revalidate();
+		dragHidden.add(button);
 	}
 
 	/**
@@ -1228,6 +1334,7 @@ public class BossMechanicsWindow
 		button.setOnMouseOverListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_WIKI_HOVER));
 		button.setOnMouseLeaveListener((JavaScriptCallback) e -> button.setSpriteId(SPRITE_WIKI));
 		button.revalidate();
+		dragHidden.add(button);
 	}
 
 	private void registerEscape()
