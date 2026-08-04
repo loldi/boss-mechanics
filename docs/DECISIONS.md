@@ -879,6 +879,89 @@ so new decisions are appended here rather than inserted in a themed section.
       would spam `client.log` on every real gesture. `dragHandleIsWiredForDragging` (D28's probe
       test) is unchanged: it still pins the one real-feature invariant the whole thing rests on.
 
+30. **Title-bar chrome for D29's draggable window: the header divider, a hover/pressed tint on the
+    drag handle, and the drag itself now moves a grey outline rather than the window (issue #48,
+    Andrew's approved Fork A(a) plus the sub-fork: outline visible, window stays visible too).**
+    Five slices, all landing in `ui/BossMechanicsWindow`; no `view` code was added, since every
+    drag-time decision is already `WindowDrag.clampedOrigin`, composed differently, not re-derived.
+
+    - **The header divider, read from group 713's own onLoad (script 4835 -> script 228, flags bit
+      2 clear): sprite 2546, x centred, y 14, width `parent - 10`, height 26, tiled.** Purely visual
+      chrome, verified in the live pass rather than color-pinned, matching D26/D27's own precedent
+      for the dim rectangle and nine-slice frame.
+      **The sprite-canvas-vs-raster tiling trap, worth recording for the next chrome job:**
+      sprite 2546's raster is 36x6, but its declared canvas is 36x36 with the raster drawn at
+      `offsetY=15` inside it, and the engine tiles by the sprite's CANVAS size, not its trimmed
+      raster -- which `DumpSprites` prints only the latter of. A 26px-tall tiled band therefore
+      shows exactly one 36px canvas tile, clipped, and the 6px groove lands wherever `offsetY` put
+      it inside that tile: window-space y 29-35 here, below the title (ends y 30) and level with the
+      close button's own bottom edge (y 29), well above the progress bar (y 48). The numbers look
+      wrong (a 26-tall sprite drawing a line 15px into itself) until you know to check canvas size
+      and offsets, not just the trimmed dimensions `DumpSprites` reports.
+    - **The drag handle's hover tint, read from the collection log's own chrome.** Script 2240
+      builds invisible tiled `GRAPHIC` overlays over the log's own draggable chrome; script 2601 sets
+      their sprite to 1040 (the same steel texture D26 already uses); script 244 flips opacity on
+      `onmouserepeat` -> 200 / `onmouseleave` -> 255 (RuneLite opacity is inverted, D27, so 255 is
+      fully invisible and 200 is the CL's own faint tint). One overlay, created once as a child of
+      the handle layer and mutated (`setOpacity`, guarded behind a changed-value check since
+      mouse-repeat is per-frame), never recreated (D22).
+    - **No pressed state exists anywhere in the CL's own scripts -- `TINT_PRESSED = 160` is ours,
+      not Jagex's.** Andrew asked for a brighter tint while held; `onHold` sets a `holdSeen` flag,
+      the next `onMouseRepeat` reads it (pressed) and clears it (so a repeat with no intervening
+      hold reverts to plain hover). **Open, for the live pass:** whether `setOnHoldListener` even
+      fires on an op-less widget is unverified beyond `javap` proving the method exists; if it turns
+      out inert, slice 2's hover tint alone still works unmodified, since the pressed logic only
+      extends `onMouseRepeat`'s body and never touched the hover wiring itself. Whether 160 reads
+      right against 200 is also only judgeable in game.
+    - **The drag fork, resolved: our own outline, not the CL's hide-window-plus-outline mechanism.**
+      The collection log's real drag (script 2801) hides its window content (component 621:88),
+      shows a separate outline component (621:89) and moves it live, clamped, landing off a 3-frame
+      timer (script 2802). We need no timer hack -- `setOnDragCompleteListener` is D29-verified --
+      and we deliberately skip the hide half: our drag handle lives inside the window tree itself
+      (D29), and hiding that tree mid-gesture might kill the engine's drag events entirely, which is
+      unverified and buys nothing visually since the window's own content isn't what's confusing to
+      look at mid-drag. The outline is 4 concentric unfilled rectangles, colour 0x9F9F9F
+      (`Widgets.GREY`), insets 0-3px, opacity stepping 100/110/120/130 -- lifted directly from
+      621:89's own recipe.
+    - **The outline is a second persistent host child, sibling to `root`, with the exact same
+      identity-scan reuse idiom (D19)**: built once by `ensureOutline`, hidden at creation, nulled in
+      `onGameStateChanged`, hidden again in `close()` (a gesture interrupted by Esc or the log
+      closing never reaches `onDragComplete`, so the outline could otherwise be left floating).
+    - **It must be created AFTER `root`, and that ordering is load-bearing, not incidental.** A
+      parent's dynamic children draw in creation order, so the last one created draws on top.
+      Because we keep the window visible during a gesture (the sub-fork above, unlike the collection
+      log which hides its content), an outline created first sits *underneath* the very window it is
+      positioning: for a short drag the offset is smaller than the window, so almost the entire
+      outline hides behind it and only a sliver protrudes. The affordance would be worth nothing
+      precisely when it is needed most. `BossMechanicsWindowLayoutTest` therefore identifies the
+      root by shape (the host child that is not four rectangles), never as "the last child" -- a
+      positional helper silently returns the outline the moment this order changes, which is exactly
+      how it was caught.
+      Logical-window sized (512x334), **not** the chrome-inflated root's 542x364: it tracks where the
+      window's own content will land, not its steel frame, so its position never goes through
+      `WindowPlacement.withChrome`.
+    - **Contract change: `onDrag` no longer mutates `dragOffsetX`/`dragOffsetY` mid-gesture.**
+      Under D29's original wiring, `onClientTick` -> `replaceIfChanged()` reading a
+      transient offset every event would have moved the window itself, which is exactly what this
+      slice needed to stop. A new pair of fields, `dragLiveOffsetX`/`dragLiveOffsetY`, holds the
+      gesture's un-committed candidate instead; `onDrag` writes them and shows/moves the outline at
+      `WindowDrag.clampedOrigin(...)` (no `withChrome`); `onDragComplete` reads them once to commit
+      the final clamped value into `dragOffsetX`/`dragOffsetY` (D29's existing phantom-offset
+      normalization, unchanged), then calls `replaceIfChanged()` itself -- the one point that
+      actually relays the window now that `onDrag` no longer does -- and hides the outline. Every
+      outline widget already exists from `ensureOutline`, so both `onDrag` and `onDragComplete` only
+      ever call `setOriginalX/Y`/`setHidden`/`revalidate` on it: the 7Hz D22 leak trap is
+      structurally impossible here, the same guarantee D24's model-widget pool relies on.
+    - Pinned by reworking `BossMechanicsWindowLayoutTest`'s existing drag cases (`draggedOffsetSurvivesARebuild`
+      now drives `onDragComplete` before asserting, since the window no longer moves mid-gesture) and
+      two new ones: `draggingMovesTheOutlineNotTheWindow` (mid-gesture the root's origin is
+      unchanged and the outline sits at the clamped logical origin, visible) and
+      `releasingLandsTheWindowAndHidesTheOutline` (release lands the root at the clamped,
+      chrome-adjusted origin, hides the outline, and a small drag right after responds immediately --
+      D29's phantom-offset pin, re-proven under the new mechanism). `hoveringTheDragHandleTintsIt`,
+      `holdingTheDragHandleBrightensTheTint` and `dragOutlineIsBuiltOnceAndHidden` are new; the
+      divider is unpinned (purely visual, per the same precedent D21/D26 already set).
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.
