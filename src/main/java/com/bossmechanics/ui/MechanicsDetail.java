@@ -7,9 +7,11 @@ import com.bossmechanics.view.SecondaryPreviewSpec;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
+import net.runelite.api.Point;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.api.widgets.WidgetPositionMode;
@@ -130,6 +132,28 @@ final class MechanicsDetail
 	private static final int LINE_HEIGHT = 12;
 
 	/**
+	 * The font's own extent below the last rendered line's baseline (docs/DECISIONS.md D34):
+	 * descenders (g/y/p in "magic damage") plus {@code setTextShadowed}'s own 1px drop. Between
+	 * stacked blocks this overhang falls harmlessly into {@link #TEXT_LINE_GAP}; the FINAL block
+	 * has nowhere for it to go, so {@link #restackText} pads the content height by exactly this
+	 * much rather than leaving the viewport to clip it even at max scroll.
+	 *
+	 * <p><b>Not a measured value.</b> Every other constant in this file cites a cache/script
+	 * source (see the class doc); this one could not be, because it does not exist to measure.
+	 * {@code FontTypeFace} exposes only {@code getTextWidth}/{@code getBaseline}
+	 * (javap-verified against runelite-api, no descent getter), and the underlying OSRS cache font
+	 * resource for {@code p12_full}/{@code b12_full} (verified via {@code cachetool}'s
+	 * {@code DumpFontMetrics}, matching each name's Djb2 hash against the FONTS index) carries only
+	 * 256 per-glyph advance widths plus one scalar labelled "ascent" -- which for both fonts
+	 * equals their own nominal line height (12) rather than a true baseline-relative ascent -- and
+	 * no glyph bitmap or bounding box at all. There is nowhere left, offline or in the client API,
+	 * to read a real below-baseline extent from. This is therefore a clearly-labelled ESTIMATE:
+	 * 4px of raw descender allowance (typical for g/y/p at a 12px em) plus 1px for the shadow. If
+	 * the in-game pass (Slice 2) still shows clipping, this is the one number to bump.
+	 */
+	static final int TEXT_DESCENT = 5;
+
+	/**
 	 * A full blank line between the stacked name/description/counterplay blocks, not a hairline
 	 * gap: at 2px the three blocks read as one crunched paragraph (Andrew's pass on #49). This can
 	 * push a long mechanic past the viewport, which is fine now that the box actually scrolls.
@@ -146,6 +170,7 @@ final class MechanicsDetail
 	private final Widget column;
 	private final IntUnaryOperator modelForNpc;
 	private final ToIntFunction<String> spriteIdForName;
+	private final Supplier<Point> mouseCanvasPosition;
 
 	/** The LAYER every pool widget is created under (D19: nested dynamic children need a LAYER). */
 	private Widget modelBox;
@@ -193,12 +218,16 @@ final class MechanicsDetail
 	 * @param spriteIdForName resolves a bundled sprite resource name to its registered (negative)
 	 *     sprite id ({@link #UNKNOWN_SPRITE} if none); supplied as a lambda so this package never
 	 *     imports {@code ImageUtil} or {@code client.getSpriteOverrides()} (docs/DECISIONS.md D27)
+	 * @param mouseCanvasPosition passed through to the text box's {@link MechanicsScrollbar}
+	 *     (docs/DECISIONS.md D35)
 	 */
-	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc, ToIntFunction<String> spriteIdForName)
+	MechanicsDetail(Widget column, IntUnaryOperator modelForNpc, ToIntFunction<String> spriteIdForName,
+		Supplier<Point> mouseCanvasPosition)
 	{
 		this.column = column;
 		this.modelForNpc = modelForNpc;
 		this.spriteIdForName = spriteIdForName;
+		this.mouseCanvasPosition = mouseCanvasPosition;
 	}
 
 	void build()
@@ -235,7 +264,7 @@ final class MechanicsDetail
 
 		textScrollbar = new MechanicsScrollbar(textContent, textBar,
 			TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT, TEXT_CONTENT_HEIGHT,
-			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE);
+			MechanicsScrollbar.Chrome.ONLY_WHEN_SCROLLABLE, mouseCanvasPosition);
 		// build() already wires the wheel on textContent.
 		textScrollbar.build();
 
@@ -490,8 +519,9 @@ final class MechanicsDetail
 
 	/**
 	 * Restacks the three text widgets top to bottom by their own real wrapped height (docs/
-	 * DECISIONS.md D28), then hands the total to {@link #textScrollbar} -- the mechanism that
-	 * replaces the old fixed-height boxes a long counterplay used to clip against.
+	 * DECISIONS.md D28), then hands the total plus {@link #TEXT_DESCENT} to {@link #textScrollbar}
+	 * (docs/DECISIONS.md D34) -- the mechanism that replaces the old fixed-height boxes a long
+	 * counterplay used to clip against, now with room for the last line's own descenders.
 	 */
 	private void restackText(String nameText, String descriptionText, String counterplayText)
 	{
@@ -499,7 +529,7 @@ final class MechanicsDetail
 		y = stack(description, descriptionText, y) + TEXT_LINE_GAP;
 		int contentHeight = stack(counterplay, counterplayText, y);
 
-		textScrollbar.setContentHeight(contentHeight);
+		textScrollbar.setContentHeight(contentHeight + TEXT_DESCENT);
 	}
 
 	/**

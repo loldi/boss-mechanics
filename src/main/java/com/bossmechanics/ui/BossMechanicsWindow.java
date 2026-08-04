@@ -1213,10 +1213,12 @@ public class BossMechanicsWindow
 		Widget detail = band(parent, COLUMN_HEADER_Y, MechanicsDetail.COLUMN_WIDTH,
 			MechanicsDetail.COLUMN_HEIGHT, true);
 
-		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal);
+		mechanicsList = new MechanicsList(listHeader, list, view, this::select, this::toggleReveal,
+			client::getMouseCanvasPosition);
 		mechanicsList.build();
 
-		mechanicsDetail = new MechanicsDetail(detail, this::modelForNpc, spriteIdForName);
+		mechanicsDetail = new MechanicsDetail(detail, this::modelForNpc, spriteIdForName,
+			client::getMouseCanvasPosition);
 		mechanicsDetail.build();
 
 		// D33: all three column layers are visible content, hidden as whole units during a drag --

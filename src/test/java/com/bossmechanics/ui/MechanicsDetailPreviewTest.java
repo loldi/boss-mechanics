@@ -27,7 +27,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		// A long animation, played a while, then a shorter one: the crash pair family from the
@@ -50,7 +50,7 @@ public class MechanicsDetailPreviewTest
 		List<String> calls = new ArrayList<>();
 		Widget column = RecordingWidget.create(calls);
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		detail.show(unlockedRow("m1", 1, 500));
@@ -72,7 +72,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		// An unlocked row first, so the model widget is identifiable below by its setModelId
@@ -97,7 +97,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		detail.show(unlockedRowWithText("m1", "Tentacle Guard",
@@ -123,9 +123,41 @@ public class MechanicsDetailPreviewTest
 
 		Widget scrollContent = widgetsThatCalled(column, "setScrollHeight").get(0);
 		assertEquals("the scrollable content height handed to the scrollbar must equal the real "
-				+ "stacked height (counterplay's own bottom edge), or the box either clips or "
-				+ "over-scrolls",
-			counterplayBottom, ((Integer) RecordingWidget.lastArgsOf(scrollContent, "setScrollHeight")[0]).intValue());
+				+ "stacked height (counterplay's own bottom edge) plus the font's own below-"
+				+ "baseline pad (docs/DECISIONS.md D34), or the box either clips or over-scrolls",
+			counterplayBottom + MechanicsDetail.TEXT_DESCENT,
+			((Integer) RecordingWidget.lastArgsOf(scrollContent, "setScrollHeight")[0]).intValue());
+	}
+
+	/**
+	 * Item 1's real cause (docs/DECISIONS.md D34): {@code restackText} used to hand the raw
+	 * stacked height straight to {@link MechanicsScrollbar#setContentHeight}, with zero allowance
+	 * for the font's own extent below the last baseline (descenders on g/y/p, plus
+	 * {@code setTextShadowed}'s own 1px drop). Between blocks that overhang fell harmlessly into
+	 * the 12px gap; the FINAL block's overhang had nowhere to go, so the viewport clipped it even
+	 * at max scroll -- Tentacle Guard's last line in the issue #47 follow-up screenshot.
+	 */
+	@Test
+	public void textScrollContentReservesTheFontsDescentBelowTheLastLine()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
+		detail.build();
+
+		detail.show(unlockedRow("m1", 1, 500));
+
+		Widget scrollContent = widgetsThatCalled(column, "setScrollHeight").get(0);
+		int scrollHeight =
+			((Integer) RecordingWidget.lastArgsOf(scrollContent, "setScrollHeight")[0]).intValue();
+
+		assertTrue("TEXT_DESCENT must be a positive pad, or the last line's descenders still clip",
+			MechanicsDetail.TEXT_DESCENT > 0);
+		// Proxy widgets return a null font, so name/description/counterplay are each one line
+		// (12px), separated by two 12px gaps: 12 + 12 + 12 + 12 + 12 = 60, plus the descent pad.
+		assertEquals("the scrollable content height must reserve TEXT_DESCENT below the stacked "
+				+ "blocks' own bottom edge",
+			60 + MechanicsDetail.TEXT_DESCENT, scrollHeight);
 	}
 
 	/**
@@ -139,7 +171,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		List<Widget> textWidgets = widgetsThatCalled(column, "setLineHeight");
@@ -228,7 +260,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		int shiftY = 30;
@@ -263,7 +295,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> {
 			modelForNpcCalls[0]++;
 			return npcId * 10;
-		}, name -> -1);
+		}, name -> -1, () -> null);
 		detail.build();
 
 		detail.show(unlockedRowWithModelId("m1", 17550, 500));
@@ -285,7 +317,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		int shiftX = -50;
@@ -311,7 +343,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		detail.show(unlockedRowWithRotation("m1", 1, 500, 512, 1024, 1536));
@@ -331,7 +363,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
@@ -351,7 +383,7 @@ public class MechanicsDetailPreviewTest
 		List<String> calls = new ArrayList<>();
 		Widget column = RecordingWidget.create(calls);
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
@@ -371,7 +403,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		SecondaryPreviewSpec secondary = new SecondaryPreviewSpec(29475, 0, 7115, 1100, 90, 33, 0, 0, 0);
@@ -421,7 +453,7 @@ public class MechanicsDetailPreviewTest
 		MechanicsDetail detail = new MechanicsDetail(column, npcId -> {
 			modelForNpcCalls[0]++;
 			return npcId * 10;
-		}, name -> -3517000);
+		}, name -> -3517000, () -> null);
 		detail.build();
 
 		detail.show(spriteRow("m1", "venomous-dragonfire.png"));
@@ -440,7 +472,7 @@ public class MechanicsDetailPreviewTest
 		List<String> calls = new ArrayList<>();
 		Widget column = RecordingWidget.create(calls);
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -3517000);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -3517000, () -> null);
 		detail.build();
 
 		detail.show(spriteRow("m1", "venomous-dragonfire.png"));
@@ -458,7 +490,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -3517000);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -3517000, () -> null);
 		detail.build();
 
 		detail.show(spriteRow("m1", "venomous-dragonfire.png"));
@@ -479,7 +511,7 @@ public class MechanicsDetailPreviewTest
 	{
 		Widget column = RecordingWidget.create();
 
-		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1);
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
 		detail.build();
 
 		detail.show(spriteRow("m1", "never-registered.png"));
