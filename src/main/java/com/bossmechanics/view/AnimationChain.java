@@ -23,7 +23,7 @@ public class AnimationChain
 	int totalCycles;
 
 	/**
-	 * @param chainData curated segments (see {@code data.Preview#getChain()}); null or empty means
+	 * @param chainData curated segments (see {@code data.Preview#getAnimationChain()}); null or empty means
 	 *     "no chain curated" -- the ordinary single-animation preview path
 	 * @return null when {@code chainData} is null or empty, matching {@code PreviewSpec}'s existing
 	 *     null-means-absent convention for every other optional preview field
