@@ -1343,10 +1343,20 @@ so new decisions are appended here rather than inserted in a themed section.
       segment (almost always segment 0) already has, and that widget's own frame counter keeps
       advancing from wherever it was left rather than resetting to 0 -- the same trade D24 already
       accepted for re-selecting a mechanic, just now also visible on every loop of a chain that has
-      been showing a while. **Open, to fill in after the live pass:** whether this drift is
-      perceptible on a real chain over several loops, and if it is, whether it reads as different
-      enough from D24's original, rarer trigger (a mechanic re-selected by hand) to need its own
-      follow-up.
+      been showing a while. **ANSWERED by the live pass, worse than this entry expected (issue
+      #69):** it is not drift, it is a stall. Andrew's report on Shockwave: "plays fine through the
+      first animation, then pauses before the slam, then pauses after each slam infinitely — never
+      loops." Two candidates, not yet separated: the curated `cycles` overrunning the real
+      animations (they came from `animMayaEnd` on the assumption that a skeletal frame count equals
+      client cycles, which is unproven — if those frames run at 60/sec against the client's 50/sec
+      every window is ~20% too long and each segment finishes then holds), and a re-shown pool
+      widget coming back parked at the end of its sequence rather than rewinding. **What is ruled
+      out:** the segments being one-shots. `DOM_STANDARD_RANGE_ATTACK` and `DOM_ROCK_THROW_ATTACK`
+      carry `frameStep -1` exactly like Sire's 4531 and Vorkath's 7952, all of which loop correctly
+      as single-animation previews; a lone animation on a MODEL widget loops fine, so the fault is
+      in the swap. Both chained mechanics are reverted to single animations, so this schema and
+      `view.AnimationChain` currently ship with no user — intact, tested, and waiting on #69 rather
+      than needing removal. Deferred past launch by Andrew as polish.
     - **Curated first: Doom of Mokhaiotl's Shockwave (`[{12412,60},{12413,30},{12414,60}]`, charge
       into charge loop into slam) and Burrow Charge (`[{12420,150},{12421,150}]`, the dive into its
       own underground idle, curated as 5 of the idle's own 30-cycle loops so the two segments run

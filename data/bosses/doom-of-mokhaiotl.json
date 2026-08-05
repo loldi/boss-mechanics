@@ -88,16 +88,7 @@
         { "type": "animation", "id": 12412 },
         { "type": "animation", "id": 12414 }
       ],
-      "preview": {
-        "modelId": 56455,
-        "animationChain": [
-          { "animationId": 12412, "cycles": 60 },
-          { "animationId": 12413, "cycles": 30 },
-          { "animationId": 12414, "cycles": 60 }
-        ],
-        "zoom": 2500,
-        "shiftY": 41
-      }
+      "preview": { "modelId": 56455, "animationId": 12414, "zoom": 2500, "shiftY": 41 }
     },
     {
       "id": "volatile-earth",
@@ -148,15 +139,7 @@
         { "type": "animation", "id": 12417 },
         { "type": "animation", "id": 12419 }
       ],
-      "preview": {
-        "modelId": 56455,
-        "animationChain": [
-          { "animationId": 12420, "cycles": 150 },
-          { "animationId": 12421, "cycles": 150 }
-        ],
-        "zoom": 2500,
-        "shiftY": 41
-      }
+      "preview": { "modelId": 56455, "animationId": 12420, "zoom": 2500, "shiftY": 41 }
     },
     {
       "id": "double-rock-throw",
@@ -186,5 +169,5 @@
   ],
   "_ids": "Every id here is named, not guessed: they come from Jagex's own gameval names (NpcID DOM_BOSS/DOM_BOSS_SHIELDED/DOM_BOSS_BURROWED/DOM_DEMONIC_ENERGY_*/DOM_SHOCKWAVE_PATH_NODE/DOM_SHOCKWAVE_SHIELD, AnimationID DOM_* and NPC_DEMONIC_GRUB_*, SpotanimID VFX_STANDARD_PROJECTILE_*/VFX_ROCK_PROJECTILE_*/VFX_BEAM_CHARGE_UP_01/VFX_DOOM_BOSS_BLOOD_SPLAT_*). The live cache's GAMEVALS index is not downloaded by the game client, and runelite-api 1.12.33 predates this boss entirely, so the names were read from RuneLite master's generated gameval sources and cross-checked against the ids present in the cache.",
   "_previews": "Doom is the first boss whose body animations are SKELETAL (sequence config opcode 13, zero classic frames), so FitZoom can only measure the static bind pose and the framemap compat check says nothing. The previews use model 56455 rather than the npc: 14707's models[0] is only the 1515-vertex centre body (X +/-142), while 56455 is the merged 1901-vertex whole boss (X +/-322) that Jagex's own Combat Achievements screen uses (struct 4933: model 56455, anim 12453 NPC_DOOM_BOSS_IDLE_CA, zoom 2500). Both carry the same 83-bone animaya rig, which is why the per-mechanic DOM_* animations play on it. The boss previews now ship at Jagex's own 2500 rather than the bind-pose fit of 1698: the first live pass showed the animated poses reaching well outside the bind pose and clipping the box, which is exactly the measurement the skeletal format denies us. shiftY tracks it (199 model units, projected at the shipped zoom). Larva recolor tables were checked against the model's face colours (D28): they repaint 0% of the faces, so their base model colours are already the ones you see in the fight. The sprite they ship as instead is about showing all three at once, not about colour.",
-  "_note": "Trigger ids are NOT yet verified in a live delve; they are cache-derived. Enable 'Log boss trigger ids' and run a delve to confirm. Two things to check first. (1) double-rock-throw claims the eight VFX_ROCK_PROJECTILE_PROJECTILE_ALT ids (3396-3403) on the reading that the ALT set is the second simultaneous throw at delve 8+, while the base set (3388-3395) is the ordinary one; if the ALT ids instead turn out to be the 2nd/3rd projectile of any multi-projectile throw, this mechanic will unlock as early as delve 2 and its detection needs rethinking. (2) the beam charge-up graphic 3412 is a trigger on the assumption that a player cannot produce it. Alternate preview animations to try if melee-punish reads poorly: 12409 DOM_BEAM_CHARGE_LOOP or 12411 DOM_BEAM_FIRE, and 12453 NPC_DOOM_BOSS_IDLE_CA as a neutral fallback for any mechanic. shockwave and burrow-charge ship as animationChains (issue #66, docs/DECISIONS.md D37) rather than a single animation: shockwave plays its charge (12412, animMayaEnd 60) into the charge loop (12413, animMayaEnd 30) into the slam (12414, animMayaEnd 60); burrow-charge plays the dive (12420 DOM_BURROW, animMayaEnd 150) into its own underground idle (12421, animMayaEnd 30, curated as 5 of its own loops so the two segments run comparable lengths). That replaces a one-shot 12420 which froze on its last frame; 12417 DOM_BURROWED_MOVEMENT was tried as a looping substitute first and is worse, because with no arena floor to be under it reads as the boss standing in a broken pose. demonic-larvae is a bundled sprite (issue #64) rather than a model preview, for two reasons: the mechanic's whole point is that colour names the prayer and only a sprite can show all three at once, and the grub models carry no rig at all (no framemap groups, no animaya bones), so NPC_DEMONIC_GRUB_WALK could only cycle their alpha and read as jitter rather than crawling. That is also why the multi-secondary generalisation (issue #63) was dropped. See issue #61."
+  "_note": "Trigger ids are NOT yet verified in a live delve; they are cache-derived. Enable 'Log boss trigger ids' and run a delve to confirm. Two things to check first. (1) double-rock-throw claims the eight VFX_ROCK_PROJECTILE_PROJECTILE_ALT ids (3396-3403) on the reading that the ALT set is the second simultaneous throw at delve 8+, while the base set (3388-3395) is the ordinary one; if the ALT ids instead turn out to be the 2nd/3rd projectile of any multi-projectile throw, this mechanic will unlock as early as delve 2 and its detection needs rethinking. (2) the beam charge-up graphic 3412 is a trigger on the assumption that a player cannot produce it. Alternate preview animations to try if melee-punish reads poorly: 12409 DOM_BEAM_CHARGE_LOOP or 12411 DOM_BEAM_FIRE, and 12453 NPC_DOOM_BOSS_IDLE_CA as a neutral fallback for any mechanic. Neither shockwave nor burrow-charge is an animationChain, though both were curated as one first (issue #66, docs/DECISIONS.md D37) and the schema for it still ships. burrow-charge failed on looks: [12420 dive, 12421 underground idle] reads as an unexplained broken pose, because the preview box has no arena floor for the boss to be under (12417 DOM_BURROWED_MOVEMENT fails the same way for the same reason), so it is the dive alone, knowing it plays once and holds. shockwave failed on playback: [{12412,60},{12413,30},{12414,60}] plays its first segment, then pauses before the slam and after every slam, and never loops cleanly (issue #69, deferred past launch), so it is the slam alone. demonic-larvae is a bundled sprite (issue #64) rather than a model preview, for two reasons: the mechanic's whole point is that colour names the prayer and only a sprite can show all three at once, and the grub models carry no rig at all (no framemap groups, no animaya bones), so NPC_DEMONIC_GRUB_WALK could only cycle their alpha and read as jitter rather than crawling. That is also why the multi-secondary generalisation (issue #63) was dropped. See issue #61."
 }
