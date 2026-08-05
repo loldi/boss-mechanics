@@ -20,3 +20,6 @@ Thumbs.db
 # Secrets
 .env
 *.local
+
+# Internal design log, kept local
+docs/DECISIONS.md

@@ -7,9 +7,7 @@ it, and a preview.
 
 Mechanics start locked. They unlock as your client watches the boss use them. (Or just hit 'View All' to see everything).
 
-<!-- PLACEHOLDER: hero gif. Collection log open on a supported boss -> click Boss
-     Mechanics -> window opens -> click through 2-3 mechanics with previews playing. -->
-![Boss Mechanics window](docs/images/hero.gif)
+![The Boss Mechanics button on a collection log boss page](docs/boss-mechanic-hero.png)
 
 ## What it does
 
@@ -23,9 +21,7 @@ Detection watches animations, projectiles, graphics and NPC spawns.
 
 If you're not interested in the discovery loop? **View All** reveals everything.
 
-<!-- PLACEHOLDER: gif. A ??? row unlocking mid-fight, chat message appearing,
-     progress bar ticking up. -->
-![Discovering a mechanic](docs/images/discovery.gif)
+![Mechanic discovery messages in the game chat](docs/mechanic-discovery.png)
 
 ### Mechanic list and counter play
 
@@ -37,9 +33,7 @@ Selecting a mechanic plays the boss model performing that move.  Certain UI elem
 as they are rendered by the engine during gameplay (ex., Doom's prayers or charge bar).  Will work on bridging those
 gaps over time since they are critical parts of certain mechanics.
 
-<!-- PLACEHOLDER: screenshot. Move list on the left, a selected mechanic's
-     description + counterplay on the right. Mix of discovered and ??? rows. -->
-![Move list and counter play](docs/images/move-list.png)
+![The mechanic list, with a selected mechanic's description, counter play and preview](docs/move-list.gif)
 
 ### The window
 
@@ -86,7 +80,8 @@ Mechanic names, descriptions and counter play are hand-written, researched from 
 [Old School RuneScape Wiki](https://oldschool.runescape.wiki/) (CC BY-SA 3.0).
 Every boss file links its source page.
 
-Boss Mechanics is an unofficial plugin
+Boss Mechanics is an unofficial plugin.
+
 ## License
 
 BSD-2-Clause. See [LICENSE](LICENSE).
