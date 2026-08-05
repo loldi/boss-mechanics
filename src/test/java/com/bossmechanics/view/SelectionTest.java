@@ -79,6 +79,6 @@ public class SelectionTest
 	private static Mechanic mechanic(String id)
 	{
 		return new Mechanic(id, "Name " + id, "Description " + id, "Counterplay " + id, null,
-			Collections.emptyList(), null, null);
+			Collections.emptyList(), null, null, null);
 	}
 }

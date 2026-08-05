@@ -2,6 +2,8 @@ package com.bossmechanics.detection;
 
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.Mechanic;
+import com.bossmechanics.data.Requirement;
+import com.bossmechanics.data.RequirementType;
 import com.bossmechanics.data.Trigger;
 import com.bossmechanics.data.TriggerType;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import java.util.function.Predicate;
 public class DetectionEngine
 {
 	private final DiscoveryState state;
+	private final GameStateReader gameStateReader;
 
 	/** boss npcId -> owning boss id, for recognizing a spawn as one of a tracked boss's forms. */
 	private final Map<Integer, String> npcIdToBossId = new HashMap<>();
@@ -31,9 +34,19 @@ public class DetectionEngine
 	/** Live npcIndex -> bossId for NPCs currently on screen that belong to a tracked boss. */
 	private final Map<Integer, String> presence = new HashMap<>();
 
+	/**
+	 * No {@link GameStateReader} supplied: every varp reads 0 (docs/DECISIONS.md D38's fail-closed
+	 * default), so a caller that never curates a {@code requires} gate sees no change.
+	 */
 	public DetectionEngine(List<Boss> bosses, DiscoveryState state)
 	{
+		this(bosses, state, id -> 0);
+	}
+
+	public DetectionEngine(List<Boss> bosses, DiscoveryState state, GameStateReader gameStateReader)
+	{
 		this.state = state;
+		this.gameStateReader = gameStateReader;
 
 		for (Boss boss : bosses)
 		{
@@ -201,12 +214,38 @@ public class DetectionEngine
 		for (Discovery candidate : candidates)
 		{
 			if (gate.test(candidate)
+				&& requiresSatisfied(candidate.getMechanic())
 				&& state.markDiscovered(candidate.getBoss().getId(), candidate.getMechanic().getId()))
 			{
 				result.add(candidate);
 			}
 		}
 		return result;
+	}
+
+	/**
+	 * A mechanic's optional {@code requires} gate (docs/DECISIONS.md D38): checked here, before
+	 * {@link DiscoveryState#markDiscovered}, so a below-threshold match never consumes the
+	 * once-only discovery and can still discover once the gate is met on a later trigger. No
+	 * {@code requires} means always satisfied -- the existing, ungated behavior. Never logs: this
+	 * runs on every cycle for an in-flight projectile.
+	 */
+	private boolean requiresSatisfied(Mechanic mechanic)
+	{
+		Requirement requirement = mechanic.getRequires();
+		if (requirement == null)
+		{
+			return true;
+		}
+
+		if (requirement.requirementType() == RequirementType.VARP)
+		{
+			return gameStateReader.varp(requirement.getId()) >= requirement.getMin();
+		}
+
+		// Validated data never reaches this: BossDataValidator rejects an unrecognized
+		// requirement type before it can ship. Fail closed rather than assume "satisfied".
+		return false;
 	}
 
 	private static Predicate<Discovery> ownedBy(String bossId)

@@ -869,7 +869,7 @@ public class BossMechanicsWindowLayoutTest
 		Preview preview = new Preview(null, null, false, null, null, 70, null, null, null, null, null, null,
 			Arrays.asList(new ChainSegment(500, 3), new ChainSegment(600, 2)));
 		Mechanic mechanic = new Mechanic("shockwave", "Shockwave", "Description", "Counterplay", null,
-			Collections.singletonList(new Trigger("animation", 500)), preview, null);
+			Collections.singletonList(new Trigger("animation", 500)), null, preview, null);
 		return new Boss("chained", "Chained", Collections.singletonList(1), "https://example.com",
 			Collections.singletonList(mechanic));
 	}
