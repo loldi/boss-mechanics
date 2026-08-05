@@ -31,13 +31,29 @@ public final class BossPageIndex
 	/** @return the boss whose name matches this collection log page title, or null if none does. */
 	public Boss forPageTitle(String pageTitle)
 	{
+		String key = pageTitleKey(pageTitle);
+		return key == null ? null : byPageTitle.get(key);
+	}
+
+	/**
+	 * The lookup key a page title reduces to: exactly the string a boss's {@code name} has to
+	 * normalize to for {@link #forPageTitle} to find it.
+	 *
+	 * Public because a miss is otherwise silent (no button, no error), and the one thing a
+	 * curator needs at that moment is the key the data failed to match, not the marked-up
+	 * title the widget carried.
+	 *
+	 * @return the key, or null if the title is missing or normalizes to nothing.
+	 */
+	public static String pageTitleKey(String pageTitle)
+	{
 		if (pageTitle == null)
 		{
 			return null;
 		}
 
 		String key = normalize(pageTitle);
-		return key.isEmpty() ? null : byPageTitle.get(key);
+		return key.isEmpty() ? null : key;
 	}
 
 	/**

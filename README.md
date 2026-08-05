@@ -55,7 +55,7 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 |---|---|---|
 | Discovery chat messages | On | Announce each newly discovered mechanic in the chatbox |
 | Clear discoveries | Off | Debug tool. Forget every discovered mechanic on this character. Unticks itself once done |
-| Log boss trigger ids | Off | Debug tool. Logs every animation, projectile and graphic id a tracked boss produces, and which mechanic claims it |
+| Log boss trigger ids | Off | Debug tool. Logs every animation, projectile and graphic id a tracked boss produces and which mechanic claims it, plus any collection log page title no boss data matches |
 
 ## Install
 

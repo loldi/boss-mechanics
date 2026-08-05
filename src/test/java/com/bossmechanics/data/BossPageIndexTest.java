@@ -1,5 +1,6 @@
 package com.bossmechanics.data;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
@@ -54,6 +55,25 @@ public class BossPageIndexTest
 	{
 		assertNull(new BossPageIndex(BOSSES).forPageTitle("Chambers of Xeric"));
 		assertNull(new BossPageIndex(Collections.emptyList()).forPageTitle("Vorkath"));
+	}
+
+	/**
+	 * What the curation log prints on a miss. It has to be the same string the lookup used,
+	 * or it would send a curator off to write a name that still doesn't match.
+	 */
+	@Test
+	public void pageTitleKeyIsTheStringTheDataMustMatch()
+	{
+		assertEquals("the mad angel", BossPageIndex.pageTitleKey("<col=ff981f>The Mad Angel</col>"));
+		assertEquals("k'ril tsutsaroth", BossPageIndex.pageTitleKey("  K'ril   Tsutsaroth "));
+	}
+
+	@Test
+	public void pageTitleKeyIsNullWhenThereIsNothingToMatch()
+	{
+		assertNull(BossPageIndex.pageTitleKey(null));
+		assertNull(BossPageIndex.pageTitleKey("   "));
+		assertNull(BossPageIndex.pageTitleKey("<col=ff981f></col>"));
 	}
 
 	private static Boss boss(String id, String name)

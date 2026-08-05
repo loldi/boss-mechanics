@@ -98,6 +98,10 @@ public class BossMechanicsPlugin extends Plugin
 	// doesn't reprint every cycle.
 	private final Set<String> loggedUnmatched = new HashSet<>();
 
+	// Same idea for collection log pages: the log redraws its page on every tab switch,
+	// selection and search keystroke, so without this one page would print dozens of lines.
+	private final Set<String> loggedUnmatchedPages = new HashSet<>();
+
 	private static final Color MECHANIC_NAME_COLOR = new Color(0xCC0000);
 
 	// A plugin field, not a local, so #5's reveal UI can reach isRevealed/setRevealed.
@@ -151,6 +155,7 @@ public class BossMechanicsPlugin extends Plugin
 
 		collectionLogButton.setBossIndex(new BossPageIndex(bosses));
 		collectionLogButton.setOnOpen(this::openBossMechanics);
+		collectionLogButton.setOnUnmatchedPage(this::logUnmatchedPage);
 		eventBus.register(collectionLogButton);
 		collectionLogButton.onPluginStart();
 
@@ -485,6 +490,32 @@ public class BossMechanicsPlugin extends Plugin
 		// Discoveries were previously chat-only, so nothing recorded them anywhere a log
 		// could show. Fires at most once per mechanic per character, so it cannot spam.
 		log.info("Discovered {} mechanic: {}", discovery.getBoss().getId(), discovery.getMechanic().getId());
+	}
+
+	/**
+	 * Curation aid for the trap that hid "The Mad Angel": a boss whose {@code name} does not
+	 * match its collection log page title gets no button and no error anywhere, so the only
+	 * signal is a human opening the page and noticing nothing appeared.
+	 *
+	 * Prints the normalized title, which is the exact string the data has to fold to, so the
+	 * fix is copy-paste rather than guesswork. Every non-boss page reports too, on purpose:
+	 * whether a miss is a curation bug or just the Raids tab is a judgement only the reader
+	 * can make, and pre-filtering it here would need the very list of page titles we don't have.
+	 */
+	private void logUnmatchedPage(String pageTitle)
+	{
+		if (!config.logUnmatchedTriggers())
+		{
+			return;
+		}
+
+		String key = BossPageIndex.pageTitleKey(pageTitle);
+		if (key == null || !loggedUnmatchedPages.add(key))
+		{
+			return;
+		}
+
+		log.info("Collection log page has no boss data: \"{}\"", key);
 	}
 
 	/** Curation aid for events that name their source actor. */
