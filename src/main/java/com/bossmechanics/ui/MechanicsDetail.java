@@ -1,5 +1,6 @@
 package com.bossmechanics.ui;
 
+import com.bossmechanics.view.AnimationChain;
 import com.bossmechanics.view.LineWrap;
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
@@ -211,6 +212,28 @@ final class MechanicsDetail
 	private Widget dim;
 
 	/**
+	 * The visible selection's own {@link PreviewSpec}, but only while it curates a chain (issue
+	 * #66, docs/DECISIONS.md D37); null whenever nothing chained is on screen (a locked row, a
+	 * sprite, a static pose, or an ordinary single-animation preview), which is what makes
+	 * {@link #tick()} a no-op for every one of those. Carries the non-animation params
+	 * ({@code npcId}/{@code modelId}/{@code zoom}/shifts/rotation) {@link #tick()} reuses when a
+	 * segment boundary swaps the visible {@link #primaryModel} pool widget — the same params
+	 * {@link #showModel} already passed for segment 0, since {@code PreviewSpec.of} resolves
+	 * {@code animationId} to the chain's own first segment.
+	 */
+	private PreviewSpec activePreview;
+
+	/** Client ticks elapsed since {@link #activePreview}'s chain last restarted at segment 0. */
+	private int chainTick;
+
+	/**
+	 * The animation id {@link #activePreview}'s chain last resolved to, so {@link #tick()} only
+	 * mutates {@link #primaryModel} on a boundary -- never every tick, and matching whatever
+	 * {@link #showModel} already put on screen for segment 0.
+	 */
+	private int chainAnimationShowing;
+
+	/**
 	 * @param column the 291-wide column layer, already positioned and sized
 	 * @param modelForNpc resolves an npc id to the cache model id to render ({@link #UNKNOWN_MODEL}
 	 *     if none); supplied as a lambda so this package never imports
@@ -311,10 +334,52 @@ final class MechanicsDetail
 			showModel(preview);
 		}
 
+		// issue #66, docs/DECISIONS.md D37: every selection change restarts the playhead at
+		// segment 0, whether or not the previous one had a chain -- showModel above already put
+		// the chain's own first segment on screen (PreviewSpec.of resolves animationId to it), so
+		// tick() only needs to start counting from here.
+		activePreview = preview.getAnimationChain() != null ? preview : null;
+		chainTick = 0;
+		chainAnimationShowing = preview.getAnimationId();
+
 		dim.setHidden(row == null || !row.isLocked());
 		dim.revalidate();
 
 		column.revalidate();
+	}
+
+	/**
+	 * Advances whichever chain is currently showing by one client tick (20ms, issue #66, docs/
+	 * DECISIONS.md D37), swapping {@link #primaryModel}'s visible pool widget only when the
+	 * chain's own resolved animation id actually changes at a segment boundary -- never on every
+	 * tick, and never via {@code setAnimationId} on a live widget: a boundary swap is a plain
+	 * {@link ModelSlot#show} call, the exact get-or-create {@link #showModel} already uses for an
+	 * ordinary selection change, so D24's invariant is untouched.
+	 *
+	 * <p>A no-op whenever nothing chained is on screen ({@link #activePreview} null: a locked row,
+	 * a sprite, a static pose, or an ordinary single-animation preview all leave it that way), and
+	 * whenever the elapsed ticks are still inside the currently-showing segment.
+	 *
+	 * <p>Package-visible: {@link BossMechanicsWindow#onClientTick} is this method's only caller.
+	 */
+	void tick()
+	{
+		if (activePreview == null)
+		{
+			return;
+		}
+
+		chainTick++;
+		int animationId = activePreview.getAnimationChain().animationAt(chainTick);
+		if (animationId == chainAnimationShowing)
+		{
+			return;
+		}
+
+		chainAnimationShowing = animationId;
+		primaryModel.show(animationId, activePreview.getModelId(), activePreview.getNpcId(),
+			activePreview.getZoom(), activePreview.getShiftX(), activePreview.getShiftY(),
+			activePreview.getRotationX(), activePreview.getRotationY(), activePreview.getRotationZ());
 	}
 
 	/**
