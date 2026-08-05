@@ -6,12 +6,17 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.bossmechanics.data.Boss;
+import com.bossmechanics.data.ChainSegment;
+import com.bossmechanics.data.Mechanic;
+import com.bossmechanics.data.Preview;
+import com.bossmechanics.data.Trigger;
 import com.bossmechanics.detection.DiscoveryState;
 import com.bossmechanics.view.MechanicsView;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import net.runelite.api.Client;
@@ -797,6 +802,90 @@ public class BossMechanicsWindowLayoutTest
 					+ "gesture (D33)",
 				args == null || Boolean.FALSE.equals(args[0]));
 		}
+	}
+
+	/**
+	 * Chained preview animations (issue #66, docs/DECISIONS.md D37): {@code onClientTick} forwards
+	 * to {@link MechanicsDetail#tick()}, which is otherwise only exercised directly by
+	 * {@code MechanicsDetailPreviewTest} -- this is the one place the wiring itself is pinned.
+	 */
+	@Test
+	public void tickingAcrossABoundaryPerformsTheSwap() throws Exception
+	{
+		Widget host = RecordingWidget.create();
+		Client client = fakeClient(host);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = chainedBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), true));
+
+		assertEquals("segment 0 must already be on screen the moment the window opens",
+			1, widgetsThatCalled(host, "setModelId").size());
+
+		for (int i = 0; i < 3; i++)
+		{
+			window.onClientTick(null);
+		}
+
+		assertEquals("driving onClientTick across the chain's own segment boundary (issue #66) "
+				+ "must swap the visible pool widget",
+			2, widgetsThatCalled(host, "setModelId").size());
+	}
+
+	@Test
+	public void furtherTicksAfterCloseTouchNothing() throws Exception
+	{
+		List<String> calls = new ArrayList<>();
+		Widget host = RecordingWidget.create(calls);
+		Client client = fakeClient(host);
+
+		BossMechanicsWindow window = new BossMechanicsWindow();
+		inject(window, "client", client);
+		inject(window, "clientThread", new ClientThread());
+		inject(window, "keyManager", fakeKeyManager(client));
+
+		Boss boss = chainedBoss();
+		window.open(boss, MechanicsView.of(boss, new DiscoveryState(), true));
+		window.close();
+
+		int callsAfterClose = calls.size();
+		for (int i = 0; i < 5; i++)
+		{
+			window.onClientTick(null);
+		}
+
+		assertEquals("a tick arriving after close() must touch nothing -- MechanicsDetail is "
+				+ "already discarded (docs/DECISIONS.md D22)",
+			callsAfterClose, calls.size());
+	}
+
+	/** A one-mechanic boss whose preview curates a chain: segment 0 (500, 3 cycles), segment 1 (600, 2). */
+	private static Boss chainedBoss()
+	{
+		Preview preview = new Preview(null, null, false, null, null, 70, null, null, null, null, null, null,
+			Arrays.asList(new ChainSegment(500, 3), new ChainSegment(600, 2)));
+		Mechanic mechanic = new Mechanic("shockwave", "Shockwave", "Description", "Counterplay", null,
+			Collections.singletonList(new Trigger("animation", 500)), preview, null);
+		return new Boss("chained", "Chained", Collections.singletonList(1), "https://example.com",
+			Collections.singletonList(mechanic));
+	}
+
+	private static List<Widget> widgetsThatCalled(Widget widget, String methodName)
+	{
+		List<Widget> found = new ArrayList<>();
+		if (RecordingWidget.callsOf(widget).contains(methodName))
+		{
+			found.add(widget);
+		}
+		for (Widget child : RecordingWidget.childrenOf(widget))
+		{
+			found.addAll(widgetsThatCalled(child, methodName));
+		}
+		return found;
 	}
 
 	/** @see BossMechanicsWindow#dragHidden -- read by reflection, the {@code inject()} idiom in reverse. */

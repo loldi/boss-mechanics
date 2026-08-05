@@ -717,11 +717,21 @@ public class BossMechanicsWindow
 	 * Resizing the client moves the collection log, so the window has to follow it. There is no
 	 * resize event on the event bus, and the log's rectangle is only readable on the client
 	 * thread, so this polls — but it writes nothing unless the answer actually changed.
+	 *
+	 * <p>Also drives {@link MechanicsDetail#tick()} (issue #66, docs/DECISIONS.md D37), which is
+	 * how a chained preview animation advances -- {@code mechanicsDetail} is null whenever nothing
+	 * is open (D22: it is discarded on {@link #close}/a world hop, same as {@link #root}), so a
+	 * tick arriving after that touches nothing.
 	 */
 	@Subscribe
 	public void onClientTick(ClientTick event)
 	{
 		replaceIfChanged();
+
+		if (mechanicsDetail != null)
+		{
+			mechanicsDetail.tick();
+		}
 	}
 
 	/**

@@ -69,6 +69,14 @@ public class PreviewSpec
 	int rotationX;
 	int rotationY;
 	int rotationZ;
+	/**
+	 * Ordered animation segments to play back to back on the D24 pool, looping as a whole (issue
+	 * #66, docs/DECISIONS.md D37), resolved from {@link Preview#getAnimationChain()}; null means
+	 * "no chain, play {@link #animationId} as a single looping animation" -- the ordinary path,
+	 * and what every mechanic without a curated chain still resolves to. {@code
+	 * com.bossmechanics.ui} owns the tick clock that walks this; it never decides the segments.
+	 */
+	AnimationChain animationChain;
 
 	/**
 	 * FORK, resolved (Option A, docs/DECISIONS.md D23): a static pose always wins over
@@ -95,7 +103,7 @@ public class PreviewSpec
 		String sprite = preview == null ? null : preview.getSprite();
 		if (sprite != null)
 		{
-			return new PreviewSpec(true, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0);
+			return new PreviewSpec(true, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0, null);
 		}
 
 		int npcId = preview != null && preview.getNpcId() != null ? preview.getNpcId() : bossNpcIds.get(0);
@@ -109,17 +117,38 @@ public class PreviewSpec
 
 		boolean staticFallback = preview != null && preview.isStaticFallback();
 		Integer animationId = preview == null ? null : preview.getAnimationId();
-		int resolvedAnimationId = staticFallback || animationId == null ? NO_ANIMATION : animationId;
+
+		// Chain tier (issue #66, docs/DECISIONS.md D37): staticFallback still wins over a curated
+		// chain, the same as it already wins over a plain animationId -- a static pose has nothing
+		// to chain. Otherwise the chain's first segment stands in for animationId (a widget needs
+		// something to show before the first tick() ever runs), and the chain itself is carried
+		// through for ui.MechanicsDetail.tick() to walk.
+		AnimationChain chain = staticFallback || preview == null
+			? null : AnimationChain.of(preview.getAnimationChain());
+
+		int resolvedAnimationId;
+		if (staticFallback || (animationId == null && chain == null))
+		{
+			resolvedAnimationId = NO_ANIMATION;
+		}
+		else if (chain != null)
+		{
+			resolvedAnimationId = chain.getSegments().get(0).getAnimationId();
+		}
+		else
+		{
+			resolvedAnimationId = animationId;
+		}
 
 		SecondaryPreview secondaryData = preview == null ? null : preview.getSecondary();
 		SecondaryPreviewSpec secondary = secondaryData == null ? null : SecondaryPreviewSpec.of(secondaryData);
 
 		return new PreviewSpec(true, npcId, resolvedAnimationId, zoom, shiftY, modelId, null, shiftX, secondary,
-			rotationX, rotationY, rotationZ);
+			rotationX, rotationY, rotationZ, chain);
 	}
 
 	public static PreviewSpec hidden()
 	{
-		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, null, 0, null, 0, 0, 0);
+		return new PreviewSpec(false, 0, NO_ANIMATION, DEFAULT_ZOOM, 0, null, null, 0, null, 0, 0, 0, null);
 	}
 }
