@@ -1,0 +1,75 @@
+{
+  "id": "mad-angel",
+  "name": "The Mad Angel",
+  "npcIds": [16305, 16307, 16309, 16311],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Mad_Angel/Strategies",
+  "mechanics": [
+    {
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "A slow melee swing on a six tick cadence. She throws three of them, then opens a special attack.",
+      "counterplay": "Keep Protect from Melee up the whole fight. Bring a golembane weapon.",
+      "detection": [
+        { "type": "animation", "id": 4589 }
+      ],
+      "preview": { "animationId": 4589, "npcId": 16305, "staticFallback": false, "zoom": 1992, "shiftY": 61 }
+    },
+    {
+      "id": "sword-cleave",
+      "name": "Sword Cleave",
+      "description": "She draws the sword to one side, then cleaves twice: once into the side she drew from, once back across where you were standing.",
+      "counterplay": "Read the draw and cross to her opposite side, not behind her. A side dodge makes your next hit land heavy.",
+      "detection": [
+        { "type": "animation", "id": 14429 },
+        { "type": "animation", "id": 14430 },
+        { "type": "animation", "id": 14431 },
+        { "type": "animation", "id": 14433 },
+        { "type": "animation", "id": 14434 },
+        { "type": "animation", "id": 14435 },
+        { "type": "animation", "id": 14437 },
+        { "type": "animation", "id": 14438 },
+        { "type": "animation", "id": 14439 },
+        { "type": "animation", "id": 14440 },
+        { "type": "animation", "id": 14441 },
+        { "type": "animation", "id": 14442 }
+      ],
+      "preview": { "animationId": 14430, "npcId": 16305, "staticFallback": false, "zoom": 2285, "shiftY": 63 }
+    },
+    {
+      "id": "exploding-light",
+      "name": "Exploding Light",
+      "description": "She lobs a ball of light at a marked tile. Left alone it detonates there for heavy damage.",
+      "counterplay": "Stand on the marked tile to punt it back into her. It can be returned three times in one throw.",
+      "detection": [
+        { "type": "animation", "id": 14443 },
+        { "type": "projectile", "id": 4015 }
+      ],
+      "preview": { "animationId": 14443, "npcId": 16305, "staticFallback": false, "zoom": 2164, "shiftY": 56 }
+    },
+    {
+      "id": "lightning-smite",
+      "name": "Lightning Smite",
+      "description": "Her eyes and sword glow blue while she charges lightning, then she fires a magic bolt at you.",
+      "counterplay": "Flick Protect from Magic on as the blue crackle appears. Nailing the tick also guarantees your next hit lands max.",
+      "detection": [
+        { "type": "animation", "id": 4590 },
+        { "type": "graphic", "id": 4011 }
+      ],
+      "preview": { "animationId": 4590, "npcId": 16305, "staticFallback": false, "zoom": 2325, "shiftY": 57 }
+    },
+    {
+      "id": "enraged-smite",
+      "name": "Enraged Smite",
+      "description": "Below roughly half health she enrages, opening with all three specials back to back and speeding the rest up. The smite becomes three consecutive bolts, the third arriving on a shorter gap than the second.",
+      "phase": "Enrage",
+      "counterplay": "Flick Protect from Magic three separate times, tightening the gap for the last one.",
+      "detection": [
+        { "type": "animation", "id": 8543 },
+        { "type": "graphic", "id": 4012 }
+      ],
+      "preview": { "animationId": 8543, "npcId": 16305, "staticFallback": false, "zoom": 2325, "shiftY": 57 }
+    }
+  ],
+  "_note": "The collection log page is titled 'The Mad Angel', not 'Mad Angel', so 'name' carries the article. BossPageIndex matches the page title exactly after stripping colour tags and folding case/whitespace, so dropping 'The' means no button and no error. Confirmed against the live log on 2026-08-05. SKELETON, NOT LIVE-VERIFIED. Every id below was read out of the live cache (revision of 2026-08-05) rather than guessed, but no id here has been confirmed in a live fight yet, which issue #13 requires before this boss is done. Provenance: npc ids from gameval NpcID (MAD_ANGEL 16305, MAD_ANGEL_ANIM 16307, MAD_ANGEL_QUEST 16309, MAD_ANGEL_ANIM_QUEST 16311). Deliberately excluded are the dormant and post-death statue forms (MAD_ANGEL_INITIAL 16306, MAD_ANGEL_DEAD 16308, MAD_ANGEL_INITIAL_QUEST 16310, MAD_ANGEL_DEAD_QUEST 16312, MAD_ANGEL_CATHEDRAL_VIS 16314, MAD_ANGEL_CATHEDRAL_VIS_QUEST 16315, all of which stand on NPC_MAD_ANGEL_INACTIVE 1991) — treating a statue as 'in the fight' would let the graphic triggers fire on someone standing in Ardeaglais. NpcID also names MAD_ANGEL_CATHEDRAL 16313, which the cache carries with a null name and no models; it is a placeholder and is excluded. Animations from gameval AnimationID: NPC_MAD_ANGEL_ATTACK_MELEE 4589, NPC_MAD_ANGEL_ATTACK_SMITE 4590, NPC_MAD_ANGEL_ATTACK_SMITE_ENRAGED 8543, NPC_MAD_ANGEL_ATTACK_SWEEP_* 14429-14442, NPC_MAD_ANGEL_ATTACK_BOMB_THROW 14443. Projectile and graphic ids from gameval SpotanimID: VFX_MAD_ANGEL_ATTACK_BOMB_THROW_PROJECTILE 4015, VFX_MAD_ANGEL_ATTACK_SMITE 4011, VFX_MAD_ANGEL_ATTACK_SMITE_ENRAGED 4012. The two graphic triggers are safe under the SCHEMA.md actor-attribution rule because the VFX_MAD_ANGEL_* spotanims are exclusive to this boss and a player cannot produce them. Preview npc is 16305, the repeatable post-quest form, which carries its own model 61847; every other form shares 61845. Zoom and shiftY are FitZoom output at the 291x140 box with the standard 10% margin, and shiftY is already projected to pixels at the zoom shipped here. sword-cleave is fitted across the whole sweep set (14429-14432, envelope Y[-568..10]) rather than its own segment alone so the preview does not jump scale between cleave directions.",
+  "_followups": "1. Live verification of every id above, plus the enrage health threshold, per issue #13's acceptance criteria. 2. The sweep reads as a natural animationChain (14429 draw -> 14430 cleave -> 14431 return cleave -> 14432 reset; totalCycles 180/180/180/30, all classic sequences so the offline per-frame tooling applies). It ships as a single animationId for now because issue #69 has chained previews stalling after the first pass. 3. NPC_MAD_ANGEL_SPAWN 3321 and VFX_MAD_ANGEL_SPAWN 4010 are the statue waking up; not curated as a mechanic since there is nothing to counter, but they are the obvious trigger pair if the awakening is ever wanted as a list entry. 4. staticFallback is false on all five; whether each body animation actually reads has not been eyeballed in game."
+}
