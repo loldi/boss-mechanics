@@ -47,6 +47,7 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 | Abyssal Sire | 9 |
 | Vorkath | 6 |
 | Doom of Mokhaiotl | 11 |
+| Mad Angel | 5 |
 
 ## Settings
 
