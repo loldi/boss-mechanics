@@ -21,5 +21,7 @@ Thumbs.db
 .env
 *.local
 
-# Internal design log, kept local
+# Internal working notes and curation material, kept local
 docs/DECISIONS.md
+data/SCHEMA.md
+assets/
