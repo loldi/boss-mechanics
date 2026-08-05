@@ -19,7 +19,7 @@ Progress shows in a **Mechanics Discovered** bar across the top of the window.
 
 Detection watches animations, projectiles, graphics and NPC spawns.
 
-If you're not interested in the discovery loop? **View All** reveals everything.
+If you're not interested in the discovery loop **View All** reveals everything.
 
 ![Mechanic discovery messages in the game chat](docs/mechanic-discovery.png)
 
