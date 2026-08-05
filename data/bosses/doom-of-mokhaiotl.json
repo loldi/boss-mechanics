@@ -53,31 +53,6 @@
       }
     },
     {
-      "id": "double-rock-throw",
-      "name": "Double Rock Throw",
-      "description": "The deepest delves send two rock throws at once, so a second set of projectiles is already falling while you are still praying through the first.",
-      "phase": "Delve 8+",
-      "counterplay": "Pray for the second explosion, not the first. Move once and let both sets land off your tile.",
-      "detection": [
-        { "type": "projectile", "id": 3396 },
-        { "type": "projectile", "id": 3397 },
-        { "type": "projectile", "id": 3398 },
-        { "type": "projectile", "id": 3399 },
-        { "type": "projectile", "id": 3400 },
-        { "type": "projectile", "id": 3401 },
-        { "type": "projectile", "id": 3402 },
-        { "type": "projectile", "id": 3403 }
-      ],
-      "preview": {
-        "modelId": 56479,
-        "animationId": 12440,
-        "zoom": 420,
-        "shiftX": -65,
-        "shiftY": 62,
-        "secondary": { "modelId": 56479, "animationId": 12441, "zoom": 420, "shiftX": 65, "shiftY": 62 }
-      }
-    },
-    {
       "id": "melee-punish",
       "name": "Melee Punish",
       "description": "A yellow bar charges above Doom, ending in a beam that no prayer stops. While it charges it prays against everything except the style you are meant to answer it with.",
@@ -102,14 +77,7 @@
         { "type": "npc-spawn", "id": 14788 },
         { "type": "npc-spawn", "id": 14789 }
       ],
-      "preview": {
-        "npcId": 14713,
-        "animationId": 12456,
-        "zoom": 171,
-        "shiftX": -60,
-        "shiftY": 48,
-        "secondary": { "npcId": 14712, "animationId": 12456, "zoom": 171, "shiftX": 65, "shiftY": 25 }
-      }
+      "preview": { "sprite": "demonic-larvae.png" }
     },
     {
       "id": "shockwave",
@@ -131,7 +99,7 @@
         { "type": "npc-spawn", "id": 14714 },
         { "type": "npc-spawn", "id": 14715 }
       ],
-      "preview": { "npcId": 14714, "animationId": 12431, "zoom": 1050, "shiftY": 23 }
+      "preview": { "npcId": 14714, "animationId": 12431, "zoom": 1250, "shiftY": 35 }
     },
     {
       "id": "acid-blood",
@@ -171,10 +139,35 @@
         { "type": "animation", "id": 12417 },
         { "type": "animation", "id": 12419 }
       ],
-      "preview": { "modelId": 56455, "animationId": 12417, "zoom": 2500, "shiftY": 41 }
+      "preview": { "modelId": 56455, "animationId": 12420, "zoom": 2500, "shiftY": 41 }
+    },
+    {
+      "id": "double-rock-throw",
+      "name": "Double Rock Throw",
+      "description": "The deepest delves send two rock throws at once, so a second set of projectiles is already falling while you are still praying through the first.",
+      "phase": "Delve 8+",
+      "counterplay": "Pray for the second explosion, not the first. Move once and let both sets land off your tile.",
+      "detection": [
+        { "type": "projectile", "id": 3396 },
+        { "type": "projectile", "id": 3397 },
+        { "type": "projectile", "id": 3398 },
+        { "type": "projectile", "id": 3399 },
+        { "type": "projectile", "id": 3400 },
+        { "type": "projectile", "id": 3401 },
+        { "type": "projectile", "id": 3402 },
+        { "type": "projectile", "id": 3403 }
+      ],
+      "preview": {
+        "modelId": 56479,
+        "animationId": 12440,
+        "zoom": 420,
+        "shiftX": -65,
+        "shiftY": 62,
+        "secondary": { "modelId": 56479, "animationId": 12441, "zoom": 420, "shiftX": 65, "shiftY": 62 }
+      }
     }
   ],
   "_ids": "Every id here is named, not guessed: they come from Jagex's own gameval names (NpcID DOM_BOSS/DOM_BOSS_SHIELDED/DOM_BOSS_BURROWED/DOM_DEMONIC_ENERGY_*/DOM_SHOCKWAVE_PATH_NODE/DOM_SHOCKWAVE_SHIELD, AnimationID DOM_* and NPC_DEMONIC_GRUB_*, SpotanimID VFX_STANDARD_PROJECTILE_*/VFX_ROCK_PROJECTILE_*/VFX_BEAM_CHARGE_UP_01/VFX_DOOM_BOSS_BLOOD_SPLAT_*). The live cache's GAMEVALS index is not downloaded by the game client, and runelite-api 1.12.33 predates this boss entirely, so the names were read from RuneLite master's generated gameval sources and cross-checked against the ids present in the cache.",
   "_previews": "Doom is the first boss whose body animations are SKELETAL (sequence config opcode 13, zero classic frames), so FitZoom can only measure the static bind pose and the framemap compat check says nothing. The previews use model 56455 rather than the npc: 14707's models[0] is only the 1515-vertex centre body (X +/-142), while 56455 is the merged 1901-vertex whole boss (X +/-322) that Jagex's own Combat Achievements screen uses (struct 4933: model 56455, anim 12453 NPC_DOOM_BOSS_IDLE_CA, zoom 2500). Both carry the same 83-bone animaya rig, which is why the per-mechanic DOM_* animations play on it. The boss previews now ship at Jagex's own 2500 rather than the bind-pose fit of 1698: the first live pass showed the animated poses reaching well outside the bind pose and clipping the box, which is exactly the measurement the skeletal format denies us. shiftY tracks it (199 model units, projected at the shipped zoom). Larva recolor tables were checked against the model's face colours (D28): they repaint 0% of the faces, so a model preview is colour-true and no sprite is needed.",
-  "_note": "Trigger ids are NOT yet verified in a live delve; they are cache-derived. Enable 'Log boss trigger ids' and run a delve to confirm. Two things to check first. (1) double-rock-throw claims the eight VFX_ROCK_PROJECTILE_PROJECTILE_ALT ids (3396-3403) on the reading that the ALT set is the second simultaneous throw at delve 8+, while the base set (3388-3395) is the ordinary one; if the ALT ids instead turn out to be the 2nd/3rd projectile of any multi-projectile throw, this mechanic will unlock as early as delve 2 and its detection needs rethinking. (2) the beam charge-up graphic 3412 is a trigger on the assumption that a player cannot produce it. Alternate preview animations to try if the shipped ones read poorly: 12409 DOM_BEAM_CHARGE_LOOP or 12411 DOM_BEAM_FIRE for melee-punish, 12413/12415 for shockwave, 12420 DOM_BURROW or 12418 DOM_BURROWED_EMERGE for burrow-charge (12417 DOM_BURROWED_MOVEMENT is shipped because the one-shot dive left the box empty once it finished), and 12453 NPC_DOOM_BOSS_IDLE_CA as a neutral fallback for any of them. demonic-larvae shows the melee and magic grubs; the ranged one needs a second secondary slot, which is a code change (see issue #63). See issue #61."
+  "_note": "Trigger ids are NOT yet verified in a live delve; they are cache-derived. Enable 'Log boss trigger ids' and run a delve to confirm. Two things to check first. (1) double-rock-throw claims the eight VFX_ROCK_PROJECTILE_PROJECTILE_ALT ids (3396-3403) on the reading that the ALT set is the second simultaneous throw at delve 8+, while the base set (3388-3395) is the ordinary one; if the ALT ids instead turn out to be the 2nd/3rd projectile of any multi-projectile throw, this mechanic will unlock as early as delve 2 and its detection needs rethinking. (2) the beam charge-up graphic 3412 is a trigger on the assumption that a player cannot produce it. Alternate preview animations to try if the shipped ones read poorly: 12409 DOM_BEAM_CHARGE_LOOP or 12411 DOM_BEAM_FIRE for melee-punish, 12413/12415 for shockwave, and 12453 NPC_DOOM_BOSS_IDLE_CA as a neutral fallback for any of them. burrow-charge ships 12420 DOM_BURROW knowing it plays once and holds: it is a one-shot dive, and the widget does not restart it. 12417 DOM_BURROWED_MOVEMENT was tried as a looping substitute and is worse -- with no arena floor to be under, it reads as the boss standing in a broken pose rather than moving beneath the ground. Looping a one-shot preview is an engine question, not a data one. demonic-larvae is a bundled sprite (issue #64) rather than a model preview, for two reasons: the mechanic's whole point is that colour names the prayer and only a sprite can show all three at once, and the grub models carry no rig at all (no framemap groups, no animaya bones), so NPC_DEMONIC_GRUB_WALK could only cycle their alpha and read as jitter rather than crawling. That is also why the multi-secondary generalisation (issue #63) was dropped. See issue #61."
 }
