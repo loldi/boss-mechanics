@@ -96,6 +96,11 @@ final class BossDataValidator
 				validateTriggers(errors, expectedId, label, mechanic.getDetection());
 			}
 
+			if (mechanic.getRequires() != null)
+			{
+				validateRequirement(errors, expectedId, label, mechanic.getRequires());
+			}
+
 			if (mechanic.getPreview() == null)
 			{
 				errors.add(expectedId + ": " + label + ": preview is required");
@@ -164,6 +169,39 @@ final class BossDataValidator
 			{
 				errors.add(expectedId + ": " + label + ": missing required field 'id'");
 			}
+		}
+	}
+
+	/**
+	 * docs/DECISIONS.md D38: a {@code requires} gate needs a recognized {@code type}, the {@code id}
+	 * of the state to read, and a {@code min} of at least 1 -- a lower value would never gate
+	 * anything, since a varp can't read below 0.
+	 */
+	private static void validateRequirement(List<String> errors, String expectedId, String mechanicLabel, Requirement requirement)
+	{
+		String label = mechanicLabel + ".requires";
+
+		if (isBlank(requirement.getType()))
+		{
+			errors.add(expectedId + ": " + label + ": missing required field 'type'");
+		}
+		else if (requirement.requirementType() == null)
+		{
+			errors.add(expectedId + ": " + label + ": unknown requirement type '" + requirement.getType() + "'");
+		}
+
+		if (requirement.getId() == null)
+		{
+			errors.add(expectedId + ": " + label + ": missing required field 'id'");
+		}
+
+		if (requirement.getMin() == null)
+		{
+			errors.add(expectedId + ": " + label + ": missing required field 'min'");
+		}
+		else if (requirement.getMin() < 1)
+		{
+			errors.add(expectedId + ": " + label + ": min must be at least 1 (a lower value would never gate anything)");
 		}
 	}
 

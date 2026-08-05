@@ -119,7 +119,7 @@ public class DiscoveryStateTest
 
 	private static Mechanic mechanic(String id)
 	{
-		return new Mechanic(id, id, "desc", "counterplay", null, Collections.emptyList(), null, null);
+		return new Mechanic(id, id, "desc", "counterplay", null, Collections.emptyList(), null, null, null);
 	}
 
 	private static class FakeDiscoveryStore implements DiscoveryStore

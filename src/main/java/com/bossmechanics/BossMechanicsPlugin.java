@@ -138,7 +138,7 @@ public class BossMechanicsPlugin extends Plugin
 
 		profileStateStore = new ProfileStateStore(configManager, bossIds);
 		discoveryState = new DiscoveryState(profileStateStore);
-		detectionEngine = new DetectionEngine(bosses, discoveryState);
+		detectionEngine = new DetectionEngine(bosses, discoveryState, client::getVarpValue);
 
 		// The RS profile is not yet known this early (login screen); reload() here is a no-op
 		// today and the real load happens on RuneScapeProfileChanged below. Kept for the case

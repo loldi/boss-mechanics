@@ -6,8 +6,10 @@ import static org.junit.Assert.assertTrue;
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.Mechanic;
 import com.bossmechanics.data.Preview;
+import com.bossmechanics.data.Requirement;
 import com.bossmechanics.data.Trigger;
 import com.bossmechanics.data.TriggerType;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +34,13 @@ public class DetectionEngineTest
 	private static final int SPAWN_GRAPHIC = 700;
 
 	private static final Boss VORKATH = vorkathFixture();
+
+	// Doom-shaped fixture (docs/DECISIONS.md D38): two mechanics sharing one trigger id, one
+	// gated on a varp threshold -- exactly the double-rock-throw/rock-throw shape.
+	private static final int GATED_BOSS_NPC = 14707;
+	private static final int SHARED_PROJECTILE = 3396;
+	private static final int GATE_VARP = 4828;
+	private static final int GATE_MIN = 8;
 
 	private DiscoveryState state;
 	private DetectionEngine engine;
@@ -281,6 +290,107 @@ public class DetectionEngineTest
 		assertTrue(vorkathEngine.projectileFired(1, ACID_PROJECTILE).isEmpty());
 	}
 
+	// --- docs/DECISIONS.md D38: state-gated discovery. ---
+
+	@Test
+	public void gatedMechanicIsNotDiscoveredBelowMin()
+	{
+		DetectionEngine gatedEngine = new DetectionEngine(Collections.singletonList(gatedFixture()),
+			new DiscoveryState(), id -> 0);
+		gatedEngine.npcSpawned(1, GATED_BOSS_NPC);
+
+		List<Discovery> result = gatedEngine.projectileFired(1, SHARED_PROJECTILE);
+
+		assertTrue(mechanicIds(result).contains("rock-throw"));
+		assertTrue(!mechanicIds(result).contains("double-rock-throw"));
+	}
+
+	@Test
+	public void gatedMechanicIsDiscoveredAtMin()
+	{
+		DetectionEngine gatedEngine = new DetectionEngine(Collections.singletonList(gatedFixture()),
+			new DiscoveryState(), id -> GATE_MIN);
+		gatedEngine.npcSpawned(1, GATED_BOSS_NPC);
+
+		List<Discovery> result = gatedEngine.projectileFired(1, SHARED_PROJECTILE);
+
+		assertTrue(mechanicIds(result).contains("double-rock-throw"));
+	}
+
+	@Test
+	public void gateReEvaluatesOnLaterTriggers()
+	{
+		// A below-min match must not consume the once-only discovery: raising the varp and
+		// firing again must still discover it, not stay silent forever.
+		int[] varp = {0};
+		DetectionEngine gatedEngine = new DetectionEngine(Collections.singletonList(gatedFixture()),
+			new DiscoveryState(), id -> varp[0]);
+		gatedEngine.npcSpawned(1, GATED_BOSS_NPC);
+
+		List<Discovery> belowMin = gatedEngine.projectileFired(1, SHARED_PROJECTILE);
+		assertTrue(!mechanicIds(belowMin).contains("double-rock-throw"));
+
+		varp[0] = GATE_MIN;
+		List<Discovery> atMin = gatedEngine.projectileFired(1, SHARED_PROJECTILE);
+		assertTrue(mechanicIds(atMin).contains("double-rock-throw"));
+	}
+
+	@Test
+	public void discoveredGatedMechanicStaysDiscoveredWhenGateStopsHolding()
+	{
+		// Discovery is persistent per profile (D18) and nothing un-marks it: discovered at
+		// delve 8 stays discovered at delve 1.
+		int[] varp = {GATE_MIN};
+		DiscoveryState gatedState = new DiscoveryState();
+		DetectionEngine gatedEngine = new DetectionEngine(Collections.singletonList(gatedFixture()),
+			gatedState, id -> varp[0]);
+		gatedEngine.npcSpawned(1, GATED_BOSS_NPC);
+		gatedEngine.projectileFired(1, SHARED_PROJECTILE);
+		assertTrue(gatedState.isDiscovered("gated-boss", "double-rock-throw"));
+
+		varp[0] = 0;
+		gatedEngine.projectileFired(1, SHARED_PROJECTILE);
+
+		assertTrue(gatedState.isDiscovered("gated-boss", "double-rock-throw"));
+	}
+
+	@Test
+	public void ungatedMechanicsIgnoreTheReader()
+	{
+		DetectionEngine throwingEngine = new DetectionEngine(Collections.singletonList(SIRE),
+			new DiscoveryState(), id -> {
+				throw new AssertionError("an ungated mechanic must never read a varp");
+			});
+		throwingEngine.npcSpawned(1, SIRE_AWAKE);
+
+		List<Discovery> result = throwingEngine.animationPlayed(1, MIASMA_ANIMATION);
+
+		assertEquals(1, result.size());
+		assertEquals("miasma-pools", result.get(0).getMechanic().getId());
+	}
+
+	private static Boss gatedFixture()
+	{
+		Requirement gate = new Requirement("varp", GATE_VARP, GATE_MIN);
+		Mechanic rockThrow = mechanic("rock-throw", "Rock Throw",
+			Collections.singletonList(trigger("projectile", SHARED_PROJECTILE)));
+		Mechanic doubleRockThrow = mechanic("double-rock-throw", "Double Rock Throw",
+			Collections.singletonList(trigger("projectile", SHARED_PROJECTILE)), gate);
+
+		return new Boss("gated-boss", "Gated Boss", Collections.singletonList(GATED_BOSS_NPC),
+			"https://example.com", Arrays.asList(rockThrow, doubleRockThrow));
+	}
+
+	private static List<String> mechanicIds(List<Discovery> discoveries)
+	{
+		List<String> ids = new ArrayList<>();
+		for (Discovery discovery : discoveries)
+		{
+			ids.add(discovery.getMechanic().getId());
+		}
+		return ids;
+	}
+
 	private static Boss sireFixture()
 	{
 		Mechanic miasmaPools = mechanic("miasma-pools", "Miasma Pools",
@@ -312,7 +422,12 @@ public class DetectionEngineTest
 
 	static Mechanic mechanic(String id, String name, List<Trigger> detection)
 	{
-		return new Mechanic(id, name, "description", "counterplay", null, detection,
+		return mechanic(id, name, detection, null);
+	}
+
+	static Mechanic mechanic(String id, String name, List<Trigger> detection, Requirement requires)
+	{
+		return new Mechanic(id, name, "description", "counterplay", null, detection, requires,
 			new Preview(null, null, false, null, null, null, null, null, null, null, null, null, null), null);
 	}
 

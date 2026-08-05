@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.BossDataLoader;
 import com.bossmechanics.data.Mechanic;
+import com.bossmechanics.data.Requirement;
 import com.bossmechanics.detection.DiscoveryState;
 import com.google.gson.Gson;
 import java.util.ArrayList;
@@ -200,6 +201,27 @@ public class MechanicsViewTest
 		assertEquals(0, view.progressFillWidth(100));
 	}
 
+	/**
+	 * docs/DECISIONS.md D38: reveal flows through {@code ProfileStateStore}/{@code MechanicsView}
+	 * and never consults the detection engine, so a mechanic's {@code requires} gate has no say
+	 * over "View All" -- pinned here so a future coupling between the two fails loudly.
+	 */
+	@Test
+	public void revealedGatedMechanicIsNotLocked()
+	{
+		Requirement gate = new Requirement("varp", 4828, 8);
+		Mechanic gated = new Mechanic("gated", "Name gated", "Description gated", "Counterplay gated",
+			null, Collections.emptyList(), gate, null, null);
+		Boss boss = new Boss("test-boss", "Test Boss", Collections.singletonList(1),
+			"https://example.com", Collections.singletonList(gated));
+
+		MechanicsView view = MechanicsView.of(boss, new DiscoveryState(), true);
+		MechanicRow row = view.getRows().get(0);
+
+		assertFalse("View All must reveal a gated mechanic's text same as any other row", row.isLocked());
+		assertFalse("Reveal must never fake a discovery", row.isDiscovered());
+	}
+
 	@Test
 	public void revealActionLabelOffersTheOppositeOfTheCurrentState()
 	{
@@ -217,7 +239,7 @@ public class MechanicsViewTest
 	private static Mechanic mechanic(String id, String phase)
 	{
 		return new Mechanic(id, "Name " + id, "Description " + id, "Counterplay " + id, phase,
-			Collections.emptyList(), null, null);
+			Collections.emptyList(), null, null, null);
 	}
 
 	/** The real bundled file, so schema order is asserted against curated data and not a fixture. */

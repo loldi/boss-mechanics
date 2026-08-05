@@ -317,6 +317,6 @@ public class PreviewSpecTest
 	private static Mechanic mechanic(Preview preview)
 	{
 		return new Mechanic("m1", "Name", "Description", "Counterplay", null,
-			Collections.emptyList(), preview, null);
+			Collections.emptyList(), null, preview, null);
 	}
 }

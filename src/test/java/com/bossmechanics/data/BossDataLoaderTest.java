@@ -361,6 +361,95 @@ public class BossDataLoaderTest
 			+ result.getErrors(), result.getErrors().isEmpty());
 	}
 
+	/** docs/DECISIONS.md D38: a curated {@code requires} gate round-trips from JSON to {@link Requirement}. */
+	@Test
+	public void requiresParsesFromJson()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],",
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],"
+				+ " \"requires\": { \"type\": \"varp\", \"id\": 4828, \"min\": 8 },");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue("expected no errors but got: " + result.getErrors(), result.getErrors().isEmpty());
+		Requirement requires = result.getBosses().get(0).getMechanics().get(0).getRequires();
+		assertEquals(RequirementType.VARP, requires.requirementType());
+		assertEquals(Integer.valueOf(4828), requires.getId());
+		assertEquals(Integer.valueOf(8), requires.getMin());
+	}
+
+	/** docs/DECISIONS.md D38: an absent {@code requires} means "always discoverable", the existing behavior. */
+	@Test
+	public void absentRequiresIsNull()
+	{
+		LoadResult result = loader.parseOne(MINIMAL_VALID_JSON, "vorkath");
+
+		assertEquals(null, result.getBosses().get(0).getMechanics().get(0).getRequires());
+	}
+
+	/** docs/DECISIONS.md D38: an unrecognized requires type is caught at curation time, naming the bad value. */
+	@Test
+	public void requiresWithUnknownTypeIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],",
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],"
+				+ " \"requires\": { \"type\": \"varb\", \"id\": 4828, \"min\": 8 },");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "varb"));
+	}
+
+	/** docs/DECISIONS.md D38: a requires gate with no id has nothing to read. */
+	@Test
+	public void requiresMissingIdIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],",
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],"
+				+ " \"requires\": { \"type\": \"varp\", \"min\": 8 },");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "requires"));
+		assertTrue(errorContaining(result, "id"));
+	}
+
+	/** docs/DECISIONS.md D38: a requires gate with no min has nothing to compare against. */
+	@Test
+	public void requiresMissingMinIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],",
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],"
+				+ " \"requires\": { \"type\": \"varp\", \"id\": 4828 },");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "requires"));
+		assertTrue(errorContaining(result, "min"));
+	}
+
+	/** docs/DECISIONS.md D38: min < 1 is a vacuous gate -- a varp can't read below 0. */
+	@Test
+	public void requiresMinLessThanOneIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],",
+			"\"detection\": [ { \"type\": \"npc-spawn\", \"id\": 8063 } ],"
+				+ " \"requires\": { \"type\": \"varp\", \"id\": 4828, \"min\": 0 },");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "min"));
+	}
+
 	private static boolean errorContaining(LoadResult result, String substring)
 	{
 		for (String error : result.getErrors())
