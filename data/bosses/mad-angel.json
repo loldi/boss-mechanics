@@ -61,7 +61,7 @@
       "id": "enraged-smite",
       "name": "Enraged Smite",
       "description": "Below roughly half health she enrages, opening with all three specials back to back and speeding the rest up. The smite becomes three consecutive bolts, the third arriving on a shorter gap than the second.",
-      "phase": "Enrage phase",
+      "phase": "Enrage",
       "counterplay": "Flick Protect from Magic three separate times, tightening the gap for the last one.",
       "detection": [
         { "type": "animation", "id": 8543 },
