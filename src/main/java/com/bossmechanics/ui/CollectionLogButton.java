@@ -75,6 +75,7 @@ public class CollectionLogButton
 
 	private BossPageIndex bossIndex;
 	private Consumer<Boss> onOpen;
+	private Consumer<String> onUnmatchedPage;
 
 	/** Our injected child. Never assumed live: {@link #stillAttached} re-checks the tree. */
 	private Widget button;
@@ -94,6 +95,16 @@ public class CollectionLogButton
 	public void setOnOpen(Consumer<Boss> onOpen)
 	{
 		this.onOpen = onOpen;
+	}
+
+	/**
+	 * Called with the raw page title every time a drawn page matches no boss. A miss is
+	 * indistinguishable from "this page isn't a boss" from here, so this class just reports
+	 * it and the plugin decides whether anyone wants to hear about it.
+	 */
+	public void setOnUnmatchedPage(Consumer<String> onUnmatchedPage)
+	{
+		this.onUnmatchedPage = onUnmatchedPage;
 	}
 
 	/** Called from the plugin's startUp. Nothing to build yet: the next page draw builds it. */
@@ -199,6 +210,11 @@ public class CollectionLogButton
 		currentBoss = bossIndex == null ? null : bossIndex.forPageTitle(title);
 
 		button.setHidden(currentBoss == null);
+
+		if (currentBoss == null && onUnmatchedPage != null)
+		{
+			onUnmatchedPage.accept(title);
+		}
 
 		// Read out of the cache (group 621 child 21): the Combat Achievements button is
 		// x=0 y=0 w=50 h=25 with xPositionMode 2, i.e. right-aligned. Its x is measured
