@@ -1,76 +1,125 @@
 # Boss Mechanics
 
-A RuneLite plugin that teaches you boss mechanics inside the game. Each supported
-boss's collection log page gets a Boss Mechanics button that opens a native-styled
-interface with:
+A RuneLite plugin that teaches boss mechanics inside the game. Every supported
+boss's collection log page gets a **Boss Mechanics** button. It opens a move list
+built from the game's own interface parts: what the boss does, what you do about
+it, and a looping preview of the boss actually doing it.
 
-- **Mechanics Discovered progress bar** — mechanics start as locked "???" rows and
-  unlock when your client witnesses the boss use them mid-fight, with a
-  collection-log-style chat message. Prefer spoilers? "View All" reveals everything
-  (reversibly — your real discovery progress is kept).
-- **Move list + counterplay** — what the boss does, and the one or two sentences
-  that keep you alive.
-- **Animated previews** — the boss model performing each move, rendered live from
-  the game cache.
+Mechanics start locked. They unlock as your client watches the boss use them.
 
-## Status
+<!-- PLACEHOLDER: hero gif. Collection log open on a supported boss -> click Boss
+     Mechanics -> window opens -> click through 2-3 mechanics with previews playing. -->
+![Boss Mechanics window](docs/images/hero.gif)
 
-Pre-alpha. Boss data loads and validates at startup, and the detection engine
-tracks which mechanics your client has witnessed, announcing each one in chat
-the first time. Discovery (and reveal) state now persists per character via
-RuneLite's profile config, replacing wholesale on character switch. Opening the
-collection log on a supported boss now puts a Boss Mechanics button in the header
-next to Combat Achievements, and clicking it opens the Boss Mechanics screen over
-the log, shaped like the Combat Achievements boss screen: a "Mechanics Discovered"
-progress bar across the top, then a scrollable list of moves on the left where
-undiscovered ones read `???`, and the selected move's description and counterplay
-on the right, dimmed until you have found it. A reversible "View All" sits above
-the list, remembers itself per character, and a WIKI button in the title bar
-opens the boss's wiki page. Selecting a mechanic plays its animation, looping, on
-a 291x140 model box above its description, curated per mechanic to a zoom that
-fits the animation's full frame range and a vertical anchor correction so the
-model sits centred rather than riding high in the box; a `staticFallback`
-mechanic shows the npc's own idle pose (never a raw T-pose) instead, and a
-locked "???" row shows nothing. The window now wears the real steel Combat
-Achievements chrome (frame, corners and title all pulled from the game's own
-sprites), and a mechanic's preview can also be a bundled sprite image (for the
-few moves whose colour the Widget API can't render live) or a second model
-shown alongside the first. The window can be dragged by its title bar anywhere
-on screen (never fully off it), and remembers where you put it across a "View
-All" flip, a boss switch and a close/reopen for the rest of your session. It
-also remembers its own position full stop: dragging or resizing the collection
-log underneath no longer moves it, and an undragged window simply opens
-covering wherever the log currently is. While you drag it, the window hides
-to a plain grey outline that tracks the cursor, the same way the collection
-log's own drag does, and reappears at the outline's position the moment you
-let go. See
-[docs/DECISIONS.md](docs/DECISIONS.md) for the locked design and
-[data/SCHEMA.md](data/SCHEMA.md) for the boss data format.
+## What it does
 
-**Launch bosses:** Abyssal Sire, Zulrah, Vorkath, General Graardor, Mad Angel.
+### Discovery
 
-## Development
+Every mechanic is a `???` row until your client sees the boss use it in a real
+fight. When it fires, the row fills in and the unlock is announced in chat, the
+same way a collection log slot is. Progress shows in a **Mechanics Discovered**
+bar across the top of the window.
 
-Launch a RuneLite client with the plugin sideloaded:
+Detection watches animations, projectiles, graphics and NPC spawns, and only
+counts them while a boss NPC is present. Discovery is stored per character, so a
+second account starts from scratch.
 
-```
+Not interested in the discovery loop? **View All** reveals everything. It is
+reversible and remembers itself per character, so real discovery progress is
+never lost.
+
+<!-- PLACEHOLDER: gif. A ??? row unlocking mid-fight, chat message appearing,
+     progress bar ticking up. -->
+![Discovering a mechanic](docs/images/discovery.gif)
+
+### Move list and counterplay
+
+The left column lists the boss's mechanics in the order you meet them. The right
+column holds the selected mechanic's description and its counterplay, kept to one
+or two sentences. Undiscovered mechanics are dimmed. A **WIKI** button in the
+title bar opens the boss's strategy page.
+
+<!-- PLACEHOLDER: screenshot. Move list on the left, a selected mechanic's
+     description + counterplay on the right. Mix of discovered and ??? rows. -->
+![Move list and counterplay](docs/images/move-list.png)
+
+### Animated previews
+
+Selecting a mechanic plays the boss model performing that move, looping, rendered
+live from the game cache. Each preview is curated per mechanic: zoom fitted to the
+animation's full frame range, vertical anchoring corrected, and multi-stage moves
+chained end to end (charge, hold, slam) rather than held on a single pose.
+
+Mechanics with nothing to animate, such as projectile and ground-effect moves,
+show the boss's idle pose or a bundled image instead.
+
+<!-- PLACEHOLDER: gif. 3-4 previews in a row, ideally including a chained
+     animation like Doom's Shockwave and a static/idle one. -->
+![Animated previews](docs/images/previews.gif)
+
+### The window
+
+The window uses the game's real steel interface sprites and sits over the
+collection log. Drag it by its title bar anywhere on screen. It hides to a grey
+outline while dragging, the way the collection log does, and keeps its position
+across a boss switch, a View All flip and a close/reopen.
+
+<!-- PLACEHOLDER: gif. Dragging the window across the screen by its title bar,
+     outline visible mid-drag, snapping back to full at drop. -->
+![Dragging the window](docs/images/drag.gif)
+
+## Supported bosses
+
+| Boss | Mechanics |
+|---|---|
+| Abyssal Sire | 9 |
+| Vorkath | 6 |
+| Doom of Mokhaiotl | 11 |
+
+## Settings
+
+| Setting | Default | What it does |
+|---|---|---|
+| Discovery chat messages | On | Announce each newly discovered mechanic in the chatbox |
+| Clear discoveries | Off | Forget every discovered mechanic on this character. Unticks itself once done |
+| Log boss trigger ids | Off | Curation aid. Logs every animation, projectile and graphic id a tracked boss produces, and which mechanic claims it |
+
+## Install
+
+Not on the RuneLite Plugin Hub yet. To run it, build from source:
+
+```bash
 gradlew runClient
 ```
 
-(`BossMechanicsPluginTest` is a `main()` launcher, not a JUnit test, so
-`gradlew test` will not run it. If you launch it from IntelliJ instead, add `-ea`
-to the VM options — RuneLite refuses to start without assertions enabled.)
+That launches a RuneLite client with the plugin sideloaded. Requires JDK 11+.
 
-`gradlew build` runs the boss data validation tests against every file bundled
-in `data/bosses/`. A data-only PR (adding or editing a boss JSON file) is green
-when those tests pass — see [data/SCHEMA.md](data/SCHEMA.md) for the format and
-how to add a boss.
+`BossMechanicsPluginTest` is a `main()` launcher, not a JUnit test, so
+`gradlew test` will not run it. Launching it from IntelliJ instead needs `-ea` in
+the VM options, since RuneLite refuses to start without assertions enabled.
 
-## Data & attribution
+## Adding a boss
 
-Mechanic names, descriptions, and counterplay are hand-curated, researched from the
+Boss data is one hand-curated JSON file per boss in [`data/bosses/`](data/bosses/).
+Adding a boss means adding a file and an index entry, no Java.
+
+```bash
+gradlew build
+```
+
+That runs the schema validation tests against every bundled data file, and fails
+on a malformed file or an index that disagrees with the directory. A data-only PR
+is green when those pass. See [data/SCHEMA.md](data/SCHEMA.md) for the field
+tables and [docs/DECISIONS.md](docs/DECISIONS.md) for the design decisions behind
+them.
+
+## Data and attribution
+
+Mechanic names, descriptions and counterplay are hand-written, researched from the
 [Old School RuneScape Wiki](https://oldschool.runescape.wiki/) (CC BY-SA 3.0).
-Every boss data file links its source page.
+Every boss file links its source page.
+
+Boss Mechanics is an unofficial plugin, not affiliated with Jagex or RuneLite.
 
 ## License
 
