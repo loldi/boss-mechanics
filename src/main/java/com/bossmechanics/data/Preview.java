@@ -1,5 +1,6 @@
 package com.bossmechanics.data;
 
+import java.util.List;
 import lombok.Value;
 
 /**
@@ -61,4 +62,13 @@ public class Preview
 	Integer rotationX;
 	Integer rotationY;
 	Integer rotationZ;
+	/**
+	 * Ordered animation segments played back to back, looping as a whole once the last one ends
+	 * (docs/DECISIONS.md D37), e.g. Shockwave's charge -&gt; charge loop -&gt; slam. Mutually
+	 * exclusive with {@link #animationId}: the loader rejects a preview curating both. Null (the
+	 * common case) means "no chain; play {@link #animationId} as a single looping animation", the
+	 * existing behaviour. A curated chain needs at least 2 segments -- one segment is just
+	 * {@code animationId} spelled a longer way.
+	 */
+	List<ChainSegment> animationChain;
 }

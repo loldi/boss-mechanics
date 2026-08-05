@@ -1286,6 +1286,87 @@ so new decisions are appended here rather than inserted in a themed section.
       #9 and #10 record for Sire and Vorkath. Ten mechanics, `phase` carrying the delve gating
       ("Delve 3+", "Delve 5+") that D7 anticipated for archetype-spanning bosses.
 
+37. **Chained preview animations (issue #66), promoting Shockwave and Burrow Charge off D14's
+    "one-shot animations vanish, prefer a looping id" workaround.** Shockwave's slam-only preview
+    never showed the charge that leads into it, and Burrow Charge shipped the one-shot dive (12417
+    `DOM_BURROWED_MOVEMENT`, D36) specifically because no single looping animation covers the whole
+    mechanic -- D14 already named the failure mode a one-shot has on this rendering path: it plays
+    once and then holds its last frame rather than looping, which reads as the preview freezing.
+    `preview.animationChain`: ordered `{animationId, cycles}` segments played back to back on the
+    existing D24 pool, looping as a whole once the last segment ends.
+
+    - **Both forks named in planning are resolved before this slice, not re-litigated here: no
+      probe PR, and the whole chain loops as a unit rather than playing once and holding the last
+      segment.** No probe: unlike D28/D29/D33, nothing about this feature asks an uncertain
+      question about live-client engine behaviour -- it composes three things this codebase had
+      already verified: D24's pool-widget-per-animation-id swap, `onClientTick`'s existing per-tick
+      poll (D20/D29), and ordinary integer arithmetic. The risk a probe exists to retire was
+      already retired by those decisions. Whole-chain looping matches every other preview in the
+      plugin, which loops indefinitely (D14); a chain that held its own last segment would just
+      move the Burrow Charge freeze this feature exists to fix one segment later.
+    - **Schema shape: an array of `{animationId, cycles}` objects, not two parallel arrays.** An id
+      and its curated duration are one fact together; a length mismatch between an id list and a
+      duration list is a silent bug class the object shape makes unrepresentable (a curator
+      reordering one array without the other, or a copy-paste that drops an entry from only one).
+      `preview.animationChain` is mutually exclusive with `preview.animationId`
+      (`BossDataValidator` rejects both present) and needs at least 2 segments -- one segment is
+      `animationId` spelled a longer way. A curated chain alone satisfies the existing "an
+      `animationId`, `staticFallback`, or now a chain must give the model box something to render"
+      rule, and the resolution ladder itself is unchanged (D27): `sprite` still wins over a chain,
+      and `staticFallback` still wins over one too, the same as either already won over a plain
+      `animationId` -- a chain only substitutes for one rung of the existing ladder, it does not
+      add a new one. `cycles` is client cycles, 20ms each: the sum of `frameLengths` for a classic
+      sequence, or `animMayaEnd` (the cachetool's `DumpSeqMaya`, outside this repo per D36) for a
+      skeletal one.
+    - **The clock: `MechanicsDetail.tick()`, driven by the same `onClientTick` poll
+      `BossMechanicsWindow.replaceIfChanged()` already rides -- a client-thread event already
+      firing every 20ms, not a new timer.** `chainTick` counts elapsed client ticks since the
+      visible selection's chain last restarted at segment 0 (every `show()` call, whether or not
+      the previous selection had a chain); `view.AnimationChain.animationAt(elapsedTicks)` is pure
+      arithmetic (cumulative cycles per segment, `Math.floorMod` for the wrap), the same
+      RuneLite-free, statically-testable shape `WindowDrag`/`ScrollThumbDrag` already established
+      for this project's other tick-driven math. `tick()` only mutates the visible D24 pool widget
+      (`ModelSlot.show()`, a plain get-or-create) when the resolved animation id actually changes
+      at a boundary -- never on every tick, and never via `setAnimationId` on a live widget: a
+      boundary swap is exactly the ordinary selection-change path `showModel` already uses, so
+      D24's invariant (`setAnimationId` called once, only in `ModelSlot.create`) is untouched by
+      this feature, not merely preserved by convention. Secondary models (D27) are explicitly out
+      of scope: no mechanic curates a chain on `secondary`, and `tick()` never touches it.
+    - **+/-1 tick phase jitter is accepted, not compensated (D24's known upstream gap, carried
+      forward).** `onClientTick` and the client's own internal draw-loop frame-cycle counter are
+      not guaranteed to agree to the tick, so a boundary can visibly clip or hold a single frame;
+      invisible at 20ms, and there is still no RuneLite API to reset or read a widget's own frame
+      counter (D24), so nothing here can do better than accept it.
+    - **Reused pool widgets resume, they do not restart (D24's existing resume-not-restart
+      behaviour, now visible within a single mechanic's own chain, not only across a mechanic
+      switch).** The second and later pass through a chain reuses whichever pool widget a repeated
+      segment (almost always segment 0) already has, and that widget's own frame counter keeps
+      advancing from wherever it was left rather than resetting to 0 -- the same trade D24 already
+      accepted for re-selecting a mechanic, just now also visible on every loop of a chain that has
+      been showing a while. **Open, to fill in after the live pass:** whether this drift is
+      perceptible on a real chain over several loops, and if it is, whether it reads as different
+      enough from D24's original, rarer trigger (a mechanic re-selected by hand) to need its own
+      follow-up.
+    - **Curated first: Doom of Mokhaiotl's Shockwave (`[{12412,60},{12413,30},{12414,60}]`, charge
+      into charge loop into slam) and Burrow Charge (`[{12420,150},{12421,150}]`, the dive into its
+      own underground idle, curated as 5 of the idle's own 30-cycle loops so the two segments run
+      comparable lengths), replacing the single held `animationId` each mechanic shipped with
+      before (D36).**
+    - Pinned by `AnimationChainTest` (the worked example `[60,30,60]`: tick 0/59 -> segment 0,
+      60/89 -> segment 1, 90/149 -> segment 2, 150 -> wraps back to segment 0; `of(null)`/
+      `of(empty)` -> null), `BossDataLoaderTest` (a chained preview parses; chain+`animationId`
+      both present, a 1-segment chain, `cycles < 1`, and a missing segment `animationId` are all
+      rejected; a chain alone satisfies the existing animationId-required rule), `PreviewSpecTest`
+      (the chain is carried through and `animationId` resolves to segment 0's; `staticFallback` and
+      `sprite` both still win over a curated chain, matching the unchanged ladder),
+      `MechanicsDetailPreviewTest` (ticking within a segment mutates nothing; a boundary swaps the
+      pool widget without ever calling `setAnimationId` on the widget already showing; a full pass
+      plus a second wrap still touches only the chain's own distinct segments' widgets; switching
+      to a different chained mechanic restarts the new selection's playhead at segment 0), and
+      `BossMechanicsWindowLayoutTest` (driving `onClientTick` across a boundary performs the swap;
+      further ticks after `close()` touch nothing, since `mechanicsDetail` is already discarded,
+      D22).
+
 ## Open questions
 
 - Mad Angel is the newest boss; wiki/community documentation of its IDs may be thin.

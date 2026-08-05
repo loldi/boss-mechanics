@@ -3,10 +3,13 @@ package com.bossmechanics.ui;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.bossmechanics.data.ChainSegment;
+import com.bossmechanics.view.AnimationChain;
 import com.bossmechanics.view.MechanicRow;
 import com.bossmechanics.view.PreviewSpec;
 import com.bossmechanics.view.SecondaryPreviewSpec;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -416,6 +419,131 @@ public class MechanicsDetailPreviewTest
 			Boolean.TRUE, RecordingWidget.lastArgsOf(secondaryWidget, "setHidden")[0]);
 	}
 
+	/**
+	 * Chained preview animations (issue #66, docs/DECISIONS.md D37): {@link MechanicsDetail#tick()}
+	 * walks a curated chain on the existing D24 pool, swapping which pool widget is visible only
+	 * on a segment boundary -- never every tick, and never via {@code setAnimationId} on a live
+	 * widget.
+	 */
+	@Test
+	public void tickWithinASegmentMutatesNothing()
+	{
+		List<String> calls = new ArrayList<>();
+		Widget column = RecordingWidget.create(calls);
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
+		detail.build();
+
+		AnimationChain chain = AnimationChain.of(Arrays.asList(
+			new ChainSegment(500, 3), new ChainSegment(600, 2)));
+		detail.show(unlockedRowWithChain("m1", 1, chain));
+		int callsAfterShow = calls.size();
+
+		// The first segment is 3 cycles long, so two ticks stay well inside it.
+		detail.tick();
+		detail.tick();
+
+		assertEquals("ticking within a segment must touch no widget at all -- a boundary is the "
+				+ "only thing tick() may act on",
+			callsAfterShow, calls.size());
+	}
+
+	@Test
+	public void tickAcrossABoundarySwapsThePoolWidgetWithoutTouchingSetAnimationId()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
+		detail.build();
+
+		AnimationChain chain = AnimationChain.of(Arrays.asList(
+			new ChainSegment(500, 3), new ChainSegment(600, 2)));
+		detail.show(unlockedRowWithChain("m1", 1, chain));
+
+		detail.tick();
+		detail.tick();
+		assertEquals("still inside the first segment", 1, widgetsThatCalled(column, "setModelId").size());
+
+		// The third tick lands exactly on the boundary (elapsed ticks == the first segment's own
+		// cycles), which is when the chain's own resolved animation id first changes.
+		detail.tick();
+
+		List<Widget> modelWidgets = widgetsThatCalled(column, "setModelId");
+		assertEquals("a boundary must get-or-create the pool widget for the new segment, exactly "
+				+ "like an ordinary selection change (docs/DECISIONS.md D24)",
+			2, modelWidgets.size());
+		assertEquals("a MODEL widget must play exactly one sequence for its whole lifetime "
+				+ "(docs/DECISIONS.md D24): the boundary swap must never call setAnimationId on "
+				+ "the widget that was already showing",
+			1, maxDistinctAnimationIdsEverSetOnAnyWidget(column));
+	}
+
+	@Test
+	public void aFullPassWrapsAndReusesWithoutGrowingThePool()
+	{
+		Widget column = RecordingWidget.create();
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
+		detail.build();
+
+		AnimationChain chain = AnimationChain.of(Arrays.asList(
+			new ChainSegment(500, 2), new ChainSegment(600, 2), new ChainSegment(700, 2)));
+		detail.show(unlockedRowWithChain("m1", 1, chain));
+
+		// Two full passes (12 ticks: the chain's own 6-cycle length, twice) must still land back on
+		// only the three widgets the chain's three distinct segments need -- the whole chain loops
+		// as a unit (docs/DECISIONS.md D37) rather than growing a new widget every wrap.
+		for (int i = 0; i < 12; i++)
+		{
+			detail.tick();
+		}
+
+		assertEquals("a chain that has wrapped around must still show only its own distinct "
+				+ "segments' widgets, never grow the pool",
+			3, widgetsThatCalled(column, "setModelId").size());
+	}
+
+	@Test
+	public void switchingMechanicsMidChainRestartsTheNewSelectionAtSegmentZero()
+	{
+		List<String> calls = new ArrayList<>();
+		Widget column = RecordingWidget.create(calls);
+
+		MechanicsDetail detail = new MechanicsDetail(column, npcId -> npcId * 10, name -> -1, () -> null);
+		detail.build();
+
+		AnimationChain chainA = AnimationChain.of(Arrays.asList(
+			new ChainSegment(500, 3), new ChainSegment(600, 2)));
+		detail.show(unlockedRowWithChain("m1", 1, chainA));
+		// Run chain A's playhead well past where a second chain's own first segment would end, so
+		// a bug that failed to reset the playhead on the new selection would show up immediately.
+		for (int i = 0; i < 12; i++)
+		{
+			detail.tick();
+		}
+
+		AnimationChain chainB = AnimationChain.of(Arrays.asList(
+			new ChainSegment(700, 10), new ChainSegment(800, 5)));
+		detail.show(unlockedRowWithChain("m2", 2, chainB));
+		int callsAfterShow = calls.size();
+
+		// One tick into the new selection: correctly restarted at segment 0, this is nowhere near
+		// chain B's own 10-cycle first segment, so nothing may swap. A stale (un-reset) playhead
+		// carried over from chain A's 12 ticks would already be past chain B's first boundary.
+		detail.tick();
+
+		assertEquals("selecting a new chained mechanic must restart its playhead at segment 0, not "
+				+ "continue counting from the previous selection's chain",
+			callsAfterShow, calls.size());
+	}
+
+	private static MechanicRow unlockedRowWithChain(String mechanicId, int npcId, AnimationChain chain)
+	{
+		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
+			new PreviewSpec(true, npcId, chain.animationAt(0), PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null,
+				0, 0, 0, chain));
+	}
+
 	private static boolean carriesModelId(List<Widget> widgets, int modelId)
 	{
 		for (Widget widget : widgets)
@@ -617,14 +745,14 @@ public class MechanicsDetailPreviewTest
 	private static MechanicRow unlockedRow(String mechanicId, int npcId, int animationId, int shiftY, int shiftX)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null, 0, 0, 0));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, shiftY, null, null, shiftX, null, 0, 0, 0, null));
 	}
 
 	private static MechanicRow unlockedRowWithText(String mechanicId, String name, String description,
 		String counterplay)
 	{
 		return new MechanicRow(mechanicId, true, false, name, description, counterplay, null,
-			new PreviewSpec(true, 1, 500, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null, 0, 0, 0));
+			new PreviewSpec(true, 1, 500, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null, 0, 0, 0, null));
 	}
 
 	private static MechanicRow unlockedRowWithRotation(String mechanicId, int npcId, int animationId,
@@ -632,26 +760,26 @@ public class MechanicsDetailPreviewTest
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
 			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, null,
-				rotationX, rotationY, rotationZ));
+				rotationX, rotationY, rotationZ, null));
 	}
 
 	private static MechanicRow unlockedRowWithModelId(String mechanicId, int modelId, int animationId)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null, 0, 0, 0));
+			new PreviewSpec(true, 0, animationId, PreviewSpec.DEFAULT_ZOOM, 0, modelId, null, 0, null, 0, 0, 0, null));
 	}
 
 	private static MechanicRow spriteRow(String mechanicId, String sprite)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0));
+			new PreviewSpec(true, 0, PreviewSpec.NO_ANIMATION, PreviewSpec.DEFAULT_ZOOM, 0, null, sprite, 0, null, 0, 0, 0, null));
 	}
 
 	private static MechanicRow unlockedRowWithSecondary(String mechanicId, int npcId, int animationId,
 		SecondaryPreviewSpec secondary)
 	{
 		return new MechanicRow(mechanicId, true, false, "Name", "Description", "Counterplay", null,
-			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary, 0, 0, 0));
+			new PreviewSpec(true, npcId, animationId, PreviewSpec.DEFAULT_ZOOM, 0, null, null, 0, secondary, 0, 0, 0, null));
 	}
 
 	private static MechanicRow lockedRow()

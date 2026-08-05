@@ -5,9 +5,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.bossmechanics.data.ChainSegment;
 import com.bossmechanics.data.Mechanic;
 import com.bossmechanics.data.Preview;
 import com.bossmechanics.data.SecondaryPreview;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
@@ -24,7 +26,7 @@ public class PreviewSpecTest
 	@Test
 	public void lockedIsNeverVisible()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, true);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, true);
 
 		assertFalse(spec.isVisible());
 	}
@@ -32,7 +34,7 @@ public class PreviewSpecTest
 	@Test
 	public void npcIdDefaultsToTheBossFirstNpcId()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(111, spec.getNpcId());
 	}
@@ -40,7 +42,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitNpcIdIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, 222, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, 222, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(222, spec.getNpcId());
 	}
@@ -48,7 +50,7 @@ public class PreviewSpecTest
 	@Test
 	public void staticFallbackWinsOverAPresentAnimationId()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, true, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, true, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(PreviewSpec.NO_ANIMATION, spec.getAnimationId());
 	}
@@ -56,7 +58,7 @@ public class PreviewSpecTest
 	@Test
 	public void missingAnimationIdFallsBackToAStaticPoseInsteadOfCrashing()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(null, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(null, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(PreviewSpec.NO_ANIMATION, spec.getAnimationId());
 	}
@@ -64,7 +66,7 @@ public class PreviewSpecTest
 	@Test
 	public void zoomDefaultsTo3000()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(PreviewSpec.DEFAULT_ZOOM, spec.getZoom());
 	}
@@ -72,7 +74,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitZoomIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, 1500, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, 1500, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(1500, spec.getZoom());
 	}
@@ -81,7 +83,7 @@ public class PreviewSpecTest
 	@Test
 	public void shiftYDefaultsToZero()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(0, spec.getShiftY());
 	}
@@ -94,7 +96,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitShiftYIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, 268, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, 268, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(268, spec.getShiftY());
 	}
@@ -106,7 +108,7 @@ public class PreviewSpecTest
 	@Test
 	public void modelIdDefaultsToNull()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(null, spec.getModelId());
 	}
@@ -118,7 +120,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitModelIdIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, 17550, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, 17550, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(Integer.valueOf(17550), spec.getModelId());
 	}
@@ -132,7 +134,7 @@ public class PreviewSpecTest
 	public void spritePreviewIsVisibleAndCarriesTheSpriteName()
 	{
 		PreviewSpec spec = PreviewSpec.of(
-			mechanic(new Preview(null, null, false, null, null, null, "venomous-dragonfire.png", null, null, null, null, null)),
+			mechanic(new Preview(null, null, false, null, null, null, "venomous-dragonfire.png", null, null, null, null, null, null)),
 			BOSS_NPC_IDS, false);
 
 		assertTrue(spec.isVisible());
@@ -144,7 +146,7 @@ public class PreviewSpecTest
 	public void lockedRowNeverLeaksASpriteEither()
 	{
 		PreviewSpec spec = PreviewSpec.of(
-			mechanic(new Preview(null, null, false, null, null, null, "venomous-dragonfire.png", null, null, null, null, null)),
+			mechanic(new Preview(null, null, false, null, null, null, "venomous-dragonfire.png", null, null, null, null, null, null)),
 			BOSS_NPC_IDS, true);
 
 		assertFalse(spec.isVisible());
@@ -155,7 +157,7 @@ public class PreviewSpecTest
 	@Test
 	public void spriteDefaultsToNull()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertNull(spec.getSprite());
 	}
@@ -164,7 +166,7 @@ public class PreviewSpecTest
 	@Test
 	public void shiftXDefaultsToZero()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(0, spec.getShiftX());
 	}
@@ -173,7 +175,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitShiftXIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, -50, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, -50, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(-50, spec.getShiftX());
 	}
@@ -182,7 +184,7 @@ public class PreviewSpecTest
 	@Test
 	public void rotationDefaultsToZero()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(0, spec.getRotationX());
 		assertEquals(0, spec.getRotationY());
@@ -193,7 +195,7 @@ public class PreviewSpecTest
 	@Test
 	public void explicitRotationIsHonored()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, 512, 1024, 1536)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, 512, 1024, 1536, null)), BOSS_NPC_IDS, false);
 
 		assertEquals(512, spec.getRotationX());
 		assertEquals(1024, spec.getRotationY());
@@ -204,7 +206,7 @@ public class PreviewSpecTest
 	@Test
 	public void secondaryDefaultsToNull()
 	{
-		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
 
 		assertNull(spec.getSecondary());
 	}
@@ -218,7 +220,7 @@ public class PreviewSpecTest
 	{
 		SecondaryPreview secondaryData = new SecondaryPreview(29475, null, 7115, 1100, 90, 33, 512, null, null);
 		PreviewSpec spec = PreviewSpec.of(
-			mechanic(new Preview(500, null, false, null, null, null, null, -50, secondaryData, null, null, null)),
+			mechanic(new Preview(500, null, false, null, null, null, null, -50, secondaryData, null, null, null, null)),
 			BOSS_NPC_IDS, false);
 
 		SecondaryPreviewSpec secondary = spec.getSecondary();
@@ -238,10 +240,78 @@ public class PreviewSpecTest
 	{
 		SecondaryPreview secondaryData = new SecondaryPreview(29475, null, 7115, 1100, 90, 33, null, null, null);
 		PreviewSpec spec = PreviewSpec.of(
-			mechanic(new Preview(500, null, false, null, null, null, null, null, secondaryData, null, null, null)),
+			mechanic(new Preview(500, null, false, null, null, null, null, null, secondaryData, null, null, null, null)),
 			BOSS_NPC_IDS, true);
 
 		assertNull(spec.getSecondary());
+	}
+
+	/**
+	 * docs/DECISIONS.md D37: a curated chain is carried through, and {@code animationId} resolves
+	 * to its first segment's -- a widget needs something to show before {@code tick()} ever runs.
+	 */
+	@Test
+	public void chainIsCarriedAndAnimationIdResolvesToTheFirstSegment()
+	{
+		List<ChainSegment> chainData = Arrays.asList(
+			new ChainSegment(12412, 60), new ChainSegment(12413, 30));
+		PreviewSpec spec = PreviewSpec.of(
+			mechanic(new Preview(null, null, false, null, null, null, null, null, null, null, null, null, chainData)),
+			BOSS_NPC_IDS, false);
+
+		assertEquals(12412, spec.getAnimationId());
+		assertEquals(chainData, spec.getAnimationChain().getSegments());
+	}
+
+	/** docs/DECISIONS.md D37: staticFallback wins over a curated chain, same as over animationId. */
+	@Test
+	public void staticFallbackWinsOverAChainToo()
+	{
+		List<ChainSegment> chainData = Arrays.asList(
+			new ChainSegment(12412, 60), new ChainSegment(12413, 30));
+		PreviewSpec spec = PreviewSpec.of(
+			mechanic(new Preview(null, null, true, null, null, null, null, null, null, null, null, null, chainData)),
+			BOSS_NPC_IDS, false);
+
+		assertEquals(PreviewSpec.NO_ANIMATION, spec.getAnimationId());
+		assertNull(spec.getAnimationChain());
+	}
+
+	/** docs/DECISIONS.md D37: sprite wins over a curated chain too, the same as every model field. */
+	@Test
+	public void spriteWinsOverAChainToo()
+	{
+		List<ChainSegment> chainData = Arrays.asList(
+			new ChainSegment(12412, 60), new ChainSegment(12413, 30));
+		PreviewSpec spec = PreviewSpec.of(
+			mechanic(new Preview(null, null, false, null, null, null, "venomous-dragonfire.png", null, null,
+				null, null, null, chainData)),
+			BOSS_NPC_IDS, false);
+
+		assertEquals("venomous-dragonfire.png", spec.getSprite());
+		assertNull(spec.getAnimationChain());
+	}
+
+	/** docs/DECISIONS.md D37: no curated chain means no chain, the ordinary single-animation path. */
+	@Test
+	public void chainDefaultsToNull()
+	{
+		PreviewSpec spec = PreviewSpec.of(mechanic(new Preview(500, null, false, null, null, null, null, null, null, null, null, null, null)), BOSS_NPC_IDS, false);
+
+		assertNull(spec.getAnimationChain());
+	}
+
+	/** docs/DECISIONS.md D37: a locked row never resolves a chain either. */
+	@Test
+	public void lockedRowNeverResolvesAChain()
+	{
+		List<ChainSegment> chainData = Arrays.asList(
+			new ChainSegment(12412, 60), new ChainSegment(12413, 30));
+		PreviewSpec spec = PreviewSpec.of(
+			mechanic(new Preview(null, null, false, null, null, null, null, null, null, null, null, null, chainData)),
+			BOSS_NPC_IDS, true);
+
+		assertNull(spec.getAnimationChain());
 	}
 
 	private static Mechanic mechanic(Preview preview)

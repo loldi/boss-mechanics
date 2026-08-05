@@ -258,6 +258,109 @@ public class BossDataLoaderTest
 		assertTrue(errorContaining(result, "a,b"));
 	}
 
+	/** docs/DECISIONS.md D37: a chained preview parses, and its animationId resolves to segment 0's. */
+	@Test
+	public void chainedPreviewParses()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationChain\": ["
+				+ "  { \"animationId\": 12412, \"cycles\": 60 },"
+				+ "  { \"animationId\": 12413, \"cycles\": 30 }"
+				+ "] }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue("expected no errors but got: " + result.getErrors(), result.getErrors().isEmpty());
+		Preview preview = result.getBosses().get(0).getMechanics().get(0).getPreview();
+		assertEquals(2, preview.getAnimationChain().size());
+		assertEquals(Integer.valueOf(12412), preview.getAnimationChain().get(0).getAnimationId());
+		assertEquals(Integer.valueOf(60), preview.getAnimationChain().get(0).getCycles());
+	}
+
+	/** docs/DECISIONS.md D37: chain and animationId are mutually exclusive. */
+	@Test
+	public void chainAndAnimationIdBothPresentIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationId\": 7960, \"animationChain\": ["
+				+ "  { \"animationId\": 12412, \"cycles\": 60 },"
+				+ "  { \"animationId\": 12413, \"cycles\": 30 }"
+				+ "] }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "animationChain"));
+		assertTrue(errorContaining(result, "animationId"));
+	}
+
+	/** docs/DECISIONS.md D37: a single-segment chain is just animationId spelled a longer way. */
+	@Test
+	public void oneSegmentChainIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationChain\": [ { \"animationId\": 12412, \"cycles\": 60 } ] }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "animationChain"));
+	}
+
+	/** docs/DECISIONS.md D37: cycles must be at least 1 client tick. */
+	@Test
+	public void chainSegmentWithCyclesLessThanOneIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationChain\": ["
+				+ "  { \"animationId\": 12412, \"cycles\": 0 },"
+				+ "  { \"animationId\": 12413, \"cycles\": 30 }"
+				+ "] }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "cycles"));
+	}
+
+	/** docs/DECISIONS.md D37: a chain segment missing its animationId has nothing to play. */
+	@Test
+	public void chainSegmentWithMissingAnimationIdIsError()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationChain\": ["
+				+ "  { \"cycles\": 60 },"
+				+ "  { \"animationId\": 12413, \"cycles\": 30 }"
+				+ "] }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue(result.getBosses().isEmpty());
+		assertTrue(errorContaining(result, "animationId"));
+	}
+
+	/** docs/DECISIONS.md D37: a chain alone satisfies the "animationId required" rule. */
+	@Test
+	public void chainAloneSatisfiesTheAnimationIdRequiredRule()
+	{
+		String json = MINIMAL_VALID_JSON.replace(
+			"\"preview\": { \"animationId\": 7960, \"staticFallback\": true }",
+			"\"preview\": { \"animationChain\": ["
+				+ "  { \"animationId\": 12412, \"cycles\": 60 },"
+				+ "  { \"animationId\": 12413, \"cycles\": 30 }"
+				+ "] }");
+
+		LoadResult result = loader.parseOne(json, "vorkath");
+
+		assertTrue("a chain must satisfy the animationId-required rule on its own: "
+			+ result.getErrors(), result.getErrors().isEmpty());
+	}
+
 	private static boolean errorContaining(LoadResult result, String substring)
 	{
 		for (String error : result.getErrors())

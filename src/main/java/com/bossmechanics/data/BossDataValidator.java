@@ -108,10 +108,23 @@ final class BossDataValidator
 				// back to, the model box would have nothing to render. Docs/DECISIONS.md D27: a
 				// sprite preview carries no model fields at all, so it is exempt -- the sprite
 				// tier wins over every model field, including this requirement.
-				if (preview.getSprite() == null && !preview.isStaticFallback() && preview.getAnimationId() == null)
+				if (preview.getSprite() == null && !preview.isStaticFallback() && preview.getAnimationId() == null
+					&& isEmpty(preview.getAnimationChain()))
 				{
 					errors.add(expectedId + ": " + label
 						+ ": preview.animationId is required when staticFallback is false");
+				}
+
+				// docs/DECISIONS.md D37: a chain replaces animationId, not sits beside it.
+				if (preview.getAnimationId() != null && !isEmpty(preview.getAnimationChain()))
+				{
+					errors.add(expectedId + ": " + label
+						+ ": preview.animationChain and preview.animationId are mutually exclusive");
+				}
+
+				if (!isEmpty(preview.getAnimationChain()))
+				{
+					validateAnimationChain(errors, expectedId, label, preview.getAnimationChain());
 				}
 
 				// docs/DECISIONS.md D28: a rotation value outside 0-2047 crashes the client (D23),
@@ -150,6 +163,38 @@ final class BossDataValidator
 			if (trigger.getId() == null)
 			{
 				errors.add(expectedId + ": " + label + ": missing required field 'id'");
+			}
+		}
+	}
+
+	/**
+	 * docs/DECISIONS.md D37: a chained preview needs at least 2 segments (one segment is just
+	 * {@code animationId} spelled a longer way), and every segment needs both a positive
+	 * {@code cycles} (the client's own animation clock, 20ms per tick -- 0 or fewer never
+	 * advances) and an {@code animationId} to actually play.
+	 */
+	private static void validateAnimationChain(List<String> errors, String expectedId, String mechanicLabel,
+		List<ChainSegment> chain)
+	{
+		if (chain.size() < 2)
+		{
+			errors.add(expectedId + ": " + mechanicLabel
+				+ ": preview.animationChain must have at least 2 segments");
+		}
+
+		for (int i = 0; i < chain.size(); i++)
+		{
+			ChainSegment segment = chain.get(i);
+			String label = mechanicLabel + ".animationChain[" + i + "]";
+
+			if (segment.getAnimationId() == null)
+			{
+				errors.add(expectedId + ": " + label + ": missing required field 'animationId'");
+			}
+
+			if (segment.getCycles() == null || segment.getCycles() < 1)
+			{
+				errors.add(expectedId + ": " + label + ": cycles must be at least 1");
 			}
 		}
 	}
