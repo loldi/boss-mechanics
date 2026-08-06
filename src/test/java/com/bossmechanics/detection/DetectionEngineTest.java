@@ -2,7 +2,9 @@ package com.bossmechanics.detection;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNotNull;
 
+import com.bossmechanics.PerfRecorder;
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.data.Mechanic;
 import com.bossmechanics.data.Preview;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.LongSupplier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,6 +37,13 @@ public class DetectionEngineTest
 	private static final int SPAWN_GRAPHIC = 700;
 
 	private static final Boss VORKATH = vorkathFixture();
+
+	// Allocation guard (issue #86). Warm up first so the measured loop times compiled code, not
+	// the interpreter. One boxed Integer is 16 bytes on a 64-bit JVM; the bound leaves headroom
+	// for header alignment rather than asserting an exact figure.
+	private static final int WARMUP_CALLS = 50_000;
+	private static final int MEASURED_CALLS = 200_000;
+	private static final int ONE_AUTOBOX_BYTES = 24;
 
 	// Doom-shaped fixture (docs/DECISIONS.md D38): two mechanics sharing one trigger id, one
 	// gated on a varp threshold -- exactly the double-rock-throw/rock-throw shape.
@@ -406,6 +416,43 @@ public class DetectionEngineTest
 			Arrays.asList(SIRE_AWAKE, SIRE_MINION_SURGE_FORM, SIRE_APOCALYPSE_FORM),
 			"https://oldschool.runescape.wiki/w/Abyssal_Sire/Strategies",
 			Arrays.asList(miasmaPools, tentacleGuard, minionSurge, apocalypse));
+	}
+
+	/**
+	 * Regression guard for issue #86. A trigger id no mechanic curates is the overwhelmingly
+	 * common case in live play (every graphic and every in-flight projectile in the scene), so
+	 * that path must cost the index lookup's own {@code Integer} autobox and nothing else.
+	 *
+	 * <p>Measured rather than reasoned about: issue #81's Wintertodt run put
+	 * {@code PROJECTILE_MOVED} at 48 bytes/call against a 16-byte one-autobox baseline, i.e. JIT
+	 * escape analysis demonstrably does NOT eliminate the {@code this}-capturing gate lambda at
+	 * the real call site.
+	 */
+	@Test
+	public void aMissedTriggerAllocatesNoMoreThanTheIndexLookup()
+	{
+		LongSupplier allocated = PerfRecorder.defaultAllocationSupplier();
+		assumeNotNull(allocated);
+
+		DetectionEngine engine = new DetectionEngine(Collections.singletonList(VORKATH), new DiscoveryState());
+		engine.npcSpawned(1, VORKATH_NPC);
+
+		int uncuratedGraphic = SPAWN_GRAPHIC + 999;
+
+		for (int i = 0; i < WARMUP_CALLS; i++)
+		{
+			engine.graphicCreated(uncuratedGraphic);
+		}
+
+		long before = allocated.getAsLong();
+		for (int i = 0; i < MEASURED_CALLS; i++)
+		{
+			engine.graphicCreated(uncuratedGraphic);
+		}
+		long bytesPerCall = (allocated.getAsLong() - before) / MEASURED_CALLS;
+
+		assertTrue("expected at most one autobox per miss, got " + bytesPerCall + " bytes/call",
+			bytesPerCall <= ONE_AUTOBOX_BYTES);
 	}
 
 	private static Boss vorkathFixture()
