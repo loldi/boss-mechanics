@@ -69,6 +69,34 @@ public class PerfRecorderTest
 			recorder.count(PerfRecorder.Handler.GRAPHICS_OBJECT_CREATED));
 	}
 
+	/**
+	 * Issue #85. A percentile is reported as its bucket's upper bound while max is tracked
+	 * exactly, so a low-sample handler could print a p99 above its own max -- the real Grand
+	 * Exchange run produced {@code p99=12, max=11}. Correct under the documented error band, and
+	 * still reads as broken arithmetic, which is the detail a hostile reader uses to dismiss the
+	 * whole table.
+	 *
+	 * <p>Clamping to max is strictly more accurate, never less: the true value is known to be at
+	 * or below max, so the clamp can only move the reported figure closer to the truth.
+	 */
+	@Test
+	public void reportedPercentilesNeverExceedTheExactMax()
+	{
+		PerfRecorder recorder = new PerfRecorder(ScriptedSupplier.forDeltas(new long[] {11_000L}), null);
+		recorder.setEnabled(true);
+
+		long a0 = recorder.allocStart();
+		long t0 = recorder.timeStart();
+		recorder.record(PerfRecorder.Handler.NPC_SPAWNED, t0, a0);
+
+		long max = recorder.maxNanos(PerfRecorder.Handler.NPC_SPAWNED);
+		assertEquals("max must stay exact", 11_000L, max);
+		assertEquals("p50 must not exceed the exact max", max,
+			recorder.percentileNanos(PerfRecorder.Handler.NPC_SPAWNED, 50));
+		assertEquals("p99 must not exceed the exact max", max,
+			recorder.percentileNanos(PerfRecorder.Handler.NPC_SPAWNED, 99));
+	}
+
 	@Test
 	public void allocationTotalsSumDeltasAndAppearInDump()
 	{
