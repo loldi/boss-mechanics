@@ -1,0 +1,81 @@
+{
+  "id": "zulrah",
+  "name": "Zulrah",
+  "npcIds": [2042, 2043, 2044],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Zulrah/Strategies",
+  "mechanics": [
+    {
+      "id": "serpentine-form",
+      "name": "Serpentine Form",
+      "description": "The green form. It attacks with ranged from anywhere on the platform, and its magic defence is the weakest of the three.",
+      "counterplay": "Pray Protect from Missiles and hit it with magic.",
+      "phase": "Green",
+      "detection": [
+        { "type": "npc-spawn", "id": 2042 },
+        { "type": "projectile", "id": 1045 }
+      ],
+      "preview": { "animationId": 5069, "npcId": 2042, "staticFallback": false, "zoom": 8002, "shiftY": 0 }
+    },
+    {
+      "id": "venom-clouds",
+      "name": "Venom Clouds",
+      "description": "It sprays a barrage of dark green orbs across the platform. Each one lands as a toxic cloud sitting on a three by three patch of tiles.",
+      "counterplay": "Step clear of the footprint before it lands, and stay out. The damage stacks fast if you linger.",
+      "detection": [
+        { "type": "animation", "id": 5068 },
+        { "type": "projectile", "id": 1044 }
+      ],
+      "preview": { "animationId": 5068, "npcId": 2042, "staticFallback": false, "zoom": 8002, "shiftY": 0 }
+    },
+    {
+      "id": "snakelings",
+      "name": "Snakelings",
+      "description": "White orbs land on the platform and hatch into snakelings. Each one has a single hitpoint, but they hit hard and rarely miss.",
+      "counterplay": "Wear a ring of recoil or suffering so they kill themselves attacking you. Otherwise step away and clear them.",
+      "detection": [
+        { "type": "npc-spawn", "id": 2045 },
+        { "type": "npc-spawn", "id": 2046 },
+        { "type": "projectile", "id": 1047 }
+      ],
+      "preview": { "animationId": 1741, "npcId": 2045, "staticFallback": false, "zoom": 2140, "shiftY": 5 }
+    },
+    {
+      "id": "dive-and-resurface",
+      "name": "Dive and Resurface",
+      "description": "It fires a parting volley, sinks into the swamp, and comes back up somewhere else wearing a different form.",
+      "counterplay": "Move to the tile the next form calls for while it is under. A hit landed as it dives still registers once it surfaces.",
+      "detection": [
+        { "type": "animation", "id": 5072 },
+        { "type": "animation", "id": 5073 }
+      ],
+      "preview": { "animationId": 5072, "npcId": 2042, "staticFallback": false, "zoom": 7326, "shiftY": 3 }
+    },
+    {
+      "id": "tanzanite-form",
+      "name": "Tanzanite Form",
+      "description": "The blue form. It mixes magic and ranged and leans heavily on magic, and its magic defence is enormous while its ranged defence is nothing.",
+      "counterplay": "Pray Protect from Magic and switch to ranged gear. Flick to Missiles on the tick a ranged attack starts.",
+      "phase": "Blue",
+      "detection": [
+        { "type": "npc-spawn", "id": 2044 },
+        { "type": "projectile", "id": 1046 }
+      ],
+      "preview": { "animationId": 5069, "npcId": 2044, "staticFallback": false, "zoom": 7998, "shiftY": 0 }
+    },
+    {
+      "id": "magma-tail-whip",
+      "name": "Magma Tail Whip",
+      "description": "The red form. It fixes on the tile you are standing on, holds there for a few seconds, then whips its tail through that spot. The hit is typeless and leaves you stunned.",
+      "counterplay": "Move off the tile it is staring at before the tail lands. No prayer stops it.",
+      "phase": "Red",
+      "detection": [
+        { "type": "npc-spawn", "id": 2043 },
+        { "type": "animation", "id": 5806 },
+        { "type": "animation", "id": 5807 }
+      ],
+      "preview": { "animationId": 5806, "npcId": 2043, "staticFallback": false, "zoom": 8046, "shiftY": 1 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight, which issue #11 requires before this boss is done. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; model, sequence and extent data from the live cache (revision of 2026-08-06). Jagex's internal name for this boss is SNAKEBOSS, not Zulrah, which is why a name search of the gamevals finds nothing. Npc ids: SNAKEBOSS_BOSS_RANGED 2042 (green/serpentine), SNAKEBOSS_BOSS_MELEE 2043 (red/magma), SNAKEBOSS_BOSS_MAGIC 2044 (blue/tanzanite). The three snakeling npcs (SNAKEBOSS_MINION_MELEE 2045, SNAKEBOSS_MINION_MAGIC 2046, SNAKEBOSS_MINION_DYING 2047) are deliberately NOT in npcIds: unlike General Graardor's bodyguards they are summoned adds that come and go mid-fight, which is the Abyssal Sire spawn case, so they detect on npc-spawn instead. 2047 is the dying state and is not curated as a trigger. Animations: SNAKEBOSS_ATTACK_ACIDX3 5068 and SNAKEBOSS_ATTACK_ACIDX1 5069 (the spit attacks, x3 read as the multi-orb barrage and x1 as the single-target attack), SNAKEBOSS_SINKFAST 5072 and SNAKEBOSS_EMERGEFAST 5073 (the dive), SNAKEBOSS_ATTACK_TAIL_LEFT 5806 and _RIGHT 5807 (the magma tail whip). Snakelings reuse the pet animation set, so the snakelings preview plays SNAKEBOSS_PET_ATTACK 1741 on npc 2045. Projectile assignment, and the weakest link in this file: the cache holds four SNAKEBOSS spotanims. SNAKEBOSS_ORB 1044 and SNAKEBOSS_EGG 1047 are the same model (20390) recoloured green and white respectively, which matches the wiki's description of venom clouds arriving as a barrage of dark green orbs and snakelings arriving as white orbs, so those two are treated as settled. That leaves SNAKEBOSS_DOUBLE_ORB 1045 (model 11221, recoloured to the same green as 1044) and SNAKEBOSS_FIREBALL 1046 (model 26593, recoloured to reds and oranges) as the two combat projectiles, and since the green form attacks with ranged and the blue form leans on magic, 1045 is curated as the ranged attack and 1046 as the magic attack. That last step is an inference from colour, not an attested mapping, and is followup 1. Every form mechanic also carries its own npc-spawn trigger, so a wrong projectile would misfile a trigger rather than break discovery. SNAKEBOSS_MINION_SPELL 1230 is the snakeling's own attack and is not curated: a projectile only matches when its source npc is tracked, and the snakelings deliberately are not. No requires gate: form changes are rotation-driven, not varp-driven. Phase labels are the three form colours and are attached only to the three form mechanics; venom clouds, snakelings and the dive all happen across multiple forms, so labelling them would be wrong. Zoom and shiftY are FitZoom output at the 291x140 box with the standard 10% margin, shiftY already projected to pixels at the zoom shipped here. The collection log page is titled 'Zulrah', matching 'name'.",
+  "_followups": "1. Confirm which of projectile 1045 and 1046 is the ranged attack and which is the magic attack, with Log boss trigger ids on. This is the one curated mapping in the file that rests on an inference rather than a gameval name. 2. Live verification of every other id per issue #11's acceptance criteria, in particular that animation 5068 really is the cloud barrage rather than a three-hit attack. 3. The zoom values on the five Zulrah previews (around 8000) are far above anything else shipped, because model 14408 extends roughly 620 units BELOW the ground plane even in its bind pose (the coil sitting in the swamp) and FitZoom has to fit that too. Expect the snake to read small in the box. If the submerged coil turns out to be dead space in the preview, the above-ground-only fit is roughly zoom 2700, which needs eyeballing in game before it can be shipped. 4. SNAKEBOSS_SPAWN 5071 is the very first emergence, not a dive, so it is not a trigger on dive-and-resurface; add it if the fight's opening should unlock that entry. 5. The jad phase (alternating magic and ranged during the blue form) has no distinct trigger id of its own and is folded into tanzanite-form's description rather than given a mechanic with nothing honest to detect on. 6. staticFallback is false on all six; whether each body animation reads has not been eyeballed in game. 7. FitZoom fits models[0] only, which for all three forms is the whole snake, so this is not a gap here."
+}
