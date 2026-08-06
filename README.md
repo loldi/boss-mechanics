@@ -49,7 +49,7 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 | Doom of Mokhaiotl | 11 |
 | The Mad Angel | 5 |
 | General Graardor | 5 |
-| Zulrah | 6 |
+| Zulrah | 5 |
 
 ## Settings
 
