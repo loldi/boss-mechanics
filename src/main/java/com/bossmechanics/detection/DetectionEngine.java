@@ -35,6 +35,18 @@ public class DetectionEngine
 	private final Map<Integer, String> presence = new HashMap<>();
 
 	/**
+	 * The "any tracked boss is on screen" gate, built once (issue #86).
+	 *
+	 * <p>It captures only {@code this}, so a single instance serves every call and still reads
+	 * {@link #presence} live at match time. Built per call it was measurable litter: issue #81's
+	 * instrumentation put {@code PROJECTILE_MOVED} at 48 bytes/call against a 16-byte
+	 * one-autobox baseline, and 490KB over ten minutes at Wintertodt, because JIT escape
+	 * analysis does not eliminate it here. Never a stutter risk, just garbage worth not making.
+	 */
+	private final Predicate<Discovery> anyBossPresent =
+		candidate -> presence.containsValue(candidate.getBoss().getId());
+
+	/**
 	 * No {@link GameStateReader} supplied: every varp reads 0 (docs/DECISIONS.md D38's fail-closed
 	 * default), so a caller that never curates a {@code requires} gate sees no change.
 	 */
@@ -121,13 +133,13 @@ public class DetectionEngine
 			return matchGated(TriggerType.PROJECTILE, projectileId, ownedBy(bossId));
 		}
 
-		return matchGated(TriggerType.PROJECTILE, projectileId, anyBossPresent());
+		return matchGated(TriggerType.PROJECTILE, projectileId, anyBossPresent);
 	}
 
 	/** Graphics report no source actor, so they gate on boss presence only (curators must pick ids players can't produce). */
 	public List<Discovery> graphicCreated(int graphicId)
 	{
-		return matchGated(TriggerType.GRAPHIC, graphicId, anyBossPresent());
+		return matchGated(TriggerType.GRAPHIC, graphicId, anyBossPresent);
 	}
 
 	/** A tracked NPC left. */
@@ -189,7 +201,7 @@ public class DetectionEngine
 
 	private List<Discovery> matchNpcSpawn(int npcId)
 	{
-		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent());
+		return matchGated(TriggerType.NPC_SPAWN, npcId, anyBossPresent);
 	}
 
 	private void updatePresence(int npcIndex, int npcId)
@@ -253,8 +265,4 @@ public class DetectionEngine
 		return candidate -> candidate.getBoss().getId().equals(bossId);
 	}
 
-	private Predicate<Discovery> anyBossPresent()
-	{
-		return candidate -> presence.containsValue(candidate.getBoss().getId());
-	}
 }
