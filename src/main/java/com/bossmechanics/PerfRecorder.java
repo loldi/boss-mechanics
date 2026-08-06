@@ -214,8 +214,15 @@ public final class PerfRecorder
 
 	/**
 	 * @param percentile in (0, 100]
-	 * @return the upper bound of the bucket containing the requested percentile, or 0 if nothing has
-	 * been recorded yet
+	 * @return the upper bound of the bucket containing the requested percentile, clamped to the
+	 * exact tracked max, or 0 if nothing has been recorded yet
+	 *
+	 * <p>The clamp (issue #85) is strictly more accurate, never less: the true value is known to sit
+	 * at or below {@link #maxNanos}, so capping there can only move the reported figure toward the
+	 * truth, and the bucket's lower bound still holds as the other guarantee. Without it a
+	 * low-sample handler prints a percentile above its own max (the first live run produced
+	 * {@code p99=12, max=11}) -- correct under the documented error band, but it reads as broken
+	 * arithmetic, and this table exists to be handed to skeptical readers.
 	 */
 	long percentileNanos(Handler handler, double percentile)
 	{
@@ -239,7 +246,7 @@ public final class PerfRecorder
 			cumulative += handlerBuckets[i];
 			if (cumulative >= target)
 			{
-				return bucketUpperBound(i);
+				return Math.min(bucketUpperBound(i), maxNanos[h]);
 			}
 		}
 		return maxNanos[h];
