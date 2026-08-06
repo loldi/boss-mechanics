@@ -48,6 +48,7 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 | Vorkath | 6 |
 | Doom of Mokhaiotl | 11 |
 | The Mad Angel | 5 |
+| General Graardor | 5 |
 
 ## Settings
 
