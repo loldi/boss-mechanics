@@ -107,6 +107,21 @@ public class BossMechanicsPlugin extends Plugin
 	// A plugin field, not a local, so #5's reveal UI can reach isRevealed/setRevealed.
 	private ProfileStateStore profileStateStore;
 
+	private PerfRecorder perfRecorder;
+
+	/**
+	 * Cached from {@link BossMechanicsConfig#perfInstrumentation()} in {@link #startUp} and kept in
+	 * sync by {@link #onConfigChanged} (issue #81). Read directly on every handler's fast path
+	 * instead of {@code config.perfInstrumentation()}, which would route through {@code
+	 * ConfigManager.getConfiguration} and concatenate a key string per call -- this field is the
+	 * entire cost of the flag being off: one volatile read, one branch, straight into the unwrapped
+	 * handler body. Volatile because {@link ConfigChanged} can arrive off the client thread (the
+	 * config panel's own EDT); a {@code reset()} racing an in-flight {@code record()} on the client
+	 * thread can tear one scenario's boundary, which is acceptable for a debug tool and not worth a
+	 * lock on this path.
+	 */
+	private volatile boolean perfEnabled;
+
 	/**
 	 * Sprite previews (docs/DECISIONS.md D27): reserved base for the negative ids every bundled
 	 * preview sprite registers under in {@code client.getSpriteOverrides()}, well clear of any
@@ -144,6 +159,13 @@ public class BossMechanicsPlugin extends Plugin
 		discoveryState = new DiscoveryState(profileStateStore);
 		detectionEngine = new DetectionEngine(bosses, discoveryState, client::getVarpValue);
 
+		// Issue #81: the allocation supplier is null on a JVM that cannot answer
+		// getThreadAllocatedBytes (see PerfRecorder.defaultAllocationSupplier), in which case the
+		// recorder itself degrades to timing-only rather than the plugin needing to know.
+		perfRecorder = new PerfRecorder(System::nanoTime, PerfRecorder.defaultAllocationSupplier());
+		perfEnabled = config.perfInstrumentation();
+		perfRecorder.setEnabled(perfEnabled);
+
 		// The RS profile is not yet known this early (login screen); reload() here is a no-op
 		// today and the real load happens on RuneScapeProfileChanged below. Kept for the case
 		// where the plugin is toggled on mid-session, after the profile is already resolved.
@@ -168,6 +190,7 @@ public class BossMechanicsPlugin extends Plugin
 		bossMechanicsWindow.setOnWikiOpened(this::openWiki);
 		bossMechanicsWindow.setOnMechanicSelected(mechanicId -> log.debug("Mechanic selected: {}", mechanicId));
 		bossMechanicsWindow.setSpriteIdForName(this::spriteIdForName);
+		bossMechanicsWindow.setPerfRecorder(perfRecorder);
 		eventBus.register(bossMechanicsWindow);
 		bossMechanicsWindow.onPluginStart();
 	}
@@ -251,14 +274,49 @@ public class BossMechanicsPlugin extends Plugin
 		return configManager.getConfig(BossMechanicsConfig.class);
 	}
 
+	/**
+	 * Issue #81: every live-gameplay handler below wraps its unchanged body in the same shape --
+	 * skip straight to {@code handleX} when {@link #perfEnabled} is false (the only cost: one
+	 * volatile read, one branch), otherwise bracket it with {@link PerfRecorder#allocStart()}/
+	 * {@link PerfRecorder#timeStart()} before and {@link PerfRecorder#record} after. The body has to
+	 * live in a separate method rather than inline: {@code onAnimationChanged} and
+	 * {@code onProjectileMoved} both have early returns that would otherwise skip the end-of-call
+	 * {@code record}.
+	 */
 	@Subscribe
 	public void onNpcSpawned(NpcSpawned event)
+	{
+		if (!perfEnabled)
+		{
+			handleNpcSpawned(event);
+			return;
+		}
+		long a0 = perfRecorder.allocStart();
+		long t0 = perfRecorder.timeStart();
+		handleNpcSpawned(event);
+		perfRecorder.record(PerfRecorder.Handler.NPC_SPAWNED, t0, a0);
+	}
+
+	private void handleNpcSpawned(NpcSpawned event)
 	{
 		handleNpcSpawn(event.getNpc());
 	}
 
 	@Subscribe
 	public void onNpcChanged(NpcChanged event)
+	{
+		if (!perfEnabled)
+		{
+			handleNpcChanged(event);
+			return;
+		}
+		long a0 = perfRecorder.allocStart();
+		long t0 = perfRecorder.timeStart();
+		handleNpcChanged(event);
+		perfRecorder.record(PerfRecorder.Handler.NPC_CHANGED, t0, a0);
+	}
+
+	private void handleNpcChanged(NpcChanged event)
 	{
 		NPC npc = event.getNpc();
 		for (Discovery discovery : detectionEngine.npcChanged(npc.getIndex(), npc.getId()))
@@ -270,11 +328,37 @@ public class BossMechanicsPlugin extends Plugin
 	@Subscribe
 	public void onNpcDespawned(NpcDespawned event)
 	{
+		if (!perfEnabled)
+		{
+			handleNpcDespawned(event);
+			return;
+		}
+		long a0 = perfRecorder.allocStart();
+		long t0 = perfRecorder.timeStart();
+		handleNpcDespawned(event);
+		perfRecorder.record(PerfRecorder.Handler.NPC_DESPAWNED, t0, a0);
+	}
+
+	private void handleNpcDespawned(NpcDespawned event)
+	{
 		detectionEngine.npcDespawned(event.getNpc().getIndex());
 	}
 
 	@Subscribe
 	public void onAnimationChanged(AnimationChanged event)
+	{
+		if (!perfEnabled)
+		{
+			handleAnimationChanged(event);
+			return;
+		}
+		long a0 = perfRecorder.allocStart();
+		long t0 = perfRecorder.timeStart();
+		handleAnimationChanged(event);
+		perfRecorder.record(PerfRecorder.Handler.ANIMATION_CHANGED, t0, a0);
+	}
+
+	private void handleAnimationChanged(AnimationChanged event)
 	{
 		Actor actor = event.getActor();
 		if (!(actor instanceof NPC))
@@ -294,6 +378,19 @@ public class BossMechanicsPlugin extends Plugin
 	// idempotency makes repeat matches harmless, but this handler must stay cheap and quiet.
 	@Subscribe
 	public void onProjectileMoved(ProjectileMoved event)
+	{
+		if (!perfEnabled)
+		{
+			handleProjectileMoved(event);
+			return;
+		}
+		long a0 = perfRecorder.allocStart();
+		long t0 = perfRecorder.timeStart();
+		handleProjectileMoved(event);
+		perfRecorder.record(PerfRecorder.Handler.PROJECTILE_MOVED, t0, a0);
+	}
+
+	private void handleProjectileMoved(ProjectileMoved event)
 	{
 		Projectile projectile = event.getProjectile();
 		Actor source = projectile.getSourceActor();
@@ -316,6 +413,19 @@ public class BossMechanicsPlugin extends Plugin
 	@Subscribe
 	public void onGraphicsObjectCreated(GraphicsObjectCreated event)
 	{
+		if (!perfEnabled)
+		{
+			handleGraphicsObjectCreated(event);
+			return;
+		}
+		long a0 = perfRecorder.allocStart();
+		long t0 = perfRecorder.timeStart();
+		handleGraphicsObjectCreated(event);
+		perfRecorder.record(PerfRecorder.Handler.GRAPHICS_OBJECT_CREATED, t0, a0);
+	}
+
+	private void handleGraphicsObjectCreated(GraphicsObjectCreated event)
+	{
 		int graphicId = event.getGraphicsObject().getId();
 		for (Discovery discovery : detectionEngine.graphicCreated(graphicId))
 		{
@@ -335,20 +445,46 @@ public class BossMechanicsPlugin extends Plugin
 	}
 
 	/**
-	 * The config panel has no button widget in this client version, so "Clear discoveries"
-	 * is a checkbox that performs its action and immediately unticks itself. Setting it back
-	 * re-enters here with "false", which falls through harmlessly.
+	 * The config panel has no button widget in this client version, so "Clear discoveries" and
+	 * "Dump perf stats" (issue #81) are both checkboxes that perform an action and immediately
+	 * untick themselves; setting either back to "false" re-enters here and falls through harmlessly.
+	 * "Measure handler cost" is a plain toggle instead -- both directions matter, so it keeps
+	 * {@link #perfEnabled} (and {@link #perfRecorder}'s own enabled state) synced to whatever it is
+	 * currently set to, not just reacting to "true".
 	 */
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (!BossMechanicsConfig.GROUP.equals(event.getGroup())
-			|| !"clearDiscoveries".equals(event.getKey())
-			|| !"true".equals(event.getNewValue()))
+		if (!BossMechanicsConfig.GROUP.equals(event.getGroup()))
 		{
 			return;
 		}
 
+		switch (event.getKey())
+		{
+			case "clearDiscoveries":
+				if ("true".equals(event.getNewValue()))
+				{
+					clearDiscoveries();
+				}
+				break;
+			case "perfInstrumentation":
+				perfEnabled = "true".equals(event.getNewValue());
+				perfRecorder.setEnabled(perfEnabled);
+				break;
+			case "dumpPerfStats":
+				if ("true".equals(event.getNewValue()))
+				{
+					dumpPerfStats();
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
+	private void clearDiscoveries()
+	{
 		int forgotten = 0;
 		for (Boss boss : bosses)
 		{
@@ -368,6 +504,19 @@ public class BossMechanicsPlugin extends Plugin
 				.append(" discovered mechanic(s).")
 				.build())
 			.build());
+	}
+
+	/**
+	 * "Dump perf stats" (issue #81): logs the table accumulated since instrumentation was last
+	 * enabled or last dumped, resets the counters so the next scenario is measured independently,
+	 * and unticks the checkbox that triggered it -- the same self-unticking shape
+	 * {@link #clearDiscoveries()} already uses.
+	 */
+	private void dumpPerfStats()
+	{
+		log.info("Boss Mechanics perf dump:\n{}", perfRecorder.dump());
+		perfRecorder.reset();
+		configManager.setConfiguration(BossMechanicsConfig.GROUP, "dumpPerfStats", false);
 	}
 
 	@Subscribe

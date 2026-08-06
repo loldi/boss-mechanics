@@ -1,5 +1,6 @@
 package com.bossmechanics.ui;
 
+import com.bossmechanics.PerfRecorder;
 import com.bossmechanics.data.Boss;
 import com.bossmechanics.view.MechanicsView;
 import com.bossmechanics.view.Selection;
@@ -310,6 +311,13 @@ public class BossMechanicsWindow
 	private Consumer<String> onWikiOpened;
 
 	/**
+	 * Debug-flag-gated client-thread cost accounting (issue #81). {@code null} until the plugin
+	 * calls {@link #setPerfRecorder}, which every existing layout test that never touches this field
+	 * leaves it as -- {@link #onClientTick}'s wrapper treats "unset" the same as "disabled".
+	 */
+	private PerfRecorder perf;
+
+	/**
 	 * Resolves a bundled sprite resource name to its registered (negative) sprite id (docs/
 	 * DECISIONS.md D27). Defaults to "nothing registered" so a window built before the plugin
 	 * calls {@link #setSpriteIdForName} (or in a test) never NPEs; the plugin sets the real lookup
@@ -412,6 +420,12 @@ public class BossMechanicsWindow
 	public void setSpriteIdForName(ToIntFunction<String> spriteIdForName)
 	{
 		this.spriteIdForName = spriteIdForName;
+	}
+
+	/** @see #perf */
+	public void setPerfRecorder(PerfRecorder perf)
+	{
+		this.perf = perf;
 	}
 
 	public void onPluginStart()
@@ -725,6 +739,20 @@ public class BossMechanicsWindow
 	 */
 	@Subscribe
 	public void onClientTick(ClientTick event)
+	{
+		if (perf == null || !perf.isEnabled())
+		{
+			handleClientTick(event);
+			return;
+		}
+
+		long a0 = perf.allocStart();
+		long t0 = perf.timeStart();
+		handleClientTick(event);
+		perf.record(PerfRecorder.Handler.WINDOW_CLIENT_TICK, t0, a0);
+	}
+
+	private void handleClientTick(ClientTick event)
 	{
 		replaceIfChanged();
 

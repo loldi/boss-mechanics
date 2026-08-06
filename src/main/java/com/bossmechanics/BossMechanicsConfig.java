@@ -44,4 +44,29 @@ public interface BossMechanicsConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigItem(
+		keyName = "perfInstrumentation",
+		name = "Measure handler cost",
+		description = "Debug tool. Tracks call count, wall time (p50/p99/max) and bytes allocated per "
+			+ "live-gameplay event handler. Off costs nothing: a single boolean check, no timing, no "
+			+ "allocation",
+		position = 4
+	)
+	default boolean perfInstrumentation()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "dumpPerfStats",
+		name = "Dump perf stats",
+		description = "Debug tool. Logs the perf table collected since instrumentation was last "
+			+ "enabled (or last dumped) and resets its counters. Unticks itself once done",
+		position = 5
+	)
+	default boolean dumpPerfStats()
+	{
+		return false;
+	}
 }

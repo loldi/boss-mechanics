@@ -56,6 +56,8 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 | Discovery chat messages | On | Announce each newly discovered mechanic in the chatbox |
 | Clear discoveries | Off | Debug tool. Forget every discovered mechanic on this character. Unticks itself once done |
 | Log boss trigger ids | Off | Debug tool. Logs every animation, projectile and graphic id a tracked boss produces and which mechanic claims it, plus any collection log page title no boss data matches |
+| Measure handler cost | Off | Debug tool. Tracks call count, wall time (p50/p99/max) and bytes allocated for every live-gameplay event handler. Off costs nothing: a single boolean check, no timing, no allocation |
+| Dump perf stats | Off | Debug tool. Logs the perf table collected since instrumentation was last enabled (or last dumped), then resets its counters. Unticks itself once done |
 
 ## Install
 
@@ -70,6 +72,34 @@ That launches a RuneLite client with the plugin sideloaded. Requires JDK 11+.
 `BossMechanicsPluginTest` is a `main()` launcher, not a JUnit test, so
 `gradlew test` will not run it. Launching it from IntelliJ instead needs `-ea` in
 the VM options, since RuneLite refuses to start without assertions enabled.
+
+### Measuring performance
+
+A plugin can only cause a stutter two ways, both on the client thread: holding it too
+long during one frame, or allocating enough to trigger a GC pause. **Measure handler
+cost** tracks exactly those two things, per event handler, so "does this lag my game"
+has a real answer instead of a guess.
+
+To reproduce a measurement:
+
+1. Tick **Measure handler cost** on.
+2. Play the scenario you want measured (normal play, a crowded area, a boss fight — see
+   issue #81 for the full scenario list).
+3. Tick **Dump perf stats**. It logs the table and unticks itself.
+4. Read the table from the client log (`Boss Mechanics perf dump:`). Each row is a handler:
+   call count, p50/p99/max wall time in microseconds, total bytes allocated, and bytes per call.
+
+**The bar.** At 50fps the frame budget is 20,000us. A worst-case call under ~200us
+(1% of a frame) is invisible; over ~16ms is a dropped frame and a non-starter.
+
+**Reading the numbers.** Percentiles are bucket-resolution (the dump header says so),
+accurate to within 12.5% worst case — enough to tell "fine" from "a problem," not enough
+to compare two very close numbers. Bytes-per-call includes more than just the handler's
+own work: `DetectionEngine`'s `anyBossPresent()` gate predicate (the open question issue
+#81 exists to answer), the `Integer` autobox inside its `triggerIndex.get(triggerId)`
+lookups, and the `config.logUnmatchedTriggers()` proxy read in the curation logger all
+show up in the total. Expect a nonzero baseline even on a handler that looks
+allocation-free by reading the code.
 
 ## Adding a boss
 
