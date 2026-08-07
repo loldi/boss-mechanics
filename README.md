@@ -71,7 +71,7 @@ track the live pass.
 | Deranged Archaeologist | 2 |
 | Doom of Mokhaiotl | 11 |
 | Duke Sucellus | 6 |
-| Fortis Colosseum | 7 |
+| Fortis Colosseum | 8 |
 | General Graardor | 5 |
 | Giant Mole | 2 |
 | Grotesque Guardians | 6 |
