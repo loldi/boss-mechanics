@@ -1,0 +1,59 @@
+{
+  "id": "vetion-and-calvarion",
+  "name": "Vet'ion and Calvar'ion",
+  "npcIds": [6611, 6612, 11993, 11994, 11995, 11996, 12002],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Vet%27ion/Strategies",
+  "mechanics": [
+    {
+      "id": "shield-bash",
+      "name": "Shield Bash",
+      "description": "He raises his shield and smashes it down on anyone within reach. A hit locks you out of attacking for several seconds.",
+      "counterplay": "Pray Protect from Melee. The shadow on the ground warns you before it lands.",
+      "detection": [
+        { "type": "animation", "id": 9971 },
+        { "type": "animation", "id": 9972 }
+      ],
+      "preview": { "animationId": 9971, "modelId": 47387, "staticFallback": false, "zoom": 1500, "shiftY": 54 }
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning",
+      "description": "Bolts strike tiles across the arena, one aimed at you and the rest scattered. The tiles glow before anything lands.",
+      "counterplay": "Watch for the glow and step off. More players in the arena means more bolts.",
+      "detection": [
+        { "type": "animation", "id": 9969 },
+        { "type": "animation", "id": 9970 },
+        { "type": "projectile", "id": 2344 },
+        { "type": "projectile", "id": 2345 }
+      ],
+      "preview": { "animationId": 9969, "modelId": 47387, "staticFallback": false, "zoom": 1500, "shiftY": 54 }
+    },
+    {
+      "id": "skeleton-hellhounds",
+      "name": "Skeleton Hellhounds",
+      "description": "At half health in each form he calls up skeletal hellhounds and takes no damage at all until they are dead. They have very little health but hit hard.",
+      "counterplay": "Pray Protect from Melee and clear them fast. Nothing you do to him counts until they are gone.",
+      "detection": [
+        { "type": "npc-spawn", "id": 6613 },
+        { "type": "npc-spawn", "id": 6614 }
+      ],
+      "preview": { "animationId": 6580, "npcId": 6613, "staticFallback": false, "zoom": 728, "shiftY": 64 }
+    },
+    {
+      "id": "second-form",
+      "name": "Second Form",
+      "description": "When his first form runs out of health he wraps himself in orange lightning and comes back at full health, attacking a tick faster and hitting harder.",
+      "counterplay": "Keep your supplies for this half. The first form is the easy one.",
+      "phase": "Second form",
+      "detection": [
+        { "type": "animation", "id": 9978 },
+        { "type": "animation", "id": 9979 },
+        { "type": "npc-spawn", "id": 6612 },
+        { "type": "npc-spawn", "id": 11994 }
+      ],
+      "preview": { "animationId": 9978, "modelId": 47383, "staticFallback": false, "zoom": 1500, "shiftY": 54 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES AND EACH HAS TWO FORMS, which is why npcIds runs to seven: VETION 6611 and VETION_2 6612 are the multi-combat boss's first and second forms, VETION_SINGLE 11993 and VETION_2_SINGLE 11994 are Calvar'ion's, and VETION_TRANS_SINGLE 11995, VETION_TRANS_2_SINGLE 11996 and VETION_TRANS 12002 are the transformation states between them. All seven have to be tracked as the boss for his animations to keep matching (docs/DECISIONS.md D17). Calvar'ion is mechanically identical to Vet'ion at lower stats, differing only in that it stands in a single-combat area, so the two share one mechanic list. The skeleton hellhounds are adds and detect on npc-spawn: VETION_HELLHOUND_JNR 6613 and VETION_HELLHOUND_SNR 6614. Older hellhound npcs 5054, 6326 and 6387 carry a different model and are not curated. The four Vet'ion Jr. pets (5536, 5537, 5559, 5560) are excluded. Animations are the NPC_VETION_* set, all unambiguous gameval names, and every one comes in a _01 and _02 pair for the two forms, so both are curated as triggers on the same mechanic: ATTACK_MELEE 9971 and 9972, ATTACK_MAGIC 9969 and 9970, ENRAGE 9978 and 9979. Projectiles FX_VETION_ATTACK_MAGIC_01 2344 and _02 2345 are curated; the two matching IMPACT ids 2346 and 2347, FX_VETION_ATTACK_MELEE 2348 and the three SPELLS_VETION01 ids 2337 through 2339 are graphics or ambiguous and are left out, since a graphic trigger has no source actor to check (D17) and discovery never revokes (D18). THE LIGHTNING MECHANIC IS CURATED ON THE MAGIC ATTACK ANIMATIONS on the reading that the bolts are his magic attack rather than a separate special; the cache names no distinct lightning sequence, and the wiki lists no other magic attack for him, so the two are taken to be the same move. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all three sequences tried. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 3555, the Combat Achievements screen's own entry for this boss, which pins model 47387 at zoom 1500, and compute shiftY from the bind pose extents at that zoom. The second-form preview pins 47383 instead, the second form's own first model, which measures identically to 47387 and therefore takes the same zoom and shiftY. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Vet'ion and Calvar'ion', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on, against both Vet'ion and Calvar'ion, since only one set of ids is curated for both. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 3. Confirm the lightning really is his magic attack rather than a separate special with its own trigger; that reading is the weakest link in this file. 4. Work out which of VETION_TRANS_SINGLE 11995, VETION_TRANS_2_SINGLE 11996 and VETION_TRANS 12002 actually appear, and whether the second-form npc-spawn triggers fire on the transformation or only on a fresh spawn. 5. Add the graphic triggers deliberately left out, starting with FX_VETION_ATTACK_MELEE 2348 and the lightning impacts 2346 and 2347. 6. staticFallback is false on all four; confirm each body animation reads at the shipped zoom."
+}

@@ -1,0 +1,20 @@
+{
+  "id": "chaos-fanatic",
+  "name": "Chaos Fanatic",
+  "npcIds": [6619],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Chaos_Fanatic",
+  "mechanics": [
+    {
+      "id": "unstable-magic",
+      "name": "Unstable Magic",
+      "description": "He attacks with magic from range, and every so often throws a burst that lands across several tiles at once and can knock the weapon out of your hands.",
+      "counterplay": "Pray Protect from Magic and step off the tiles he marks. Bring a spare weapon in case he takes yours.",
+      "detection": [
+        { "type": "npc-spawn", "id": 6619 }
+      ],
+      "preview": { "animationId": 2770, "npcId": 6619, "staticFallback": false, "zoom": 1384, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED, AND THE THINNEST FILE IN THIS WAVE. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id CHAOS_FANATIC 6619. ONE MECHANIC IS NOT A JUDGEMENT THAT THIS BOSS HAS ONE MOVE. IT IS THE LIMIT OF WHAT THE CACHE WILL HONESTLY SUPPORT. The gamevals name no animation, no spotanim and no projectile for this boss at all: a search across all three spaces for 'fanatic' returns nothing. His standing animation is 2770, which the gamevals name DRUNK_PLAYER_READY, so even his idle is borrowed, and struct 3562, the Combat Achievements screen's own entry for him, falls back to animation 808, the plain human idle. There is therefore no attack animation to curate, no projectile to curate, and nothing to distinguish his ordinary magic attack from his disarming special. Rather than split them into two mechanics that would both have to detect on the same npc-spawn and so unlock simultaneously and meaninglessly, they are described together in one. The single npc-spawn trigger means this unlocks when you arrive rather than when he does anything, which is honest about what is known and is exactly what the live pass exists to fix. Because the trigger is a bare npc-spawn on the boss itself there is no false-positive risk here at all; the only cost is that the mechanic is uninformative until someone logs his real trigger ids. staticFallback is false; whether the borrowed idle reads has not been eyeballed in game. The collection log page is titled 'Chaos Fanatic', matching 'name'.",
+  "_followups": "1. THIS BOSS NEEDS A LIVE FIGHT MORE THAN ANY OTHER IN THE WAVE. Run it with Log boss trigger ids on and record every animation, projectile and graphic he produces; nothing in the cache names any of them, so the log is the only source. 2. Once his ids are known, split unstable-magic into the ordinary magic attack and the disarming special, which are two mechanics with different counterplay currently sharing one row. 3. staticFallback is false; confirm the borrowed DRUNK_PLAYER_READY idle reads at the shipped zoom, and replace it if the live pass finds a real idle."
+}

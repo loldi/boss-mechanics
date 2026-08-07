@@ -1,0 +1,30 @@
+{
+  "id": "crazy-archaeologist",
+  "name": "Crazy Archaeologist",
+  "npcIds": [6618],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Crazy_archaeologist",
+  "mechanics": [
+    {
+      "id": "book-throw",
+      "name": "Thrown Book",
+      "description": "He hurls a book at you, a ranged attack he uses from anywhere in his ruins.",
+      "counterplay": "Pray Protect from Missiles and it stops almost all of it.",
+      "detection": [
+        { "type": "animation", "id": 3353 }
+      ],
+      "preview": { "animationId": 3353, "npcId": 6618, "staticFallback": false, "zoom": 1322, "shiftY": 68 }
+    },
+    {
+      "id": "rain-of-knowledge",
+      "name": "Rain of Knowledge",
+      "description": "He shouts about knowledge raining down and marks several tiles around you. Anyone still standing on one when the books land takes a heavy hit that ignores prayer.",
+      "counterplay": "Move off the marked tiles. Your overhead does nothing here.",
+      "detection": [
+        { "type": "npc-spawn", "id": 6618 }
+      ],
+      "preview": { "animationId": 3846, "npcId": 6618, "staticFallback": false, "zoom": 1322, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id CRAZY_ARCHAEOLOGIST 6618. THIS BOSS HAS NO ANIMATIONS OF ITS OWN. Npc 6618's standing animation is 3846, which the gamevals name BOOK_CHUCK_READY, so it uses the generic book-throwing set, and BOOK_CHUCK 3353 is curated as its attack on that basis. Struct 3564, the Combat Achievements screen's own entry for this boss, corroborates the absence: it frames him on animation 808, the plain human idle, because there is nothing more distinctive to show. Because the animation is generic, the animation trigger is doing real work: an animation only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17), so another npc playing 3353 cannot false-positive. THE SECOND MECHANIC DETECTS ON THE BOSS'S OWN NPC-SPAWN, SO IT UNLOCKS ON ARRIVAL RATHER THAN ON THE SPECIAL. That is a deliberate compromise, not an oversight: the special has no animation of its own, it is announced by overhead text the schema has no trigger type for, and its two spotanims are ambiguous. CRAZY_ARCHAEOLOGIST_BOOK 1259 and CRAZY_ARCHAEOLOGIST_BOOK_SPECIAL 1260 are the two ids in question, and 1260 in particular is almost certainly this special, but neither name says whether the game fires it as a projectile or applies it as a graphic. A graphic trigger has no source actor to check (D17) and discovery never revokes (D18), so both are left for the live pass rather than guessed at. If 1260 turns out to be a projectile it is a far better trigger than the npc-spawn shipped here. staticFallback is false on both; whether either body animation reads has not been eyeballed in game. The collection log page is titled 'Crazy Archaeologist' with a capital A, while the npc is named 'Crazy archaeologist' in lower case; 'name' follows the page, since the page title is what BossPageIndex matches. Matching folds case anyway, so either would work today.",
+  "_followups": "1. Live verification of both ids per the curation checklist, with Log boss trigger ids on. 2. Establish whether CRAZY_ARCHAEOLOGIST_BOOK_SPECIAL 1260 is fired as a projectile. If it is, it replaces the npc-spawn trigger on rain-of-knowledge and the mechanic starts unlocking when the special actually happens. 3. Confirm BOOK_CHUCK 3353 is what he plays, since it is a generic animation rather than a boss-specific one. 4. staticFallback is false on both; confirm each body animation reads at the shipped zoom."
+}
