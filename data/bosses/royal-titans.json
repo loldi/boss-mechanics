@@ -5,30 +5,21 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/Royal_Titans/Strategies",
   "mechanics": [
     {
-      "id": "branda-melee",
-      "name": "Branda the Fire Queen",
-      "description": "The fire half of the pair. She fights in melee and burns what she hits.",
-      "counterplay": "Pray Protect from Melee. Keep her health level with Eldric's, since killing one alone does nothing.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "Both titans stomp, which covers the three rows in front of them. They also raise rows of fire and icicles across the floor, which take a few ticks to form.",
+      "counterplay": "Pray Protect from Melee for the stomp, and stand on a wall tile before it forms to stop it. Fire dies to water spells and icicles die to fire spells.",
       "detection": [
+        { "type": "animation", "id": 11973 },
         { "type": "animation", "id": 11974 }
       ],
       "preview": { "animationId": 11974, "npcId": 12596, "staticFallback": false, "zoom": 2744, "shiftY": 53 }
     },
     {
-      "id": "eldric-melee",
-      "name": "Eldric the Ice King",
-      "description": "The ice half. He fights in melee alongside Branda and freezes what he hits.",
-      "counterplay": "Same prayer, same job. The two have to die close together or the survivor brings the other back.",
-      "detection": [
-        { "type": "animation", "id": 11973 }
-      ],
-      "preview": { "animationId": 11973, "npcId": 14147, "staticFallback": false, "zoom": 3331, "shiftY": 63 }
-    },
-    {
-      "id": "summons",
-      "name": "Summoned Minions",
-      "description": "Both titans call up minions of their own element through the fight.",
-      "counterplay": "Clear them as they arrive. Leaving them to build up is what turns the fight around.",
+      "id": "summoned-elementals",
+      "name": "Summoned Elementals",
+      "description": "Each titan summons elementals that walk in and hit you in melee. Left alone they blow up on their own for a hit across a small area.",
+      "counterplay": "Kill them with the opposing element and they die in one. Do not let them reach you and expire.",
       "detection": [
         { "type": "animation", "id": 11975 },
         { "type": "animation", "id": 11976 },
@@ -38,28 +29,32 @@
       "preview": { "animationId": 11975, "npcId": 14147, "staticFallback": false, "zoom": 3331, "shiftY": 63 }
     },
     {
-      "id": "branda-aoe",
-      "name": "Branda's Eruption",
-      "description": "Branda's area attack, thrown across a patch of the arena rather than at one target.",
-      "counterplay": "Move out of the marked area. No prayer covers standing in it.",
-      "detection": [
-        { "type": "animation", "id": 11981 },
-        { "type": "animation", "id": 11982 }
-      ],
-      "preview": { "animationId": 11981, "npcId": 12596, "staticFallback": false, "zoom": 2744, "shiftY": 53 }
-    },
-    {
-      "id": "teleports",
+      "id": "repositioning",
       "name": "Repositioning",
-      "description": "Both titans teleport around the arena rather than walking, so the shape of the fight keeps changing.",
-      "counterplay": "Reposition with them and keep both in reach, or you end up splitting damage badly between the two.",
+      "description": "Early on the titans break away and put distance between themselves and you, and their ranged accuracy climbs enormously while they are apart.",
+      "counterplay": "Close the gap and stay in melee range. Letting them stay separated is what makes this half hurt.",
+      "phase": "Phase 1",
       "detection": [
         { "type": "animation", "id": 11983 },
         { "type": "animation", "id": 11984 }
       ],
       "preview": { "animationId": 11983, "npcId": 14147, "staticFallback": false, "zoom": 3331, "shiftY": 63 }
+    },
+    {
+      "id": "elemental-blast",
+      "name": "Elemental Blast",
+      "description": "Once one of them is low enough both move into the main arena and blast the whole floor three times over, leaving a single safe tile each time.",
+      "counterplay": "Find the safe tile and be standing on it for each blast. There are hittable ticks between them.",
+      "phase": "Phase 2",
+      "detection": [
+        { "type": "animation", "id": 11979 },
+        { "type": "animation", "id": 11980 },
+        { "type": "animation", "id": 11981 },
+        { "type": "animation", "id": 11982 }
+      ],
+      "preview": { "animationId": 11981, "npcId": 12596, "staticFallback": false, "zoom": 2744, "shiftY": 53 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES, which is why npcIds holds both: Branda the Fire Queen 12596 and Eldric the Ice King 14147. They are in npcIds rather than treated as spawns because both are present for the whole fight, the same call General Graardor's sergeants ship under. THE TWO HAVE COMPLETELY SEPARATE ANIMATION SETS, laid out as matching pairs one number apart: ICE_GIANT_ELDRIC_KING_* takes the odd-numbered id and FIRE_GIANT_BRANDA_QUEEN_* the even one, through IDLE (11969, 11970), WALK (11971, 11972), ATTACK_MELEE (11973, 11974), ATTACK_SUMMON01 (11975, 11976), ATTACK_SUMMON02 (11977, 11978) and TELEPORT (11983, 11984). That pairing is what lets each titan have its own mechanic with an exact trigger rather than sharing one. BRANDA HAS TWO AOE SEQUENCES AND ELDRIC HAS NONE. FIRE_GIANT_BRANDA_QUEEN_ATTACK_AOE01 11981 and AOE02 11982 exist with no ICE_GIANT equivalent at 11979 or 11980, so either Eldric genuinely has no area attack or his sits elsewhere in the set. The file follows the cache and gives the eruption to Branda alone. Both summon sequences from both titans are curated on a single summons mechanic, since the counterplay is the same whichever element arrives. No projectile is curated: the cache names no BRANDA, ELDRIC or ROYAL_TITAN spotanim. Both previews resolve through npcId and fitted normally, so unlike most of this batch these are real arithmetic rather than a bind-pose estimate; struct 1744, the Combat Achievements entry, pins Branda's model 55951 at zoom 2500, close to the 2744 fitted here, which corroborates the fit. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Royal Titans', matching 'name'.",
-  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Find out whether Eldric has an area attack and where its sequence sits; the gap at 11979 and 11980 is suspicious and if he does, branda-aoe should become one shared mechanic. 3. Find the minion npc ids so the summons mechanic can detect on npc-spawn as well as on the summon animations. 4. Confirm what distinguishes ATTACK_SUMMON01 from ATTACK_SUMMON02 for each titan; they may be two different minions worth separating. 5. The linked-health mechanic, where killing one titan without the other accomplishes nothing, is described in the two titans' counterplay rather than given its own row, because it has no trigger. 6. staticFallback is false on all five; confirm each animation reads at the shipped zoom."
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES, which is why npcIds holds both: Branda the Fire Queen 12596 and Eldric the Ice King 14147. They are in npcIds rather than treated as spawns because both are present for the whole fight, the same call General Graardor's sergeants ship under. THE TWO HAVE COMPLETELY SEPARATE ANIMATION SETS, laid out as matching pairs one number apart: ICE_GIANT_ELDRIC_KING_* takes the odd-numbered id and FIRE_GIANT_BRANDA_QUEEN_* the even one, through IDLE (11969, 11970), WALK (11971, 11972), ATTACK_MELEE (11973, 11974), ATTACK_SUMMON01 (11975, 11976), ATTACK_SUMMON02 (11977, 11978) and TELEPORT (11983, 11984). That pairing is what lets each titan have its own mechanic with an exact trigger rather than sharing one. BRANDA HAS TWO AOE SEQUENCES AND ELDRIC HAS NONE. FIRE_GIANT_BRANDA_QUEEN_ATTACK_AOE01 11981 and AOE02 11982 exist with no ICE_GIANT equivalent at 11979 or 11980, so either Eldric genuinely has no area attack or his sits elsewhere in the set. The file follows the cache and gives the eruption to Branda alone. Both summon sequences from both titans are curated on a single summons mechanic, since the counterplay is the same whichever element arrives. No projectile is curated: the cache names no BRANDA, ELDRIC or ROYAL_TITAN spotanim. Both previews resolve through npcId and fitted normally, so unlike most of this batch these are real arithmetic rather than a bind-pose estimate; struct 1744, the Combat Achievements entry, pins Branda's model 55951 at zoom 2500, close to the 2744 fitted here, which corroborates the fit. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Royal Titans', matching 'name'. REDO 2026-08-07 (Andrew asked for a full list rewrite): The list is rewritten against the wiki attacks and phase sections. The find that made this worth doing: the old file curated only Branda's AOE (11981/11982) and was missing Eldric's entirely. Elemental Blast now carries all four, ICE_GIANT_EDRIC_KING_ATTACK_AOE01/02 11979/11980 and FIRE_GIANT_BRANDA_QUEEN_ATTACK_AOE01/02 11981/11982, and is tagged Phase 2 where the wiki puts it. The gameval set is cleanly symmetric per titan (MELEE 11973/11974, SUMMON 11975 through 11978, AOE 11979 through 11982, TELEPORT 11983/11984), so every id here is confident. FIRE AND ICICLE WALLS HAS NO ROW: it is built from locs and has no animation, projectile, graphic or npc to detect on, so it is described inside Standard Attacks instead of shipping a row that could never be discovered.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Find out whether Eldric has an area attack and where its sequence sits; the gap at 11979 and 11980 is suspicious and if he does, branda-aoe should become one shared mechanic. 3. Find the minion npc ids so the summons mechanic can detect on npc-spawn as well as on the summon animations. 4. Confirm what distinguishes ATTACK_SUMMON01 from ATTACK_SUMMON02 for each titan; they may be two different minions worth separating. 5. The linked-health mechanic, where killing one titan without the other accomplishes nothing, is described in the two titans' counterplay rather than given its own row, because it has no trigger. 6. staticFallback is false on all five; confirm each animation reads at the shipped zoom. 7. Fire and Icicle Walls has no curatable trigger (locs only) so it ships as prose inside Standard Attacks. If a graphic id for wall formation turns up, it earns its own row."
 }

@@ -5,11 +5,12 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/The_Whisperer/Strategies",
   "mechanics": [
     {
-      "id": "projectile-volleys",
-      "name": "Orb and Barb Volleys",
-      "description": "It throws three projectiles at a time, either blue magic orbs or grey ranged barbs. The pattern changes as its health drops.",
-      "counterplay": "Set your overhead before the first one lands and it blocks all three. Expect the pattern to shift at four fifths, half and a third health.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "She fires a volley of projectiles at range, alternating ranged and magic, and hits twice in a row in melee if you let her get adjacent. Shadow tentacles rise a few tiles out and converge on wherever you are standing.",
+      "counterplay": "Pray against the volley before it lands and stay at least five tiles away. Step two tiles then one to the side to slip the tentacles.",
       "detection": [
+        { "type": "animation", "id": 10234 },
         { "type": "animation", "id": 10235 },
         { "type": "animation", "id": 10236 },
         { "type": "animation", "id": 10237 },
@@ -17,57 +18,66 @@
         { "type": "animation", "id": 10242 },
         { "type": "animation", "id": 10243 },
         { "type": "projectile", "id": 2444 },
-        { "type": "projectile", "id": 2445 }
+        { "type": "projectile", "id": 2445 },
+        { "type": "npc-spawn", "id": 12208 }
       ],
       "preview": { "animationId": 10241, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
     },
     {
-      "id": "tentacles",
-      "name": "Shadow Tentacles",
-      "description": "Four tentacles break the surface four tiles from you and close on the tile you were standing on. Early on they form an X, later a cross.",
-      "counterplay": "Move like a knight in chess: two tiles one way, then one tile across. That dodges every standard formation.",
-      "detection": [
-        { "type": "npc-spawn", "id": 12208 }
-      ],
-      "preview": { "animationId": 10264, "npcId": 12208, "staticFallback": false, "zoom": 1722, "shiftY": 64 }
-    },
-    {
-      "id": "screech",
-      "name": "Screech",
-      "description": "It teleports south and screeches three times. Columns rise from the water to block them, and each column can take a different amount of punishment before it breaks.",
-      "counterplay": "Hide behind the weakest column first and the strongest last. Step into the shadow realm briefly to see which is which.",
-      "detection": [
-        { "type": "animation", "id": 10250 },
-        { "type": "animation", "id": 10251 },
-        { "type": "animation", "id": 10252 },
-        { "type": "projectile", "id": 2471 }
-      ],
-      "preview": { "animationId": 10250, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
-    },
-    {
-      "id": "shadow-realm",
-      "name": "Shadow Realm",
-      "description": "Parts of the fight only exist in the shadow realm, reached with a blackstone fragment. Your sanity drains fast while you are in there and slowly comes back when you leave.",
-      "counterplay": "Go in only for the seeds, the screech and the siphon, and leave as soon as you are done.",
-      "detection": [
-        { "type": "animation", "id": 10229 },
-        { "type": "animation", "id": 10247 },
-        { "type": "animation", "id": 10248 }
-      ],
-      "preview": { "animationId": 10247, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
-    },
-    {
-      "id": "summon-leeches",
-      "name": "Summon Leeches",
-      "description": "It calls up leeches to feed on you while it keeps attacking.",
-      "counterplay": "Clear them before they stack up. Leaving them alive costs more than the time spent killing them.",
+      "id": "corrupted-seeds",
+      "name": "Corrupted Seeds",
+      "description": "She scatters light and dark seeds across the arena. The light ones only exist in the Shadow Realm, and the attack does not stop until every one of them has been stepped on.",
+      "counterplay": "Drop into the Shadow Realm to see them and walk the light seeds down. Dark ones hurt, so do not walk those.",
       "detection": [
         { "type": "animation", "id": 10254 },
         { "type": "animation", "id": 10255 }
       ],
       "preview": { "animationId": 10254, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
+    },
+    {
+      "id": "screech",
+      "name": "Screech",
+      "description": "She raises floating pillars and screams across the whole arena. Anyone not tucked behind a pillar takes a heavy hit and loses most of their sanity.",
+      "counterplay": "Get into the square behind a pillar before the scream lands. Pick one with enough health left to survive it.",
+      "detection": [
+        { "type": "animation", "id": 10250 },
+        { "type": "animation", "id": 10251 },
+        { "type": "animation", "id": 10252 },
+        { "type": "projectile", "id": 2471 },
+        { "type": "npc-spawn", "id": 12209 },
+        { "type": "npc-spawn", "id": 12210 }
+      ],
+      "preview": { "animationId": 10250, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
+    },
+    {
+      "id": "soul-siphon",
+      "name": "Soul Siphon",
+      "description": "Twelve lost souls appear and have to be killed on a timer. They can only be damaged in the Shadow Realm, and each colour gives back something different when it dies.",
+      "counterplay": "Go into the Shadow Realm and clear them fast; a venator bow chews through them. Take the colour you actually need.",
+      "detection": [
+        { "type": "animation", "id": 10256 },
+        { "type": "animation", "id": 10257 },
+        { "type": "animation", "id": 10258 },
+        { "type": "animation", "id": 10259 },
+        { "type": "npc-spawn", "id": 12211 },
+        { "type": "npc-spawn", "id": 12212 }
+      ],
+      "preview": { "animationId": 10256, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
+    },
+    {
+      "id": "enrage",
+      "name": "Enrage",
+      "description": "At zero health she gets some back and drags you into the Shadow Realm for good. She alternates ranged and magic every two attacks at a faster speed, with a single tentacle behind each one.",
+      "counterplay": "Keep moving and keep swapping. Sanity cannot be topped up out here, so the fight is now a race.",
+      "phase": "Enrage",
+      "detection": [
+        { "type": "animation", "id": 10247 },
+        { "type": "animation", "id": 10248 },
+        { "type": "npc-spawn", "id": 12205 }
+      ],
+      "preview": { "animationId": 10247, "modelId": 49222, "staticFallback": false, "zoom": 2100, "shiftY": 21 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 12204 through 12207 all carry the same five-part model set and standing animation 10230; the four are presumably the real-world and shadow-realm states, and all four are in npcIds because the boss transforms between them rather than respawning (docs/DECISIONS.md D17). The tentacle is a separate npc, 12208, and detects on npc-spawn. Animations are the NPC_WHISPERER_01_* set, all unambiguous gameval names. THE ATTACK ANIMATIONS ARE CURATED IN PART, NOT IN FULL: the cache names six ranged sequences (10235 through 10240) and six magic ones (10241 through 10246), and only the first three of each are curated. Six variants of one attack almost certainly correspond to the wiki's shifting volley patterns, and curating all twelve would add nothing to discovery, which fires once; the remaining six are listed here so the live pass can decide whether any deserves its own mechanic. Projectiles PROJ_WHISPERER_01_RANGED_01 2444, PROJ_WHISPERER_01_MAGIC_01 2445 and WHISPERER_SCREECH_PROJ 2471 are curated because each carries an explicit projectile prefix or suffix in Jagex's own name; PROJANIM_WHISPERER_EGG_01_LARVAE_01 2456 and the two GHOST_SPAWN ids 2457 and 2458 are also projanims but are not curated, because nothing establishes which mechanic they belong to. THE TENTACLE PREVIEW MAY NOT RENDER COLOUR-TRUE. Npc 12208 carries a one-pair recolour table (-110 to -31870) over model 49250, and SCHEMA.md's recolor-table rule says a widget cannot apply an npc's recolour table. One pair is unlikely to cover the whole mesh the way Vorkath's zombified spawn did, so this is a risk rather than a known problem, but it has not been measured with ModelColors. THE CORRUPTED SEEDS AND SOUL SIPHON ARE KNOWN MISSING MECHANICS. Both are named on the wiki as shadow-realm phases but neither has an animation that clearly matches; NPC_WHISPERER_01_TELEPORT_SUMMON_SOULS_01_* 10256 through 10259 is the likeliest home for the siphon and is deliberately uncurated rather than guessed at. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). The method is the one Doom of Mokhaiotl already shipped under: take the zoom from struct 4588, the Combat Achievements screen's own entry for this boss, which pins model 49222 at zoom 2100, and compute shiftY from the bind pose extents at that zoom. This is the one boss in the batch that needed no zoom raise and sits well inside the ceiling, at shiftY 21, because model 49222 is wide and flat rather than tall, measuring Y[-173..0] against the Leviathan's Y[-1129..42]. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'The Whisperer', matching 'name', article included.",
-  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. The wide flat model means shiftY 21 is unusually small; confirm it does not sit low in the box. 3. Measure the tentacle's recolour coverage with ModelColors. If the one pair covers the whole mesh, the tentacle preview needs a bundled sprite the way Vorkath's zombified spawn did (docs/DECISIONS.md D27/D28). 4. Curate the corrupted seeds and soul siphon, the two named wiki mechanics missing here; NPC_WHISPERER_01_TELEPORT_SUMMON_SOULS_01_* 10256 through 10259 is the likeliest trigger for the siphon. 5. Decide whether the six ranged and six magic attack variants map onto the volley patterns that shift at 80, 55 and 30 percent health, and split projectile-volleys accordingly if so. 6. Identify PROJANIM_WHISPERER_EGG_01_LARVAE_01 2456 and the two ghost spawn projanims 2457 and 2458. 7. The enrage phase, where it heals and attacks twice per tick, has no mechanic here for want of a trigger."
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 12204 through 12207 all carry the same five-part model set and standing animation 10230; the four are presumably the real-world and shadow-realm states, and all four are in npcIds because the boss transforms between them rather than respawning (docs/DECISIONS.md D17). The tentacle is a separate npc, 12208, and detects on npc-spawn. Animations are the NPC_WHISPERER_01_* set, all unambiguous gameval names. THE ATTACK ANIMATIONS ARE CURATED IN PART, NOT IN FULL: the cache names six ranged sequences (10235 through 10240) and six magic ones (10241 through 10246), and only the first three of each are curated. Six variants of one attack almost certainly correspond to the wiki's shifting volley patterns, and curating all twelve would add nothing to discovery, which fires once; the remaining six are listed here so the live pass can decide whether any deserves its own mechanic. Projectiles PROJ_WHISPERER_01_RANGED_01 2444, PROJ_WHISPERER_01_MAGIC_01 2445 and WHISPERER_SCREECH_PROJ 2471 are curated because each carries an explicit projectile prefix or suffix in Jagex's own name; PROJANIM_WHISPERER_EGG_01_LARVAE_01 2456 and the two GHOST_SPAWN ids 2457 and 2458 are also projanims but are not curated, because nothing establishes which mechanic they belong to. THE TENTACLE PREVIEW MAY NOT RENDER COLOUR-TRUE. Npc 12208 carries a one-pair recolour table (-110 to -31870) over model 49250, and SCHEMA.md's recolor-table rule says a widget cannot apply an npc's recolour table. One pair is unlikely to cover the whole mesh the way Vorkath's zombified spawn did, so this is a risk rather than a known problem, but it has not been measured with ModelColors. THE CORRUPTED SEEDS AND SOUL SIPHON ARE KNOWN MISSING MECHANICS. Both are named on the wiki as shadow-realm phases but neither has an animation that clearly matches; NPC_WHISPERER_01_TELEPORT_SUMMON_SOULS_01_* 10256 through 10259 is the likeliest home for the siphon and is deliberately uncurated rather than guessed at. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). The method is the one Doom of Mokhaiotl already shipped under: take the zoom from struct 4588, the Combat Achievements screen's own entry for this boss, which pins model 49222 at zoom 2100, and compute shiftY from the bind pose extents at that zoom. This is the one boss in the batch that needed no zoom raise and sits well inside the ceiling, at shiftY 21, because model 49222 is wide and flat rather than tall, measuring Y[-173..0] against the Leviathan's Y[-1129..42]. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'The Whisperer', matching 'name', article included. REDO 2026-08-07 (Andrew asked for a full list rewrite): The list is now the five rows Andrew specified. CONFIDENT IDS: screech is the ATTACK_SCREECH_01 trio 10250/10251/10252 plus the two safespot pillar npcs 12209 and 12210, which is a much better trigger than the animation alone; soul siphon is the TELEPORT_SUMMON_SOULS_01 set 10256 through 10259 plus WHISPERER_SOUL 12211 and WHISPERER_SOUL_VULNERABLE 12212; standard attacks unions the melee, ranged and magic sequences with the tentacle npc. CORRUPTED SEEDS IS INFERRED: the cache names no seed animation at all, and SUMMON_LEECHES 10254/10255 is curated for it as the only \"she puts something on the floor\" sequence in her set. It may well be wrong, and it is the first row to check in game. Enrage is curated on the two teleport sequences plus WHISPERER_MELEE 12205 and is the second least certain.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. The wide flat model means shiftY 21 is unusually small; confirm it does not sit low in the box. 3. Measure the tentacle's recolour coverage with ModelColors. If the one pair covers the whole mesh, the tentacle preview needs a bundled sprite the way Vorkath's zombified spawn did (docs/DECISIONS.md D27/D28). 4. Curate the corrupted seeds and soul siphon, the two named wiki mechanics missing here; NPC_WHISPERER_01_TELEPORT_SUMMON_SOULS_01_* 10256 through 10259 is the likeliest trigger for the siphon. 5. Decide whether the six ranged and six magic attack variants map onto the volley patterns that shift at 80, 55 and 30 percent health, and split projectile-volleys accordingly if so. 6. Identify PROJANIM_WHISPERER_EGG_01_LARVAE_01 2456 and the two ghost spawn projanims 2457 and 2458. 7. The enrage phase, where it heals and attacks twice per tick, has no mechanic here for want of a trigger. 9. Corrupted Seeds is curated on SUMMON_LEECHES 10254/10255 because the cache names no seed animation. Confirm or replace it; it is the least certain id in this file."
 }

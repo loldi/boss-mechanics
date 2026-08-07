@@ -77,17 +77,63 @@
       "preview": { "animationId": 10902, "modelId": 52584, "staticFallback": false, "zoom": 1348, "shiftY": 64 }
     },
     {
-      "id": "solar-flare",
-      "name": "Solar Flares and Totems",
-      "description": "Solar flares and healing totems appear during waves, the flares punishing where you stand and the totems putting health back into what you are fighting.",
-      "counterplay": "Break the totems before clearing the wave, and keep off the flares.",
+      "id": "minotaur",
+      "name": "Minotaur",
+      "description": "A large wave monster that charges the player it is chasing.",
+      "counterplay": "Keep moving so the charge lands somewhere you are not.",
       "detection": [
-        { "type": "npc-spawn", "id": 12826 },
-        { "type": "npc-spawn", "id": 12825 }
+        { "type": "npc-spawn", "id": 12812 },
+        { "type": "npc-spawn", "id": 12813 }
       ],
-      "preview": { "animationId": 10882, "modelId": 52580, "staticFallback": false, "zoom": 1650, "shiftY": 56 }
+      "preview": { "animationId": 10840, "npcId": 12812, "staticFallback": false, "zoom": 2004, "shiftY": 63 }
+    },
+    {
+      "id": "fremennik-warband",
+      "name": "Fremennik Warband",
+      "description": "A group of three that arrives together, one melee, one ranged and one magic.",
+      "counterplay": "Kill the mage first and pray against whichever of the other two is on you.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12814 },
+        { "type": "npc-spawn", "id": 12815 },
+        { "type": "npc-spawn", "id": 12816 }
+      ],
+      "preview": { "animationId": 808, "npcId": 12814, "staticFallback": false, "zoom": 965, "shiftY": 62 }
+    },
+    {
+      "id": "serpent-shaman",
+      "name": "Serpent Shaman",
+      "description": "A caster that attacks from range and keeps its distance while it does.",
+      "counterplay": "Pray Protect from Magic and close on it. It is fragile once you reach it.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12811 }
+      ],
+      "preview": { "animationId": 813, "npcId": 12811, "staticFallback": false, "zoom": 994, "shiftY": 63 }
+    },
+    {
+      "id": "jaguar-warrior",
+      "name": "Jaguar Warrior",
+      "description": "A fast melee wave monster that closes the gap quickly.",
+      "counterplay": "Pray Protect from Melee. Running does not shake it.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12810 }
+      ],
+      "preview": { "animationId": 808, "npcId": 12810, "staticFallback": false, "zoom": 997, "shiftY": 63 }
+    },
+    {
+      "id": "modifiers",
+      "name": "Modifiers",
+      "description": "Before each wave you pick modifiers that make the run harder in exchange for a better reward. They add hazards to the arena: solar flares, healing totems, bees, doom scorpions and beam crystals.",
+      "counterplay": "Only take what you can actually handle. A stacked modifier list is what ends most runs, not any single wave.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12822 },
+        { "type": "npc-spawn", "id": 12823 },
+        { "type": "npc-spawn", "id": 12824 },
+        { "type": "npc-spawn", "id": 12825 },
+        { "type": "npc-spawn", "id": 12826 }
+      ],
+      "preview": { "animationId": 10817, "npcId": 12826, "staticFallback": false, "zoom": 1982, "shiftY": 24 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). LIKE THE INFERNO, THIS PAGE COVERS BOTH THE BOSS AND THE WAVES, because both matter. npcIds holds Sol Heredit COLOSSEUM_SOL_P1 12821 with his two Deadman copies 15554 and 15696; the wave monsters detect on npc-spawn, since adding them to npcIds would let any wave animation unlock any mechanic (docs/DECISIONS.md D17). The whole encounter is laid out under a COLOSSEUM_ prefix, which is what gives every wave mechanic here an exact npc trigger: MANTICORE 12818, JAVELIN_COLOSSUS 12817, SHOCKWAVE_COLOSSUS 12819, SOLAR_FLARE 12826 and HEALING_TOTEM 12825. Animations are the NPC_COLOSSI_FINALBOSS_01_* set, all unambiguous gameval names: MELEE_ATTACK 10882 with its TELEGRAPH 10883, GRAPPLE_ATTACK_TELEGRAPH 10884, SHIELDSLAM_TELEGRAPH 10885, and TRIPLEATTACK 10886 with TRIPLEATTACK_SHORTER 10887. THREE OF THE FOUR BOSS MECHANICS DETECT ON A TELEGRAPH RATHER THAN THE ATTACK, which is unusual and is correct here: the telegraph is the mechanic. Sol Heredit is built around reading wind-ups, so the sequence a player needs to recognise is exactly the one curated. No projectile is curated: the COLOSSEUM spotanims that exist (10803 through 10813) are all named BEAM, IMPACT or IDLE and belong to the wave crystals rather than the boss, so none meets this wave's bar for an unambiguous projectile name. THREE PREVIEWS BORROW ANOTHER MECHANIC'S MODEL. The colossi share the Manticore's preview and the solar flares share the boss's, because neither the colossi nor the flares were separately fitted; that is a display compromise which cannot affect discovery, and it is followup 2. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for every sequence tried, including the wave monsters'. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 881, the Combat Achievements screen's own entry for this page, which pins model 52580 at zoom 1650, and compute shiftY from the bind pose extents at that zoom. The Manticore is not in the CA structs, so its zoom starts from the same 1650 and was then raised to 2797 to clear the 70px shiftY ceiling BundledBossDataTest enforces. staticFallback is false on all seven; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Fortis Colosseum', matching 'name'. PREVIEW PASS 2026-08-07: The Javelin and Shockwave Colossi shared one row previewing modelId 52612, which is the Manticore's mesh, so both showed a Manticore. They are separate npcs with separate meshes (12817 Javelin 52579, 12819 Shockwave 52584) and are now separate rows, one trigger each, each pinning its own model. The Manticore row is refitted and zoomed out from 2797 to 2989.",
-  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Fit the Javelin Colossus, Shockwave Colossus and Solar Flare previews against their own models; all three currently borrow another mechanic's and will render at the wrong scale. 3. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 4. Split the two colossi into separate mechanics; they are combined here only because both are dodge-not-pray, but their patterns are completely different. 5. Consider mechanics for the remaining wave npcs under the COLOSSEUM prefix: DOOM_SCORPION 12822, MODIFIER_BEES 12823, BEAM_CRYSTAL 12824 and the two warbanders 12815 and 12816. 6. Confirm the telegraph animations fire reliably, since three mechanics depend on them entirely."
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). LIKE THE INFERNO, THIS PAGE COVERS BOTH THE BOSS AND THE WAVES, because both matter. npcIds holds Sol Heredit COLOSSEUM_SOL_P1 12821 with his two Deadman copies 15554 and 15696; the wave monsters detect on npc-spawn, since adding them to npcIds would let any wave animation unlock any mechanic (docs/DECISIONS.md D17). The whole encounter is laid out under a COLOSSEUM_ prefix, which is what gives every wave mechanic here an exact npc trigger: MANTICORE 12818, JAVELIN_COLOSSUS 12817, SHOCKWAVE_COLOSSUS 12819, SOLAR_FLARE 12826 and HEALING_TOTEM 12825. Animations are the NPC_COLOSSI_FINALBOSS_01_* set, all unambiguous gameval names: MELEE_ATTACK 10882 with its TELEGRAPH 10883, GRAPPLE_ATTACK_TELEGRAPH 10884, SHIELDSLAM_TELEGRAPH 10885, and TRIPLEATTACK 10886 with TRIPLEATTACK_SHORTER 10887. THREE OF THE FOUR BOSS MECHANICS DETECT ON A TELEGRAPH RATHER THAN THE ATTACK, which is unusual and is correct here: the telegraph is the mechanic. Sol Heredit is built around reading wind-ups, so the sequence a player needs to recognise is exactly the one curated. No projectile is curated: the COLOSSEUM spotanims that exist (10803 through 10813) are all named BEAM, IMPACT or IDLE and belong to the wave crystals rather than the boss, so none meets this wave's bar for an unambiguous projectile name. THREE PREVIEWS BORROW ANOTHER MECHANIC'S MODEL. The colossi share the Manticore's preview and the solar flares share the boss's, because neither the colossi nor the flares were separately fitted; that is a display compromise which cannot affect discovery, and it is followup 2. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for every sequence tried, including the wave monsters'. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 881, the Combat Achievements screen's own entry for this page, which pins model 52580 at zoom 1650, and compute shiftY from the bind pose extents at that zoom. The Manticore is not in the CA structs, so its zoom starts from the same 1650 and was then raised to 2797 to clear the 70px shiftY ceiling BundledBossDataTest enforces. staticFallback is false on all seven; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Fortis Colosseum', matching 'name'. PREVIEW PASS 2026-08-07: The Javelin and Shockwave Colossi shared one row previewing modelId 52612, which is the Manticore's mesh, so both showed a Manticore. They are separate npcs with separate meshes (12817 Javelin 52579, 12819 Shockwave 52584) and are now separate rows, one trigger each, each pinning its own model. The Manticore row is refitted and zoomed out from 2797 to 2989. BATCH 4 2026-08-07: The four missing wave mobs are added: COLOSSEUM_MINOTAUR 12812 (plus its routefind twin 12813), the three-npc Fremennik warband 12814/12815/12816, COLOSSEUM_STANDARD_MAGER 12811 as the Serpent Shaman, and COLOSSEUM_JAGUAR_WARRIOR 12810. Solar Flares and Totems is replaced by a Modifiers row covering the whole modifier system, detecting on all five modifier npcs (DOOM_SCORPION 12822, MODIFIER_BEES 12823, BEAM_CRYSTAL 12824, HEALING_TOTEM 12825, SOLAR_FLARE 12826). Andrew wants that row to show a static sprite of the modifier selection screen rather than a model; until that image exists it previews the solar flare npc. NOTE THE JAGUAR WARRIOR, SERPENT SHAMAN AND WARBAND ARCHER ARE MULTI-MODEL (docs/DECISIONS.md D40) but models[0] is the distinctive body in each case, with 53213/53214 shared equipment across all three, so these do not preview as bare heads the way the D40 cases do.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Fit the Javelin Colossus, Shockwave Colossus and Solar Flare previews against their own models; all three currently borrow another mechanic's and will render at the wrong scale. 3. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 4. Split the two colossi into separate mechanics; they are combined here only because both are dodge-not-pray, but their patterns are completely different. 5. Consider mechanics for the remaining wave npcs under the COLOSSEUM prefix: DOOM_SCORPION 12822, MODIFIER_BEES 12823, BEAM_CRYSTAL 12824 and the two warbanders 12815 and 12816. 6. Confirm the telegraph animations fire reliably, since three mechanics depend on them entirely. 7. The Modifiers row wants a static sprite of the modifier selection screen (287x136) instead of a model preview. Needs a source image."
 }
