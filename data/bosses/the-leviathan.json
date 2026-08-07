@@ -1,0 +1,72 @@
+{
+  "id": "the-leviathan",
+  "name": "The Leviathan",
+  "npcIds": [12214, 12215, 12219, 12591],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/The_Leviathan/Strategies",
+  "mechanics": [
+    {
+      "id": "orb-volleys",
+      "name": "Orb Volleys",
+      "description": "It fires volleys of orbs and the colour tells you what is coming: blue is magic, green is ranged, orange is melee.",
+      "counterplay": "Read the colour and set your overhead before the volley lands. The right prayer blocks it completely.",
+      "detection": [
+        { "type": "animation", "id": 10278 },
+        { "type": "animation", "id": 10279 },
+        { "type": "animation", "id": 10280 },
+        { "type": "animation", "id": 10281 },
+        { "type": "projectile", "id": 2487 },
+        { "type": "projectile", "id": 2488 },
+        { "type": "projectile", "id": 2489 }
+      ],
+      "preview": { "animationId": 10278, "modelId": 49285, "staticFallback": false, "zoom": 4092, "shiftY": 68 }
+    },
+    {
+      "id": "melee-bite",
+      "name": "Bite",
+      "description": "If you stand next to the pool it bites, with no wind-up animation to warn you.",
+      "counterplay": "Mark the tiles beside the pool and stay off them. Protect from Melee blocks it entirely if you cannot.",
+      "detection": [
+        { "type": "animation", "id": 10283 },
+        { "type": "animation", "id": 10284 }
+      ],
+      "preview": { "animationId": 10283, "modelId": 49285, "staticFallback": false, "zoom": 4092, "shiftY": 68 }
+    },
+    {
+      "id": "falling-debris",
+      "name": "Falling Debris",
+      "description": "After each volley it roars and debris drops around the arena, including one piece on your tile. Every piece stays for the rest of the fight.",
+      "counterplay": "Step a tile off before it lands. Where the debris falls also tells you which special is coming next.",
+      "detection": [
+        { "type": "animation", "id": 10285 },
+        { "type": "animation", "id": 10286 },
+        { "type": "animation", "id": 10287 }
+      ],
+      "preview": { "animationId": 10285, "modelId": 49285, "staticFallback": false, "zoom": 4092, "shiftY": 68 }
+    },
+    {
+      "id": "smoke-blast",
+      "name": "Smoke Blast",
+      "description": "It drops debris onto your tile every tick, then discharges a blast that hits very hard.",
+      "counterplay": "Put a piece of fallen debris between you and it. The debris takes the blast.",
+      "detection": [
+        { "type": "animation", "id": 10288 },
+        { "type": "animation", "id": 10289 },
+        { "type": "animation", "id": 10290 }
+      ],
+      "preview": { "animationId": 10288, "modelId": 49285, "staticFallback": false, "zoom": 4092, "shiftY": 68 }
+    },
+    {
+      "id": "enrage-pathfinder",
+      "name": "Abyssal Pathfinder",
+      "description": "At a fifth health a pathfinder appears and lights a patch of the arena. It stops using melee orbs and attacks every other tick, while debris keeps piling up.",
+      "counterplay": "Stand in the pathfinder's glow for the accuracy and damage it gives, and finish the fight before the debris leaves you nowhere to stand.",
+      "phase": "Enraged",
+      "detection": [
+        { "type": "npc-spawn", "id": 12220 }
+      ],
+      "preview": { "animationId": 10295, "npcId": 12220, "staticFallback": false, "zoom": 1269, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 12214, 12215, 12219 and 12591 all carry model 49285 and standing animation 10276. LEVIATHAN_CUTSCENE_FAKE 12221 is deliberately excluded: the cache names it a cutscene prop and it carries a different model (48293) and standing animation (10331) from the real boss. LEVIATHAN_BUFF_NPC 12220 is the abyssal pathfinder and detects on npc-spawn, and LEVIATHAN_TORNADO 12222 is not curated because nothing in the wiki's mechanic list matches it. Animations are the NPC_LEVIATHAN_01_* set, all unambiguous gameval names, and this boss follows a start-loop-end pattern for most moves, so all three segments of each are curated as triggers on the same mechanic: PROJECTILE_START 10278 with LOOP 10279, END 10280 and SINGLE 10281; the two MELEE ids 10283 and 10284; the three 360 ids 10285 through 10287; and SPIT_START 10288 with LOOP 10289 and EXPLOSION_START 10290. Projectiles VFX_LEVIATHAN_01_PROJECTILE_RANGED_01 2487, _MELEE_01 2488 and _MAGIC_01 2489 are curated because each carries an explicit projectile suffix in Jagex's own name; the six _PROJECTILE_SPOTANIM_ ids 2481 through 2486, the three _PROJECTILE_IMPACT_ ids 2490 through 2492 and the eight SPOTANIM_LEVIATHAN_SMOKE ids 10098 through 10105 are graphics and are deliberately left out, since a graphic trigger has no source actor to check (D17) and discovery never revokes (D18). THE 360 ANIMATIONS ARE CURATED AS THE DEBRIS ROAR ON AN INFERENCE. The gameval name says only that the boss turns through a full circle, and the wiki describes debris falling around the whole arena after a roar, which is the only move in its list that would need a full turn. This is the weakest trigger mapping in the file. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). A skeletal sequence has no frames for FitZoom to walk, so the offline fit collapses to the model's bind pose. The method is the one Doom of Mokhaiotl already shipped under: take the zoom from struct 4589, the Combat Achievements screen's own entry for this boss, which pins model 49285 at zoom 2700, and compute shiftY from the bind pose extents at that zoom. The zoom then had to be raised from 2700 to 4092 because the bind-pose shiftY at 2700 projected well past the 70px half-box ceiling BundledBossDataTest enforces; model 49285 measures Y[-1129..42], which is the tallest model in this whole wave, so it needs the largest correction. The pathfinder preview is not in the CA structs and its zoom comes from the bind-pose formula applied directly, raised for the same reason. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'The Leviathan', matching 'name', article included.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED. This is the most aggressive zoom raise in the wave, from the CA screen's 2700 to 4092, so the boss will render noticeably smaller than Jagex frames it. If it reads too small, the alternative is Zulrah's treatment: fit the above-ground body only and let the rest clip. 3. Confirm the three 360 animations 10285 through 10287 are the debris roar; the mapping rests on an inference from the name. 4. Work out what LEVIATHAN_TORNADO 12222 is and whether it belongs to a mechanic here. 5. Add the graphic triggers deliberately left out, starting with the eight smoke spotanims 10098 through 10105, which would give the smoke blast a second trigger. 6. The lightning barrage described on the wiki has no mechanic here, for want of an animation that clearly matches it; find its trigger during the live pass."
+}
