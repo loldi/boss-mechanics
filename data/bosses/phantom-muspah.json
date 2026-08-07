@@ -1,0 +1,77 @@
+{
+  "id": "phantom-muspah",
+  "name": "Phantom Muspah",
+  "npcIds": [12077, 12078, 12079, 12080, 12082],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Phantom_Muspah/Strategies",
+  "mechanics": [
+    {
+      "id": "ranged-form",
+      "name": "Ranged Form",
+      "description": "Its default stance. It attacks with ranged, and drops in the occasional magic cast that you can see charging as a purple orb.",
+      "counterplay": "Keep Protect from Missiles up by default and swap to Magic the moment the orb charges.",
+      "phase": "Ranged",
+      "detection": [
+        { "type": "animation", "id": 9922 },
+        { "type": "animation", "id": 9918 }
+      ],
+      "preview": { "animationId": 9922, "modelId": 47147, "staticFallback": false, "zoom": 2550, "shiftY": 42 }
+    },
+    {
+      "id": "melee-form",
+      "name": "Melee Form",
+      "description": "It comes at you in melee, and the longer it stays still the harder it hits.",
+      "counterplay": "Never stop moving. Step back on the third tick after a hit and the next one misses entirely, or freeze it and walk away.",
+      "phase": "Melee",
+      "detection": [
+        { "type": "animation", "id": 9920 },
+        { "type": "npc-spawn", "id": 12078 }
+      ],
+      "preview": { "animationId": 9920, "modelId": 47147, "staticFallback": false, "zoom": 2550, "shiftY": 42 }
+    },
+    {
+      "id": "corruption",
+      "name": "Corruption",
+      "description": "Its magic projectiles leave a corruption on you that eats your prayer in increasing bites every few seconds.",
+      "counterplay": "Cast Ward of Arceuus. It stops the corruption landing, and clears it if it already has.",
+      "detection": [
+        { "type": "animation", "id": 9918 }
+      ],
+      "preview": { "animationId": 9918, "modelId": 47147, "staticFallback": false, "zoom": 2550, "shiftY": 42 }
+    },
+    {
+      "id": "lightning-clouds",
+      "name": "Lightning Clouds",
+      "description": "It teleports around the arena leaving lightning clouds behind it. Damage you deal during this does not count toward its next form change.",
+      "counterplay": "There is a tile that every cloud misses. Stand on it and wait; it always comes back north-east.",
+      "detection": [
+        { "type": "animation", "id": 9928 }
+      ],
+      "preview": { "animationId": 9923, "modelId": 47147, "staticFallback": false, "zoom": 2550, "shiftY": 42 }
+    },
+    {
+      "id": "homing-spikes",
+      "name": "Homing Spikes",
+      "description": "Spikes crawl toward you a tile every couple of ticks, then harden where they stop.",
+      "counterplay": "Let them harden somewhere useful, then stand behind them. A hardened spike blocks its projectiles.",
+      "detection": [
+        { "type": "animation", "id": 9923 }
+      ],
+      "preview": { "animationId": 9923, "modelId": 47147, "staticFallback": false, "zoom": 2550, "shiftY": 42 }
+    },
+    {
+      "id": "shielded-shockwave",
+      "name": "Shield and Shockwave",
+      "description": "In its last form it raises a prayer shield and turns on Soul Split, and entering that form sets off a shockwave across the whole arena.",
+      "counterplay": "Be standing behind a spike before it changes. Smite the shield down, or use sapphire bolts to strip it faster.",
+      "phase": "Shielded",
+      "detection": [
+        { "type": "animation", "id": 9925 },
+        { "type": "npc-spawn", "id": 12079 },
+        { "type": "npc-spawn", "id": 12080 }
+      ],
+      "preview": { "animationId": 9925, "modelId": 47147, "staticFallback": false, "zoom": 2550, "shiftY": 42 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: MUSPAH 12077, MUSPAH_MELEE 12078, MUSPAH_SOULSPLIT 12079, MUSPAH_FINAL 12080 and MUSPAH_TELEPORT 12082. All five are in npcIds because the boss transforms between forms rather than respawning, and an npc transform has to be tracked as the boss for its animations to keep matching (docs/DECISIONS.md D17); the form-specific ids also serve as npc-spawn triggers where a mechanic is tied to one form. The four MUSPAH_*_QUEST ids (12073 through 12076, 12081) belong to the quest version and are deliberately excluded, as is MUSPAH_PROJECTILE 12083, which is a projectile entity rather than a boss form. Animations are the NPC_MUSPAH_* set, all unambiguous gameval names: ATTACK_MAGIC 9918, ATTACK_MELEE 9920, ATTACK_RANGED 9922, ATTACK_SUMMON 9923, ATTACK_EXPLOSION 9925 and TELEPORT_DISAPPEAR 9928. THE VFX_MUSPAH_* SIBLINGS ARE DELIBERATELY LEFT OUT. Each attack animation has a matching VFX id one number higher (9919, 9921, 9924, 9926, 9927), and all of them sit in the animation space rather than the spotanim space a projectile trigger reads, so none is curatable as a projectile. TWO TRIGGER MAPPINGS ARE INFERENCES. The lightning clouds detect on TELEPORT_DISAPPEAR 9928 because the wiki describes the phase as the boss teleporting rapidly around the arena, and the homing spikes detect on ATTACK_SUMMON 9923 because summoning is the only sequence left that fits. Neither is named for the mechanic it is curated on, and swapping them would silently mislabel two rows. The corruption mechanic deliberately shares animation 9918 with the ranged form, because corruption is the effect its magic cast applies rather than an attack of its own; both unlock together, which is honest, and separating them matters because the counterplay differs completely. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all five sequences tried. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 4454, the Combat Achievements screen's own entry for this boss, which pins model 47147 at zoom 2550, and compute shiftY from the bind pose extents at that zoom. The preview pins modelId 47147 rather than resolving through npcId, since that is the model the CA screen frames. staticFallback is false on all six; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Phantom Muspah', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 3. Confirm the two inferred mappings: TELEPORT_DISAPPEAR 9928 as the lightning cloud phase and ATTACK_SUMMON 9923 as the homing spikes. These are the weakest links in the file. 4. Find the spike npc id, if the spikes are npcs; an npc-spawn would be a far better trigger for them than a summon animation. 5. Establish whether any VFX_MUSPAH id exists in the spotanim space as well as the animation space, which would give the ranged and magic attacks real projectile triggers. 6. staticFallback is false on all six; confirm each body animation reads at the shipped zoom."
+}
