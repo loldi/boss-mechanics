@@ -1,0 +1,87 @@
+{
+  "id": "barrows-chests",
+  "name": "Barrows Chests",
+  "npcIds": [1672, 1673, 1674, 1675, 1676, 1677],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Barrows/Strategies",
+  "mechanics": [
+    {
+      "id": "ahrim",
+      "name": "Ahrim the Blighted",
+      "description": "The mage. His attacks can drain your Strength on a hit.",
+      "counterplay": "Pray Protect from Magic. He is weak to ranged, so bring something to shoot him with.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1672 },
+        { "type": "animation", "id": 2086 }
+      ],
+      "preview": { "animationId": 813, "npcId": 1672, "staticFallback": false, "zoom": 1062, "shiftY": 58 }
+    },
+    {
+      "id": "dharok",
+      "name": "Dharok the Wretched",
+      "description": "The melee brother, and the dangerous one. The less health he has left, the harder he hits.",
+      "counterplay": "Pray Protect from Melee and kill him fast. Chipping him down slowly is how people die here.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1673 }
+      ],
+      "preview": { "animationId": 2065, "npcId": 1673, "staticFallback": false, "zoom": 1323, "shiftY": 68 }
+    },
+    {
+      "id": "guthan",
+      "name": "Guthan the Infested",
+      "description": "Melee, and every hit he lands heals him for the same amount.",
+      "counterplay": "Pray Protect from Melee so he never lands one and never heals.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1674 },
+        { "type": "animation", "id": 2083 }
+      ],
+      "preview": { "animationId": 813, "npcId": 1674, "staticFallback": false, "zoom": 1062, "shiftY": 58 }
+    },
+    {
+      "id": "karil",
+      "name": "Karil the Tainted",
+      "description": "The ranger. His hits can cut your Agility level.",
+      "counterplay": "Pray Protect from Missiles. He is weak to melee, so walk up to him.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1675 },
+        { "type": "animation", "id": 2087 }
+      ],
+      "preview": { "animationId": 808, "npcId": 1675, "staticFallback": false, "zoom": 1062, "shiftY": 58 }
+    },
+    {
+      "id": "torag",
+      "name": "Torag the Corrupted",
+      "description": "Melee, and his hits drain your run energy.",
+      "counterplay": "Pray Protect from Melee. He is the least threatening of the three melee brothers.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1676 },
+        { "type": "animation", "id": 2084 }
+      ],
+      "preview": { "animationId": 808, "npcId": 1676, "staticFallback": false, "zoom": 1062, "shiftY": 58 }
+    },
+    {
+      "id": "verac",
+      "name": "Verac the Defiled",
+      "description": "Melee, and the one brother whose hits go through prayer entirely.",
+      "counterplay": "Pray Protect from Melee anyway, and expect some damage regardless. Nothing stops him completely.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1677 },
+        { "type": "animation", "id": 1375 }
+      ],
+      "preview": { "animationId": 2061, "npcId": 1677, "staticFallback": false, "zoom": 1062, "shiftY": 58 }
+    },
+    {
+      "id": "tunnel-and-drain",
+      "name": "Tunnels and Prayer Drain",
+      "description": "Your prayer drains steadily the whole time you are in the crypts and tunnels, and the last brother appears behind you in the tunnel rather than in a tomb.",
+      "counterplay": "Bring prayer restores and expect the sixth brother to arrive without warning while you are digging through the chest.",
+      "detection": [
+        { "type": "npc-spawn", "id": 1678 },
+        { "type": "npc-spawn", "id": 1683 },
+        { "type": "npc-spawn", "id": 1684 }
+      ],
+      "preview": { "animationId": 808, "npcId": 1676, "staticFallback": false, "zoom": 1062, "shiftY": 58 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS SIX BOSSES, and unlike the other multi-boss pages in this wave they are met one at a time rather than together, so each brother gets his own mechanic. npcIds holds all six: BARROWS_AHRIM 1672, DHAROK 1673, GUTHAN 1674, KARIL 1675, TORAG 1676 and VERAC 1677, laid out consecutively under a shared BARROWS_ prefix. EACH BROTHER CARRIES BOTH AN npc-spawn AND, WHERE ONE EXISTS, HIS OWN SIGNATURE ANIMATION. The npc-spawn is what makes the identification exact, since the six share generic human animations and an animation trigger alone would confirm only that some tracked brother played it (docs/DECISIONS.md D17). Four of the six have a named signature sequence: BARROWS_GUTHAN_INFESTATION 2083, BARROWS_TORAG_CORRUPTION 2084, BARROWS_AHRIM_BLIGHTED_AURA 2086 and BARROWS_KARIL_TAINTED_SHOT 2087, plus BARROWS_VERAC_DESOLATION 1375. Dharok has none, which is why his mechanic is npc-spawn only. Note that Verac's 1375 sits at the same number as INFERNO_ZUK_PROJECTILE in the spotanim space; they are unrelated ids in different spaces. THE BROTHERS' PREVIEWS MOSTLY USE GENERIC HUMAN IDLES (808 and 813) because that is what their npcs carry, and four of them share one fitted zoom for the same reason: they are the same human skeleton in different armour. Dharok is fitted separately because his model set is larger. THE SEVENTH MECHANIC IS THE CRYPT ITSELF rather than a brother, detecting on the tunnel creatures BARROWS_BLOODWORM 1678, BARROWS_SPIDER 1683 and BARROWS_GIANTSPIDER 1684. It covers the prayer drain and the sixth brother ambush, neither of which any brother animates. The three BARROWS_GIANTRAT ids 1680 through 1682 are left out as redundant with the spider ids. No projectile is curated: the cache names BARROWS_REPEATING_CROSSBOW_FIRE_SPOT 5477 but that is Karil's weapon graphic rather than an unambiguous projectile. staticFallback is false on all seven; whether each animation reads has not been eyeballed in game. The collection log page is titled 'Barrows Chests', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Confirm the five signature animations actually play; they are named for each brother's effect but nothing establishes the game triggers them on a hit rather than on spawn. 3. Find Dharok a trigger beyond his npc-spawn; he is the most dangerous brother and currently unlocks just for being met. 4. Fit each brother's preview separately rather than sharing one zoom across four of them. 5. Confirm the tunnel mechanic's three npc ids are the right ones for the crypt, and whether the prayer drain has any trigger of its own."
+}
