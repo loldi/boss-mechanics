@@ -86,7 +86,7 @@ track the live pass.
 | Nex | 6 |
 | Obor | 1 |
 | Phantom Muspah | 6 |
-| Royal Titans | 5 |
+| Royal Titans | 4 |
 | Sarachnis | 2 |
 | Scorpia | 2 |
 | Scurrius | 4 |
@@ -105,7 +105,7 @@ track the live pass.
 | Venenatis and Spindel | 3 |
 | Vet'ion and Calvar'ion | 4 |
 | Vorkath | 6 |
-| Yama | 6 |
+| Yama | 7 |
 | Zulrah | 5 |
 
 ## Settings
