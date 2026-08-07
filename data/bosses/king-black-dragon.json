@@ -1,0 +1,41 @@
+{
+  "id": "king-black-dragon",
+  "name": "King Black Dragon",
+  "npcIds": [239, 2642],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/King_Black_Dragon/Strategies",
+  "mechanics": [
+    {
+      "id": "dragonfire",
+      "name": "Dragonfire",
+      "description": "His main threat. Unprotected it hits for enormous damage; with an antifire and a shield it barely registers.",
+      "counterplay": "Bring an antifire potion and a dragonfire shield. Either alone leaves you taking real damage.",
+      "detection": [
+        { "type": "animation", "id": 91 }
+      ],
+      "preview": { "animationId": 91, "npcId": 239, "staticFallback": false, "zoom": 797, "shiftY": 60 }
+    },
+    {
+      "id": "coloured-breath",
+      "name": "Coloured Breath",
+      "description": "His other three heads breathe poison, ice and shock. Poison stacks damage over time, ice freezes you in place, and shock drains your stats.",
+      "counterplay": "Antifire does nothing against these three. Pray Protect from Magic and keep antipoison handy.",
+      "detection": [
+        { "type": "npc-spawn", "id": 239 },
+        { "type": "npc-spawn", "id": 2642 }
+      ],
+      "preview": { "animationId": 90, "npcId": 239, "staticFallback": false, "zoom": 797, "shiftY": 60 }
+    },
+    {
+      "id": "melee-bite",
+      "name": "Bite",
+      "description": "In melee range he bites, and it is the only attack an antifire will not help with.",
+      "counterplay": "Pray Protect from Melee if you are standing next to him, or fight from range.",
+      "detection": [
+        { "type": "animation", "id": 89 }
+      ],
+      "preview": { "animationId": 91, "npcId": 239, "staticFallback": false, "zoom": 797, "shiftY": 60 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 239 and 2642, the second being a recoloured cutscene copy (TWOCATS_KBD_CUTSCENE) that shares the model set and animations. KBD_PET 6636 and POH_KBD_PET 6652 are excluded. THIS BOSS HAS NO ANIMATIONS OF ITS OWN. Npc 239's standing animation is 90, which the gamevals name DRAGON_READY, so it reuses the generic dragon set wholesale: DRAGON_BLOCK 89, DRAGON_HEAD_ATTACK 91, DRAGON_DEATH 92. That set has exactly one attack sequence, DRAGON_HEAD_ATTACK 91, which is why the three mechanics here cannot each have their own animation. Because the animations are generic, the animation trigger is doing real work: an animation only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17), so an ordinary dragon nearby cannot false-positive. THE THREE MECHANICS ARE SPLIT BY COUNTERPLAY, NOT BY TRIGGER, AND TWO OF THE THREE TRIGGERS ARE COMPROMISES. Ordinary dragonfire takes DRAGON_HEAD_ATTACK 91 because it is the attack he throws most. The melee bite takes DRAGON_BLOCK 89, which is a defend rather than an attack sequence and is the weakest mapping in the file, chosen because it is the only other sequence in the set and because a melee bite is the only mechanic that happens exclusively at close range. The coloured breaths take a bare npc-spawn, so they unlock on arrival rather than on the breath: they are the same head attack with a different spotanim, and the cache names no KBD spotanim to tell them apart. Splitting them out anyway is deliberate, because the counterplay genuinely differs, an antifire covers the ordinary breath and does nothing against the other three, and a player reading this list needs that separated. THREE MECHANICS IS ON THE THIN SIDE and reflects how little of this boss the cache describes, not the wiki's account of it. staticFallback is false on all three; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'King Black Dragon', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. THIS BOSS NEEDS IT MORE THAN MOST: two of its three triggers are compromises. 2. Find the spotanims that distinguish the four breath colours. If they exist, the coloured breaths stop detecting on npc-spawn and can split into poison, ice and shock. 3. Confirm DRAGON_BLOCK 89 is not simply his defend animation, in which case the melee bite needs a different trigger or should fold into dragonfire. 4. staticFallback is false on all three; confirm the shared preview animation reads at the shipped zoom."
+}

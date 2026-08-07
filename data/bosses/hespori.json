@@ -1,0 +1,41 @@
+{
+  "id": "hespori",
+  "name": "Hespori",
+  "npcIds": [8583, 11192, 15615],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Hespori/Strategies",
+  "mechanics": [
+    {
+      "id": "ranged-attack",
+      "name": "Thorn Barrage",
+      "description": "Its ordinary attack, thrown at range from the patch it is rooted in.",
+      "counterplay": "Pray Protect from Missiles for the whole fight.",
+      "detection": [
+        { "type": "animation", "id": 8224 }
+      ],
+      "preview": { "animationId": 8224, "npcId": 8583, "staticFallback": false, "zoom": 3601, "shiftY": 62 }
+    },
+    {
+      "id": "special-attack",
+      "name": "Vine Special",
+      "description": "It lashes out with vines, and standing in the wrong place while it does binds you where you are.",
+      "counterplay": "Keep moving and stay off the tiles the vines cover.",
+      "detection": [
+        { "type": "animation", "id": 8223 }
+      ],
+      "preview": { "animationId": 8223, "npcId": 8583, "staticFallback": false, "zoom": 3790, "shiftY": 62 }
+    },
+    {
+      "id": "flowers",
+      "name": "Healing Flowers",
+      "description": "Three flowers open around the patch and heal it steadily while they are alive.",
+      "counterplay": "Kill every flower as it opens. Ignoring them means the fight does not end.",
+      "detection": [
+        { "type": "npc-spawn", "id": 8584 },
+        { "type": "npc-spawn", "id": 8585 }
+      ],
+      "preview": { "animationId": 8227, "npcId": 8584, "staticFallback": false, "zoom": 640, "shiftY": 62 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids HESPORI 8583, TOBQUEST_HESPORI 11192 and 15615, the last two carrying different models but the same animations; all three are in npcIds so the plugin recognises whichever version the player meets. HESPORI_HEALER_ACTIVE 8584 and HESPORI_HEALER_INACTIVE 8585 are the flowers and detect on npc-spawn. Animations are the HESPORI_* set, all unambiguous gameval names: ATTACK_RANGED 8224, ATTACK_SPECIAL 8223, and HEALER_READY 8227 for the flower preview. HESPORI_VINE_IMPACT 8226 is a graphic and is left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). HESPORI_SEED_PROJ 11918 CARRIES AN EXPLICIT PROJECTILE SUFFIX BUT IS DELIBERATELY NOT CURATED, because it sits in the animation space rather than the spotanim space that a projectile trigger reads, and nothing establishes that a spotanim of the same name exists. It is the first candidate for the live pass. THE FLOWER PREVIEW USES THE ACTIVE FLOWER'S OWN IDLE, per docs/DECISIONS.md D26. The two flower npcs are the open and closed states of the same thing and both are curated as triggers so whichever the game spawns is caught. staticFallback is false on all three; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Hespori', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Establish whether HESPORI_SEED_PROJ 11918 exists in the spotanim space as well as the animation space; if it does it belongs on the ranged attack. 3. Confirm which of the three Hespori npc ids the player actually meets, and whether 11192 and 15615 belong to different content rather than the ordinary patch fight. 4. Consider whether the flowers should split into their own mechanic per flower; the wiki treats all three as one behaviour and this file follows it. 5. staticFallback is false on all three; confirm each body animation reads at the shipped zoom."
+}

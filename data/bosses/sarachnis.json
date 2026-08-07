@@ -1,0 +1,31 @@
+{
+  "id": "sarachnis",
+  "name": "Sarachnis",
+  "npcIds": [8713],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Sarachnis/Strategies",
+  "mechanics": [
+    {
+      "id": "melee-and-ranged",
+      "name": "Melee and Ranged",
+      "description": "She switches between melee up close and ranged at a distance, and she picks whichever suits where you are standing rather than following a pattern.",
+      "counterplay": "Stay at range and pray Protect from Missiles, so she only ever has the one option.",
+      "detection": [
+        { "type": "npc-spawn", "id": 8713 }
+      ],
+      "preview": { "animationId": 8320, "npcId": 8713, "staticFallback": false, "zoom": 1118, "shiftY": 50 }
+    },
+    {
+      "id": "spawns",
+      "name": "Spawn of Sarachnis",
+      "description": "She calls up spiderlings through the fight. They are weak individually and a nuisance in numbers.",
+      "counterplay": "Clear them with anything that hits several at once, or step away and keep hitting her.",
+      "detection": [
+        { "type": "npc-spawn", "id": 8714 },
+        { "type": "npc-spawn", "id": 8715 }
+      ],
+      "preview": { "animationId": 8320, "npcId": 8714, "staticFallback": false, "zoom": 1118, "shiftY": 50 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id SARACHNIS 8713, with SARACHNIS_MELEE_SPAWN 8714 and SARACHNIS_MAGE_SPAWN 8715 as adds detecting on npc-spawn. The four Sarachnis pets (2143, 2144, 11159, 11160) are excluded. THIS BOSS HAS NO ATTACK ANIMATION IN THE CACHE, WHICH IS WHY THE FIRST MECHANIC DETECTS ON A BARE npc-spawn AND SO UNLOCKS ON ARRIVAL. The gamevals name exactly three sequences for her, and Jagex misspelled the prefix two different ways doing it: HOSDUN_SPIDER_BOSS_DEATH 8318, HODSUN_SPIDER_BOSS_WALK 8319 and HOSDUN_SPIDER_BOSS_IDLE 8320. There is no attack among them, and no SARACHNIS spotanim of any kind, so neither her melee nor her ranged attack has anything honest to detect on. Her melee and ranged are consequently curated as one mechanic rather than two: splitting them would produce two rows detecting on the same npc-spawn, unlocking at the same instant, which tells a player nothing. THE SPAWN NPC NAMES SAY MELEE AND MAGE, THE WIKI SAYS SHE HERSELF USES MELEE AND RANGED. The two spawn ids are curated together on one mechanic rather than split by the style their names claim, because nothing confirms the naming reflects what they actually do and the counterplay is the same either way. Both spawns share the boss's own idle animation 8320 and differ only in model. TWO MECHANICS IS THE LIMIT OF WHAT THE CACHE SUPPORTS HERE, not a judgement about the boss. staticFallback is false on both; whether the idle reads has not been eyeballed in game. The collection log page is titled 'Sarachnis', matching 'name'.",
+  "_followups": "1. THIS BOSS NEEDS A LIVE FIGHT BADLY. Run it with Log boss trigger ids on: the cache names no attack animation and no projectile for her, so every real trigger in this fight is unknown and the first mechanic currently unlocks just for walking in. 2. Once her ids are known, split melee-and-ranged into two mechanics with different prayers. 3. Confirm whether spawns 8714 and 8715 really are melee and magic as their gameval names claim, and split the spawn mechanic if the difference matters. 4. staticFallback is false on both; confirm the idle reads at the shipped zoom, and replace it with a real attack animation once one is known."
+}

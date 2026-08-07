@@ -1,0 +1,30 @@
+{
+  "id": "bryophyta",
+  "name": "Bryophyta",
+  "npcIds": [8195],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Bryophyta/Strategies",
+  "mechanics": [
+    {
+      "id": "club-swing",
+      "name": "Club Swing",
+      "description": "Her melee attack, and she has nothing that reaches beyond it. She poisons on a hit.",
+      "counterplay": "Pray Protect from Melee and bring an antipoison.",
+      "detection": [
+        { "type": "animation", "id": 4658 }
+      ],
+      "preview": { "animationId": 4658, "npcId": 8195, "staticFallback": false, "zoom": 1943, "shiftY": 62 }
+    },
+    {
+      "id": "growthlings",
+      "name": "Growthlings",
+      "description": "She calls up growthlings that get between you and her. Ordinary damage barely touches them.",
+      "counterplay": "Cut them down with a slashing weapon. Anything else leaves them standing.",
+      "detection": [
+        { "type": "npc-spawn", "id": 8194 }
+      ],
+      "preview": { "animationId": 3259, "npcId": 8194, "staticFallback": false, "zoom": 958, "shiftY": 52 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: the boss is GB_MOSSGIANT 8195 and the growthling is GB_GROWTHLING 8194, the pair sitting next to each other in the gamevals under a shared GB_ prefix. Bryophyta (Chest) 14786 is the loot chest, not the boss, and is excluded. THIS BOSS HAS NO ANIMATIONS OF ITS OWN. Npc 8195's standing animation is 4656, which the gamevals name GIANT_UPDATE_MOSS_READY, so it reuses the ordinary moss giant set wholesale, and GIANT_UPDATE_MOSS_ATTACK 4658 is curated as its attack on that basis; the growthling likewise borrows 3259 as its idle. Because the boss animation is generic, the animation trigger is doing real work: an animation only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17), so the ordinary moss giants around her cannot false-positive. The growthling detects on npc-spawn, which matches one exact id and needs no such protection. No projectile is curated: the cache names no BRYOPHYTA or GB_ spotanim, and she has no ranged attack. THE GROWTHLING PREVIEW MAY NOT RENDER COLOUR-TRUE. Npc 8194 carries a four-pair recolour table over model 11979, and SCHEMA.md's recolor-table rule says a widget cannot apply an npc's recolour table. The recolours are green-on-green shifts rather than a wholesale change of hue, so this is a mild risk rather than the Vorkath zombified-spawn case, but it has not been measured with ModelColors. staticFallback is false on both; whether the borrowed animations read has not been eyeballed in game. The collection log page is titled 'Bryophyta', matching 'name'.",
+  "_followups": "1. Live verification per the curation checklist, with Log boss trigger ids on. 2. Confirm GIANT_UPDATE_MOSS_ATTACK 4658 is what she plays, since it is the generic moss giant animation rather than a boss-specific one. 3. Measure the growthling's recolour coverage with ModelColors; if the four pairs cover the whole mesh the preview needs a bundled sprite (docs/DECISIONS.md D27/D28). 4. Struct 3577, her Combat Achievements entry, pins model 28608 at zoom 1800, which matches the npc's own models[0]; no discrepancy to fix here. 5. staticFallback is false on both; confirm each animation reads at the shipped zoom."
+}
