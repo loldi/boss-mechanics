@@ -1,0 +1,31 @@
+{
+  "id": "scorpia",
+  "name": "Scorpia",
+  "npcIds": [6615],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Scorpia",
+  "mechanics": [
+    {
+      "id": "tail-attack",
+      "name": "Tail Strike",
+      "description": "She strikes with her tail at close range, and she has no attack that reaches any further.",
+      "counterplay": "Pray Protect from Melee, or stand back and she cannot touch you at all.",
+      "detection": [
+        { "type": "animation", "id": 6254 }
+      ],
+      "preview": { "animationId": 6254, "npcId": 6615, "staticFallback": false, "zoom": 1339, "shiftY": 60 }
+    },
+    {
+      "id": "offspring",
+      "name": "Offspring and Guardians",
+      "description": "Small scorpions crawl out around her. The guardians heal her steadily, which is what turns a short fight into a long one.",
+      "counterplay": "Kill the guardians on sight. The plain offspring can be ignored.",
+      "detection": [
+        { "type": "npc-spawn", "id": 6616 },
+        { "type": "npc-spawn", "id": 6617 }
+      ],
+      "preview": { "animationId": 6258, "npcId": 6616, "staticFallback": false, "zoom": 281, "shiftY": 56 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: SCORPIA 6615, with SCORPIA_MINION 6616 and SCORPIA_GUARDIAN 6617 as adds detecting on npc-spawn. POH_SCORPIA_PET 5547, SCORPIAPET 5561 and the older offspring npc 5561 are excluded. THIS BOSS HAS NO ANIMATIONS OF ITS OWN. Npc 6615's standing animation is 6252, which the gamevals name SCORPION_UPDATE_READY, so it reuses the ordinary scorpion set wholesale, and SCORPION_UPDATE_ATTACK_TAIL 6254 is curated as its attack on that basis. The offspring likewise reuse SMALL_SCORPION_UPDATE_READY 6258. Because the animation is the generic scorpion one rather than a boss-specific one, the animation trigger is doing real work here: an animation only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17), so an ordinary scorpion nearby playing 6254 cannot false-positive. No projectile is curated: the cache names no SCORPIA spotanim at all, and she has no ranged attack to need one. THE OFFSPRING PREVIEW MAY NOT RENDER COLOUR-TRUE. Npc 6616 carries a five-pair recolour table over model 24612, and SCHEMA.md's recolor-table rule says a widget cannot apply an npc's recolour table. Its sibling the guardian, npc 6617, carries a different five-pair table over the same model, which is exactly how the game tells the two apart, so whichever is previewed the other's colour is wrong by construction. This has not been measured with ModelColors. TWO MECHANICS IS AN HONEST COUNT FOR THIS BOSS, not a shortfall: she has one attack and one spawn mechanic, and the wiki lists nothing else. staticFallback is false on both; whether either body animation reads has not been eyeballed in game. The collection log page is titled 'Scorpia', matching 'name'.",
+  "_followups": "1. Live verification of both ids per the curation checklist, with Log boss trigger ids on. 2. Confirm SCORPION_UPDATE_ATTACK_TAIL 6254 is what she actually plays, since it is the generic scorpion animation rather than a boss-specific one. 3. Measure the offspring and guardian recolour coverage with ModelColors. If either covers the whole mesh, the preview needs a bundled sprite the way Vorkath's zombified spawn did (docs/DECISIONS.md D27/D28), and the two could then be split into separate mechanics with the guardian shown in its own colour. 4. staticFallback is false on both; confirm each body animation reads at the shipped zoom."
+}

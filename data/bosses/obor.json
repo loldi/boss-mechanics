@@ -1,0 +1,20 @@
+{
+  "id": "obor",
+  "name": "Obor",
+  "npcIds": [7416],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Obor",
+  "mechanics": [
+    {
+      "id": "club-swing",
+      "name": "Club Swing",
+      "description": "His only attack. He swings his club at whoever is next to him and has nothing that reaches further.",
+      "counterplay": "Pray Protect from Melee. He hits hard for a boss this size but he only ever does the one thing.",
+      "detection": [
+        { "type": "animation", "id": 4652 }
+      ],
+      "preview": { "animationId": 4652, "npcId": 7416, "staticFallback": false, "zoom": 1965, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id 7416. Obor (Chest) 14787 is the loot chest, not the boss, and is excluded. THIS BOSS HAS NO ANIMATIONS OF ITS OWN. Npc 7416's standing animation is 4650, which the gamevals name GIANT_UPDATE_BASIC_READY, so it reuses the ordinary hill giant set wholesale, and GIANT_UPDATE_BASIC_ATTACK 4652 is curated as its attack on that basis. Because the animation is generic, the animation trigger is doing real work here: an animation only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17), so the ordinary hill giants in the cave below cannot false-positive. No projectile is curated: the cache names no OBOR spotanim, and he has no ranged attack to need one. ONE MECHANIC IS AN HONEST COUNT FOR THIS BOSS, not a shortfall. He is a scaled-up hill giant with one melee attack and no specials; the wiki's page has no strategy section at all, which is why wikiUrl points at the main page rather than a Strategies one. ZOOM IS DELIBERATELY LARGER THAN FitZoom'S OWN FIT. The model sits entirely above the ground line the engine anchors to, so the shiftY that centres it projects past the 70px half-box ceiling BundledBossDataTest enforces; raising zoom shrinks the model and its offset by the same factor, and 1965 is the smallest zoom that brings shiftY to 68. staticFallback is false; whether the borrowed attack animation reads has not been eyeballed in game. The collection log page is titled 'Obor', matching 'name'.",
+  "_followups": "1. Live verification per the curation checklist, with Log boss trigger ids on. 2. Confirm GIANT_UPDATE_BASIC_ATTACK 4652 is what he plays, since it is the generic hill giant animation rather than a boss-specific one. 3. Confirm the raised zoom reads correctly in game. 4. Struct 3572, his Combat Achievements entry, pins model 42774 at zoom 1500 rather than the npc's own models[0]; if the preview renders partially that is the fallback."
+}

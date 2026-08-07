@@ -1,0 +1,45 @@
+{
+  "id": "brutus",
+  "name": "Brutus",
+  "npcIds": [15626, 15627, 15628, 15629],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Brutus",
+  "mechanics": [
+    {
+      "id": "melee-attack",
+      "name": "Melee Attack",
+      "description": "His ordinary attack, a crush hit at close range. It does very little.",
+      "counterplay": "Pray Protect from Melee and it does nothing at all.",
+      "detection": [
+        { "type": "animation", "id": 13783 }
+      ],
+      "preview": { "animationId": 13783, "npcId": 15626, "staticFallback": false, "zoom": 1054, "shiftY": 63 }
+    },
+    {
+      "id": "charge",
+      "name": "Charge",
+      "description": "He lowers his head, breathes heavily, and charges in a straight line. The wind-up gives you a few ticks.",
+      "counterplay": "Step out of the line he is pointing down. This is the move that teaches you to watch a boss rather than a health bar.",
+      "detection": [
+        { "type": "animation", "id": 13778 },
+        { "type": "animation", "id": 13780 },
+        { "type": "animation", "id": 13779 }
+      ],
+      "preview": { "animationId": 13778, "npcId": 15626, "staticFallback": false, "zoom": 1315, "shiftY": 62 }
+    },
+    {
+      "id": "stomp",
+      "name": "Stomp",
+      "description": "He rears and stamps, hitting the ground around him rather than one target.",
+      "counterplay": "Move away from him while he winds up. Prayer does not cover this one.",
+      "detection": [
+        { "type": "animation", "id": 13785 },
+        { "type": "animation", "id": 13791 },
+        { "type": "animation", "id": 13786 },
+        { "type": "animation", "id": 13792 }
+      ],
+      "preview": { "animationId": 13785, "npcId": 15626, "staticFallback": false, "zoom": 1348, "shiftY": 63 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 15626 and 15627 are Brutus, 15628 and 15629 are Demonic Brutus, carrying different models but the same animation set; all four are in npcIds so the plugin recognises whichever version the player meets. Jagex's internal name for this boss is COW_BOSS, not Brutus, which is why a gameval name search for 'brutus' finds nothing. Animations are the COW_BOSS_* set, all unambiguous gameval names: ATTACK 13783, CHARGE 13778 with HEAVY_BREATH 13780, and STOMP 13785 with SPIRIT_STOMP 13791. THE SET COMES IN ORDINARY AND GHOST PAIRS, and both halves of each pair are curated as triggers on the same mechanic: GHOST_CHARGE 13779 beside CHARGE 13778, and GHOST_STOMP 13786 and GHOST_SPIRIT_STOMP 13792 beside their ordinary versions. The ghost variants presumably belong to the Demonic Brutus npcs, so curating both means the mechanic unlocks whichever version you fight. No projectile is curated: the cache names no COW_BOSS or Brutus spotanim, and he has no ranged attack. THREE MECHANICS IS AN HONEST COUNT and matches what this boss is for: the wiki describes it as a deliberately simple free-to-play boss in the Lumbridge cow field, built to teach a new player one melee attack and two telegraphed specials. The two specials are the whole point, and both have real triggers. THE SAFESPOT BEHAVIOUR IS NOT CURATED as a mechanic: the wiki notes he charges through or walks around scenery after being safespotted too long, but that is pathing rather than a move, and it has no animation of its own beyond the charge already listed. staticFallback is false on all three; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Brutus', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Confirm the ghost animation variants belong to the Demonic Brutus npcs rather than to a phase of the ordinary one; if they are a phase, the mechanics may want phase labels. 3. Work out what distinguishes COW_BOSS_STOMP 13785 from COW_BOSS_SPIRIT_STOMP 13791; they are curated as one mechanic on the assumption they are the same move. 4. Struct 4550, his Combat Achievements entry, pins model 60113 at zoom 1000, close to the 1054 fitted here, which corroborates the fit. 5. staticFallback is false on all three; confirm each animation reads at the shipped zoom."
+}

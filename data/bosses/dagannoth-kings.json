@@ -1,0 +1,56 @@
+{
+  "id": "dagannoth-kings",
+  "name": "Dagannoth Kings",
+  "npcIds": [2265, 2266, 2267],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Dagannoth_Kings/Strategies",
+  "mechanics": [
+    {
+      "id": "dagannoth-supreme",
+      "name": "Dagannoth Supreme",
+      "description": "The ranged king. It is weak to magic and it is the only one of the three that can hit you from across the room with arrows.",
+      "counterplay": "Pray Protect from Missiles and kill it with magic. Most people take it first for that reason.",
+      "detection": [
+        { "type": "animation", "id": 2855 },
+        { "type": "npc-spawn", "id": 2265 },
+        { "type": "projectile", "id": 473 }
+      ],
+      "preview": { "animationId": 2855, "npcId": 2265, "staticFallback": false, "zoom": 1002, "shiftY": 62 }
+    },
+    {
+      "id": "dagannoth-prime",
+      "name": "Dagannoth Prime",
+      "description": "The magic king. It is weak to ranged and its attack reaches anywhere in the room.",
+      "counterplay": "Pray Protect from Magic and kill it with ranged.",
+      "detection": [
+        { "type": "animation", "id": 2854 },
+        { "type": "npc-spawn", "id": 2266 },
+        { "type": "projectile", "id": 475 },
+        { "type": "projectile", "id": 476 }
+      ],
+      "preview": { "animationId": 2854, "npcId": 2266, "staticFallback": false, "zoom": 1324, "shiftY": 61 }
+    },
+    {
+      "id": "dagannoth-rex",
+      "name": "Dagannoth Rex",
+      "description": "The melee king. It is weak to stab and it only reaches you if you are standing next to it, so a safespot removes it from the fight entirely.",
+      "counterplay": "Pray Protect from Melee, or stand where it cannot reach and deal with the other two first.",
+      "detection": [
+        { "type": "animation", "id": 2853 },
+        { "type": "npc-spawn", "id": 2267 }
+      ],
+      "preview": { "animationId": 2853, "npcId": 2267, "staticFallback": false, "zoom": 1118, "shiftY": 55 }
+    },
+    {
+      "id": "one-prayer-at-a-time",
+      "name": "One Prayer at a Time",
+      "description": "All three attack at once and each uses a different style, so whichever overhead you pick leaves two of them hitting you.",
+      "counterplay": "Pray against whichever one you are fighting and tank the other two. Kill Supreme, then Prime, then Rex.",
+      "detection": [
+        { "type": "animation", "id": 2852 }
+      ],
+      "preview": { "animationId": 2850, "npcId": 2267, "staticFallback": false, "zoom": 1118, "shiftY": 55 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS THREE BOSSES, which is why npcIds holds all three kings: Dagannoth Supreme 2265, Prime 2266 and Rex 2267. They are in npcIds rather than treated as spawns because all three are present for the whole fight, the same call General Graardor's sergeants ship under. The cache holds dozens of other npcs named Dagannoth, all of them ordinary dagannoths and Waterbirth mothers on a different model, and none is curated. THE THREE KINGS SHARE ONE ANIMATION SET, DAGANNOTH_MEGANOTH_*, and are told apart by which attack sequence each plays: ATTACK_RANGE 2855 for Supreme, ATTACK_MAGE 2854 for Prime and ATTACK_MELEE 2853 for Rex. Each mechanic also carries its king's npc-spawn as a second trigger, which matters here more than usual: because the animations are shared across all three npcs, an animation trigger alone would fire for whichever king played it, and D17's source check confirms the npc is one of this boss's tracked ids but not which one. The npc-spawn makes the identification exact. Projectiles DAGANNOTH_ARROW_SPOTANIM_TRAVEL 473 goes to Supreme and DAGANNOTH_SPINE_SPOTANIM_TRAVEL 475 and TRAVEL2 476 to Prime, each on its explicit TRAVEL suffix; DAGANNOTH_ARROW_SPOTANIM_HIT 474 and DAGANNOTH_WHIRLPOOL 477 are graphics and are left out. THE ARROW-TO-SUPREME AND SPINE-TO-PRIME ASSIGNMENT IS AN INFERENCE from the wiki's attack styles onto the projectile names, not an attested mapping; a wrong guess would misfile a trigger between two mechanics that both also carry an exact npc-spawn, so discovery would still work. THE FOURTH MECHANIC IS THE FIGHT ITSELF rather than a move, and it detects on DAGANNOTH_MEGANOTH_DEFEND 2852, the one sequence in the set that is not an attack and so belongs to no single king. That is a compromise: it will unlock the first time any king is hit rather than at some moment that means anything. It earns its place because the single most important thing about this boss is that no overhead covers more than one of the three, and a player reading a list of three kings would otherwise have to infer it. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Dagannoth Kings', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Confirm the projectile split, 473 to Supreme and 475 with 476 to Prime, which is inferred from the wiki's attack styles rather than a gameval name. 3. Reconsider the one-prayer-at-a-time mechanic once the fight has been run: detecting it on the shared defend animation is the weakest trigger in this file, and if it reads badly in game the mechanic may be better folded into the three kings' descriptions. 4. The three CA structs (3550, 3551, 3552) pin models 42709, 42711 and 42710 at zoom 1200 for Prime, Rex and Supreme; these previews resolve through npcId instead and fitted cleanly, but if any renders partially the CA models are the fallback. 5. staticFallback is false on all four; confirm each body animation reads at the shipped zoom."
+}

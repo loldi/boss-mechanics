@@ -1,0 +1,89 @@
+{
+  "id": "the-nightmare",
+  "name": "The Nightmare",
+  "npcIds": [378, 9425, 9426, 9427, 9428, 9429, 9430, 9431, 9432, 9433],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/The_Nightmare/Strategies",
+  "mechanics": [
+    {
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "She rotates through three styles. Ranged is a burst of projectiles, magic is the spin that throws pink petals, and melee is a fast claw slash that catches the tiles in front of and diagonal to her.",
+      "counterplay": "You get three ticks to react to ranged and magic, two to melee. Stand off her facing direction so melee never reaches you.",
+      "detection": [
+        { "type": "animation", "id": 8594 },
+        { "type": "animation", "id": 8595 },
+        { "type": "animation", "id": 8596 },
+        { "type": "projectile", "id": 1764 },
+        { "type": "projectile", "id": 1766 }
+      ],
+      "preview": { "animationId": 8595, "npcId": 9428, "staticFallback": false, "zoom": 3014, "shiftY": 61 }
+    },
+    {
+      "id": "parasites",
+      "name": "Parasites",
+      "description": "She throws a parasite into a player. About eighteen ticks later it bursts out for heavy damage, and until it is killed it heals her.",
+      "counterplay": "Drink a Sanfew serum or Relicym's balm before it emerges to blunt it, then kill the parasite fast.",
+      "detection": [
+        { "type": "animation", "id": 8606 },
+        { "type": "animation", "id": 8600 },
+        { "type": "projectile", "id": 1770 }
+      ],
+      "preview": { "animationId": 8606, "npcId": 9428, "staticFallback": false, "zoom": 3182, "shiftY": 56 }
+    },
+    {
+      "id": "sleepwalkers",
+      "name": "Sleepwalkers",
+      "description": "At the start of the second and last phases she summons sleepwalkers that shamble toward her. Each has almost no health and dies to a single hit.",
+      "counterplay": "Kill as many as you can before they reach her. Every one that gets through feeds a power blast.",
+      "detection": [
+        { "type": "animation", "id": 8602 }
+      ],
+      "preview": { "animationId": 8602, "npcId": 9428, "staticFallback": false, "zoom": 3194, "shiftY": 44 }
+    },
+    {
+      "id": "grasping-claws",
+      "name": "Grasping Claws",
+      "description": "A black portal opens under her and smaller ones scatter across the floor, then she pushes her claws through them.",
+      "counterplay": "Get onto a tile with no portal on it.",
+      "detection": [
+        { "type": "animation", "id": 8598 }
+      ],
+      "preview": { "animationId": 8598, "npcId": 9428, "staticFallback": false, "zoom": 3206, "shiftY": 44 }
+    },
+    {
+      "id": "curse",
+      "name": "Curse",
+      "description": "In the second phase your protection prayers shuffle, so clicking one turns on a different one. It lasts five of her attacks.",
+      "counterplay": "Work out the new mapping and commit to it rather than fighting the interface. It lifts on its own.",
+      "phase": "Phase 2",
+      "detection": [
+        { "type": "animation", "id": 8599 }
+      ],
+      "preview": { "animationId": 8599, "npcId": 9428, "staticFallback": false, "zoom": 3014, "shiftY": 61 }
+    },
+    {
+      "id": "surge",
+      "name": "Surge",
+      "description": "She teleports across the arena in a straight line, hitting hard anything standing in the way.",
+      "counterplay": "Step out of the line she is aimed down.",
+      "phase": "Phase 3",
+      "detection": [
+        { "type": "animation", "id": 8597 }
+      ],
+      "preview": { "animationId": 8597, "npcId": 9428, "staticFallback": false, "zoom": 3014, "shiftY": 61 }
+    },
+    {
+      "id": "totems",
+      "name": "Totems",
+      "description": "Once her shield breaks she cannot be hurt directly. Four corner totems have to be charged instead, and when all four are full they blast her for a fixed chunk of health. Three blasts end the fight.",
+      "counterplay": "Stop attacking her and go charge totems. Attacking her while the shield is up wastes the phase.",
+      "detection": [
+        { "type": "animation", "id": 8604 },
+        { "type": "animation", "id": 8603 }
+      ],
+      "preview": { "animationId": 8603, "npcId": 9431, "staticFallback": false, "zoom": 3014, "shiftY": 61 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 378 and 9425 through 9433 are all named 'The Nightmare' and differ only in model, which is how she changes appearance through the fight; all are in npcIds because these are transforms rather than respawns (docs/DECISIONS.md D17), and 9431 in particular carries a different standing animation (8603) and is used for the totem preview. THE PHOSANI'S NIGHTMARE NPCS (377, 9416 through 9424) ARE DELIBERATELY EXCLUDED, even though they share this boss's entire animation set and several of her models. Phosani's is its own collection log page, so including its npcs here would put this page's mechanics on that fight; it belongs in its own data file if it is ever added. Note the Combat Achievements structs for the two (3585 and 2868) both pin model 39196 at zoom 2000, so the cache does not distinguish them there either. Animations are the NIGHTMARE_* set, all unambiguous gameval names: ATTACK_MELEE 8594, ATTACK_MAGIC 8595, ATTACK_RANGED 8596, ATTACK_SURGE 8597, ATTACK_RIFT 8598, ATTACK_CONFUSION 8599, ATTACK_INFECTION 8600, ATTACK_SUMMON 8602, ATTACK_CHARGE 8603, ATTACK_BLAST 8604 and ATTACK_PARASITE 8606. Two mappings read the gameval name against the wiki's own vocabulary rather than matching it word for word: ATTACK_RIFT 8598 is curated as the grasping claws, since the wiki describes portals opening and the cache calls them rifts, and ATTACK_CONFUSION 8599 is curated as the prayer curse. Projectiles NIGHTMARE_MAGIC_TRAVEL 1764, NIGHTMARE_RANGED_TRAVEL 1766 and NIGHTMARE_PARASITE_TRAVEL 1770 are curated, each on its explicit TRAVEL suffix. NIGHTMARE_RIFT 1767 is deliberately NOT curated despite matching the grasping-claws mechanic: unlike its siblings its name carries no travel or projectile suffix, so nothing says the game fires it rather than applying it, and a graphic trigger has no source actor to check (D17) while discovery never revokes (D18). NIGHTMARE_MAGIC_IMPACT 1765, NIGHTMARE_TELEPORT 1763 and the parasite's own spotanims are graphics and are left out for the same reason. Note the curated ids are the spotanim-space entries; the animation space separately holds NIGHTMARE_PROJECTILE_RANGED 8614 and NIGHTMARE_PROJECTILE_RIFT 8615, which a projectile trigger does not read. SEVERAL WIKI MECHANICS ARE MISSING and none is guessed at: the husks, the corpse flowers and the phase 3 spores each have their own npcs or scenery rather than a boss animation, and NIGHTMARE_ATTACK_SEGMENT 8601 and ATTACK_TRANCE 8605 are named but unassigned and are the likeliest homes for two of them. The parasite has its own animation set (8553 through 8561) played by the parasite npc rather than the boss, so it cannot be an animation trigger here (D17); the boss's own ATTACK_PARASITE 8606 and ATTACK_INFECTION 8600 are used instead. staticFallback is false on all seven; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'The Nightmare', matching 'name', article included.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Identify NIGHTMARE_ATTACK_SEGMENT 8601 and NIGHTMARE_ATTACK_TRANCE 8605, which are named but unassigned; the husks and the corpse flowers are both missing and one of these is likely to be the trigger. 3. Find the husk and sleepwalker npc ids so those mechanics can detect on npc-spawn rather than on the boss's summon animation. 4. Confirm the ATTACK_RIFT-to-grasping-claws and ATTACK_CONFUSION-to-curse readings. 5. Consider whether Phosani's Nightmare deserves its own data file; it has its own collection log page and shares every animation here. 6. staticFallback is false on all seven; confirm each body animation reads at the shipped zoom."
+}

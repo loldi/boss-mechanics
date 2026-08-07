@@ -1,0 +1,65 @@
+{
+  "id": "vardorvis",
+  "name": "Vardorvis",
+  "npcIds": [12223, 12224, 12228, 12425, 12426, 13656],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Vardorvis/Strategies",
+  "mechanics": [
+    {
+      "id": "melee-attacks",
+      "name": "Melee Attacks",
+      "description": "His ordinary attack, and it heals him for half of what it deals. His maximum hit climbs as his health falls.",
+      "counterplay": "Pray Protect from Melee. It cuts the damage by three quarters, and the healing with it.",
+      "detection": [
+        { "type": "animation", "id": 10340 }
+      ],
+      "preview": { "animationId": 10340, "modelId": 49298, "staticFallback": false, "zoom": 1200, "shiftY": 57 }
+    },
+    {
+      "id": "swinging-axes",
+      "name": "Swinging Axes",
+      "description": "The tendrils lift his axes into the arena and let them go, sweeping them across the floor. A hit leaves you bleeding.",
+      "counterplay": "Step two tiles diagonally out of the path. There are twelve tiles around the arena an axe never reaches.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12227 },
+        { "type": "npc-spawn", "id": 12229 }
+      ],
+      "preview": { "animationId": 10334, "npcId": 12227, "staticFallback": false, "zoom": 1279, "shiftY": 0 }
+    },
+    {
+      "id": "head-gaze",
+      "name": "Head Gaze",
+      "description": "Below three quarters health the head above him spits a green orb that drains your prayer and locks your overhead off for three ticks.",
+      "counterplay": "Pray Protect from Missiles when the message appears and the orb does nothing.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12226 },
+        { "type": "projectile", "id": 2520 },
+        { "type": "projectile", "id": 2521 }
+      ],
+      "preview": { "animationId": 10348, "npcId": 12226, "staticFallback": false, "zoom": 929, "shiftY": 48 }
+    },
+    {
+      "id": "darting-spikes",
+      "name": "Darting Spikes",
+      "description": "He darts around the arena, cracking the ground where he passes. Standing on a crack hurts you and heals him for half of it.",
+      "counterplay": "Fight from the arena edge near the tendrils, where there is less floor for him to crack.",
+      "detection": [
+        { "type": "animation", "id": 10341 }
+      ],
+      "preview": { "animationId": 10341, "modelId": 49298, "staticFallback": false, "zoom": 1200, "shiftY": 57 }
+    },
+    {
+      "id": "strangle",
+      "name": "Strangle",
+      "description": "Spores appear across the middle of your screen. If they are not all gone within five ticks the tendrils tighten and hit hard.",
+      "counterplay": "Click every spore before the five ticks are up. Right click to attack afterwards so you do not lose your attack speed.",
+      "detection": [
+        { "type": "animation", "id": 10342 },
+        { "type": "animation", "id": 10343 },
+        { "type": "animation", "id": 10344 }
+      ],
+      "preview": { "animationId": 10342, "modelId": 49298, "staticFallback": false, "zoom": 1200, "shiftY": 57 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: VARDORVIS 12223, VARDORVIS_QUEST 12224 and VARDORVIS_CUTSCENE 12228 plus 12425, 12426 and 13656, which carry the same model and animation set. The axes and the head are separate npcs and detect on npc-spawn: VARDORVIS_AXE 12227, VARDORVIS_AXE_STATIC 12229 and VARDORVIS_HEAD_TENTACLE 12226. VARDORVIS_BIG_TENTACLE 12225 is arena scenery and is not curated. Animations are the NPC_VARDORVIS_01_* set, all unambiguous gameval names: MELEE 10340, DASH 10341 and the three ENTANGLE sequences 10342, 10343 and 10344. Projectiles VFX_VARDORVIS_HEAD_PROJECTILE_MAGIC_01 2520 and _RANGED_01 2521 are curated because each carries an explicit projectile suffix in Jagex's own name; the two IMPACT ids 2551 and 2552, the eleven VARDORVIS_SPIKE spotanims 2508 through 2518 and the three player spore spotanims 2523 through 2525 are graphics and are deliberately left out, since a graphic trigger has no source actor to check (D17) and discovery never revokes (D18). THE AXES AND THE HEAD DETECT ON npc-spawn RATHER THAN THEIR OWN ANIMATIONS, and this is not a shortcut but the only correct call: NPC_VARDORVIS_AXE_02_SPAWN_01 10334 and NPC_VARDORVIS_01_HEAD_01_SCREAM_01 10348 are played by npcs 12227 and 12226, which are adds rather than the boss, and an animation trigger only matches when played by an npc the engine is currently tracking as this boss (D17). Curating them as animations would mean never matching at all. They are still used as the preview animations, which has no such restriction. THE DARTING SPIKES MECHANIC DETECTS ON THE DASH ANIMATION, NOT THE SPIKES. The spikes themselves are spotanims and NPC_VARDORVIS_SPIKE_01_SPAWN_01 10353 belongs to a spike entity rather than to Vardorvis, so the dash that creates them is the honest trigger. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). A skeletal sequence has no frames for FitZoom to walk, so the offline fit collapses to the model's bind pose. The method is the one Doom of Mokhaiotl already shipped under: take the zoom from struct 4587, the Combat Achievements screen's own entry for this boss, which pins model 49298 at zoom 1200, and compute shiftY from the bind pose extents at that zoom. Unlike the other three bosses in this batch, Vardorvis needed no zoom raise: his bind-pose shiftY of 57 already clears the 70px ceiling. The axe and head previews are not in the CA structs at all, so their zooms come from the bind-pose formula applied directly, with the axe's shiftY of 0 correct rather than missing: model 49304 is symmetric about the ground plane, Y[-106..106], so it needs no vertical correction. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Vardorvis', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 3. Add the graphic triggers deliberately left out, in particular the eleven VARDORVIS_SPIKE spotanims 2508 through 2518, which would let the darting spikes detect on the spikes themselves rather than on the dash that precedes them. 4. The strangle mechanic's spore spotanims 2523 through 2525 are player-side graphics; if they can be curated they are a far better trigger for it than the entangle animations. 5. Check whether VARDORVIS_AXE 12227 and VARDORVIS_AXE_STATIC 12229 both actually spawn in a normal fight, or whether one is scenery. 6. staticFallback is false on all five; confirm each body animation reads at the shipped zoom."
+}

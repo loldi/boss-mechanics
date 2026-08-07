@@ -1,0 +1,84 @@
+{
+  "id": "fortis-colosseum",
+  "name": "Fortis Colosseum",
+  "npcIds": [12821, 15554, 15696],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Sol_Heredit/Strategies",
+  "mechanics": [
+    {
+      "id": "spear-attack",
+      "name": "Spear Attack",
+      "description": "Sol Heredit's ordinary attack, thrown at whoever is in front of him.",
+      "counterplay": "Pray Protect from Melee and watch for the telegraph that says something worse is coming.",
+      "detection": [
+        { "type": "animation", "id": 10882 },
+        { "type": "animation", "id": 10883 }
+      ],
+      "preview": { "animationId": 10882, "modelId": 52580, "staticFallback": false, "zoom": 1650, "shiftY": 56 }
+    },
+    {
+      "id": "shield-slam",
+      "name": "Shield Slam",
+      "description": "He winds up a slam with his shield, and the wind-up is long enough to read.",
+      "counterplay": "Move out of the arc as soon as the telegraph starts. The tell exists precisely so it can be dodged.",
+      "detection": [
+        { "type": "animation", "id": 10885 }
+      ],
+      "preview": { "animationId": 10885, "modelId": 52580, "staticFallback": false, "zoom": 1650, "shiftY": 56 }
+    },
+    {
+      "id": "grapple",
+      "name": "Grapple",
+      "description": "He telegraphs a grapple, and being caught by it is far worse than being hit by anything else he does.",
+      "counterplay": "Get out of range the moment the telegraph plays.",
+      "detection": [
+        { "type": "animation", "id": 10884 }
+      ],
+      "preview": { "animationId": 10884, "modelId": 52580, "staticFallback": false, "zoom": 1650, "shiftY": 56 }
+    },
+    {
+      "id": "triple-attack",
+      "name": "Triple Attack",
+      "description": "Three attacks in a row, each needing its own prayer, with almost no gap between them.",
+      "counterplay": "Learn the order and flick through it. There is no time to react to each one individually.",
+      "detection": [
+        { "type": "animation", "id": 10886 },
+        { "type": "animation", "id": 10887 }
+      ],
+      "preview": { "animationId": 10886, "modelId": 52580, "staticFallback": false, "zoom": 1650, "shiftY": 56 }
+    },
+    {
+      "id": "manticore",
+      "name": "Manticore",
+      "description": "A wave monster that fires three attacks in sequence, one of each style.",
+      "counterplay": "Flick magic, then ranged, then melee in that order. Getting the sequence wrong costs three hits, not one.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12818 }
+      ],
+      "preview": { "animationId": 10863, "modelId": 52612, "staticFallback": false, "zoom": 2797, "shiftY": 68 }
+    },
+    {
+      "id": "colossi",
+      "name": "Javelin and Shockwave Colossi",
+      "description": "Two large wave monsters. The javelin one lands artillery on marked tiles from across the arena; the shockwave one sends waves out along the ground.",
+      "counterplay": "Step off the marked tiles for the artillery, and out of the line for the shockwave. Neither is stopped by prayer.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12817 },
+        { "type": "npc-spawn", "id": 12819 }
+      ],
+      "preview": { "animationId": 10863, "modelId": 52612, "staticFallback": false, "zoom": 2797, "shiftY": 68 }
+    },
+    {
+      "id": "solar-flare",
+      "name": "Solar Flares and Totems",
+      "description": "Solar flares and healing totems appear during waves, the flares punishing where you stand and the totems putting health back into what you are fighting.",
+      "counterplay": "Break the totems before clearing the wave, and keep off the flares.",
+      "detection": [
+        { "type": "npc-spawn", "id": 12826 },
+        { "type": "npc-spawn", "id": 12825 }
+      ],
+      "preview": { "animationId": 10882, "modelId": 52580, "staticFallback": false, "zoom": 1650, "shiftY": 56 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). LIKE THE INFERNO, THIS PAGE COVERS BOTH THE BOSS AND THE WAVES, because both matter. npcIds holds Sol Heredit COLOSSEUM_SOL_P1 12821 with his two Deadman copies 15554 and 15696; the wave monsters detect on npc-spawn, since adding them to npcIds would let any wave animation unlock any mechanic (docs/DECISIONS.md D17). The whole encounter is laid out under a COLOSSEUM_ prefix, which is what gives every wave mechanic here an exact npc trigger: MANTICORE 12818, JAVELIN_COLOSSUS 12817, SHOCKWAVE_COLOSSUS 12819, SOLAR_FLARE 12826 and HEALING_TOTEM 12825. Animations are the NPC_COLOSSI_FINALBOSS_01_* set, all unambiguous gameval names: MELEE_ATTACK 10882 with its TELEGRAPH 10883, GRAPPLE_ATTACK_TELEGRAPH 10884, SHIELDSLAM_TELEGRAPH 10885, and TRIPLEATTACK 10886 with TRIPLEATTACK_SHORTER 10887. THREE OF THE FOUR BOSS MECHANICS DETECT ON A TELEGRAPH RATHER THAN THE ATTACK, which is unusual and is correct here: the telegraph is the mechanic. Sol Heredit is built around reading wind-ups, so the sequence a player needs to recognise is exactly the one curated. No projectile is curated: the COLOSSEUM spotanims that exist (10803 through 10813) are all named BEAM, IMPACT or IDLE and belong to the wave crystals rather than the boss, so none meets this wave's bar for an unambiguous projectile name. THREE PREVIEWS BORROW ANOTHER MECHANIC'S MODEL. The colossi share the Manticore's preview and the solar flares share the boss's, because neither the colossi nor the flares were separately fitted; that is a display compromise which cannot affect discovery, and it is followup 2. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for every sequence tried, including the wave monsters'. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 881, the Combat Achievements screen's own entry for this page, which pins model 52580 at zoom 1650, and compute shiftY from the bind pose extents at that zoom. The Manticore is not in the CA structs, so its zoom starts from the same 1650 and was then raised to 2797 to clear the 70px shiftY ceiling BundledBossDataTest enforces. staticFallback is false on all seven; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Fortis Colosseum', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Fit the Javelin Colossus, Shockwave Colossus and Solar Flare previews against their own models; all three currently borrow another mechanic's and will render at the wrong scale. 3. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 4. Split the two colossi into separate mechanics; they are combined here only because both are dodge-not-pray, but their patterns are completely different. 5. Consider mechanics for the remaining wave npcs under the COLOSSEUM prefix: DOOM_SCORPION 12822, MODIFIER_BEES 12823, BEAM_CRYSTAL 12824 and the two warbanders 12815 and 12816. 6. Confirm the telegraph animations fire reliably, since three mechanics depend on them entirely."
+}

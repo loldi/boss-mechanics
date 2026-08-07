@@ -1,0 +1,30 @@
+{
+  "id": "deranged-archaeologist",
+  "name": "Deranged Archaeologist",
+  "npcIds": [7806],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Deranged_archaeologist",
+  "mechanics": [
+    {
+      "id": "book-throw",
+      "name": "Thrown Book",
+      "description": "He throws a book at range, his ordinary attack throughout the fight.",
+      "counterplay": "Pray Protect from Missiles and it stops almost all of it.",
+      "detection": [
+        { "type": "animation", "id": 3353 }
+      ],
+      "preview": { "animationId": 3353, "npcId": 7806, "staticFallback": false, "zoom": 1286, "shiftY": 68 }
+    },
+    {
+      "id": "special-attack",
+      "name": "Learn to Read",
+      "description": "He shouts and marks tiles around you, then books slam down on them for a heavy hit that goes straight through prayer.",
+      "counterplay": "Step off the marked tiles as soon as they appear.",
+      "detection": [
+        { "type": "npc-spawn", "id": 7806 }
+      ],
+      "preview": { "animationId": 3846, "npcId": 7806, "staticFallback": false, "zoom": 1286, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id 7806. THIS BOSS IS THE CRAZY ARCHAEOLOGIST'S TWIN IN THE CACHE and this file is shaped the same way for the same reasons. Its standing animation is 3846, BOOK_CHUCK_READY, the same generic book-throwing set, so BOOK_CHUCK 3353 is curated as its attack; struct 3574, its Combat Achievements entry, likewise falls back to the plain human idle 808. The two npcs differ only in their model list and recolour table. Unlike its twin, this one has NO spotanims of its own at all: the cache names CRAZY_ARCHAEOLOGIST_BOOK 1259 and _BOOK_SPECIAL 1260 but nothing equivalent for the deranged one, so there is not even an ambiguous candidate to leave for the live pass. THE SECOND MECHANIC DETECTS ON THE BOSS'S OWN NPC-SPAWN, SO IT UNLOCKS ON ARRIVAL RATHER THAN ON THE SPECIAL, because the special is announced by overhead text the schema has no trigger type for and has no animation of its own. Because the attack animation is generic, the animation trigger is doing real work: an animation only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17), so another npc playing 3353 cannot false-positive. staticFallback is false on both; whether either body animation reads has not been eyeballed in game. The collection log page is titled 'Deranged Archaeologist' with a capital A, while the npc is named 'Deranged archaeologist' in lower case; 'name' follows the page, since the page title is what BossPageIndex matches.",
+  "_followups": "1. Live verification of both ids per the curation checklist, with Log boss trigger ids on. 2. Find the special attack's real trigger. Unlike the crazy archaeologist there is no named spotanim to try, so this one needs the trigger ids logged from a live fight. 3. Confirm BOOK_CHUCK 3353 is what he plays, since it is a generic animation rather than a boss-specific one. 4. staticFallback is false on both; confirm each body animation reads at the shipped zoom."
+}

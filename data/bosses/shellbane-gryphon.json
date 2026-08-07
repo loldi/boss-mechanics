@@ -1,0 +1,63 @@
+{
+  "id": "shellbane-gryphon",
+  "name": "Shellbane Gryphon",
+  "npcIds": [14860, 15010],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Shellbane_Gryphon/Strategies",
+  "mechanics": [
+    {
+      "id": "melee-attack",
+      "name": "Melee Attack",
+      "description": "Its ordinary attack, and what it does most of the time.",
+      "counterplay": "Carry a Tortugan shield. Without one this hits far harder than it should.",
+      "detection": [
+        { "type": "animation", "id": 12552 }
+      ],
+      "preview": { "animationId": 12552, "modelId": 59398, "staticFallback": false, "zoom": 2600, "shiftY": 43 }
+    },
+    {
+      "id": "knockback",
+      "name": "Knockback",
+      "description": "It throws you backwards for a hit you cannot avoid or pray against.",
+      "counterplay": "Keep your equipped weight at forty kilograms or more. Heavy enough and you hold your ground and take nothing.",
+      "detection": [
+        { "type": "animation", "id": 12554 },
+        { "type": "projectile", "id": 3459 }
+      ],
+      "preview": { "animationId": 12554, "modelId": 59398, "staticFallback": false, "zoom": 2600, "shiftY": 43 }
+    },
+    {
+      "id": "corrosive-spit",
+      "name": "Corrosive Spit",
+      "description": "It spits an orange blob that sticks to your gear and eats away at you in repeated bites over half a minute.",
+      "counterplay": "Move away from where it lands. If it catches you, unequipping the affected gear cuts the rest of it short.",
+      "detection": [
+        { "type": "animation", "id": 12553 },
+        { "type": "projectile", "id": 3461 }
+      ],
+      "preview": { "animationId": 12553, "modelId": 59398, "staticFallback": false, "zoom": 2600, "shiftY": 43 }
+    },
+    {
+      "id": "whirlwinds",
+      "name": "Whirlwinds",
+      "description": "Whirlwinds appear where you are standing every couple of seconds, and any that overlap merge into something worse.",
+      "counterplay": "Move a tile between each one. Standing still is what lets them stack.",
+      "detection": [
+        { "type": "animation", "id": 12555 }
+      ],
+      "preview": { "animationId": 12555, "modelId": 59398, "staticFallback": false, "zoom": 2600, "shiftY": 43 }
+    },
+    {
+      "id": "guardians",
+      "name": "Gryphon Guardians",
+      "description": "Guardians accompany the fight and have to be dealt with alongside it.",
+      "counterplay": "Clear them rather than letting them chip at you while you handle the whirlwinds.",
+      "detection": [
+        { "type": "npc-spawn", "id": 14862 },
+        { "type": "npc-spawn", "id": 14861 }
+      ],
+      "preview": { "animationId": 12547, "npcId": 14861, "staticFallback": false, "zoom": 2600, "shiftY": 43 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: GRYPHON_BOSS 14860 and TT_PEARL_GRYPHON 15010, both carrying model 59398 and the same animations. The ordinary slayer gryphons (14857, 14858), the superior (14859) and the pets are excluded; SLAYER_GRYPHON_GUARDIAN 14861 and SLAYER_GRYPHON_BOSS_GUARDIAN 14862 are adds detecting on npc-spawn. THE CACHE SEPARATES BOSS AND NON-BOSS ANIMATIONS BY NAME, which makes this file unusually clean for new content: GRYPHON_BOSS_MELEE_ATTACK01 12552, GRYPHON_BOSS_SPIT01 12553, GRYPHON_BOSS_RANGED01 12554 and GRYPHON_BOSS_WHIRLWIND01 12555 all belong to the boss, while the unsuffixed GRYPHON_MELEE_ATTACK01 12551 and GRYPHON_IDLE01 12547 belong to the ordinary gryphons and are used only for the guardian preview. Projectiles GRYPHON_RANGED_PROJECTILE 3459 and GRYPHON_SPIT_ATTACK_PROJECTILE 3461 say projectile outright and are curated; GRYPHON_RANGED_IMPACT 3460 and the eight directional GRYPHON_SPIT_* ids 3462 through 3469 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). THE KNOCKBACK IS CURATED ON GRYPHON_BOSS_RANGED01 12554 BY ELIMINATION, which is the one inference in this file. The wiki lists three specials, knockback, corrosive spit and whirlwind; the cache names spit and whirlwind outright, leaving the ranged sequence as the only candidate for the knockback. If that is wrong, the knockback and an unlisted ranged attack are swapped. THE EIGHT WHIRLWIND GROWTH SEQUENCES (12558 through 12563 and beyond) belong to the whirlwind entities rather than to the boss, so they cannot be animation triggers here; the boss's own WHIRLWIND01 12555 carries the mechanic instead. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all four sequences tried. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 6336, the Combat Achievements screen's own entry, which pins model 59398 at zoom 2600, and compute shiftY from the bind pose extents at that zoom. The guardian preview borrows the same numbers, which is a known rough edge since it is a different and smaller npc. staticFallback is false on all five; whether each animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Shellbane Gryphon' with a capital G, while the npc is named 'Shellbane gryphon' in lower case; 'name' follows the page, since the page title is what BossPageIndex matches.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. This is recent content and nothing here has been seen in play. 2. CONFIRM GRYPHON_BOSS_RANGED01 12554 IS THE KNOCKBACK. It is curated by elimination against the wiki's list of three specials, and if wrong the knockback row shows and detects the wrong move. 3. Fit the guardian preview against its own model rather than borrowing the boss's; it is a different size and will render at the wrong scale. 4. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 5. Confirm which of GRYPHON_BOSS 14860 and TT_PEARL_GRYPHON 15010 is the live boss, and whether the guardians accompany the boss fight or only the ordinary slayer task."
+}

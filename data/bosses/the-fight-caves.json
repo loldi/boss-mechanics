@@ -1,0 +1,45 @@
+{
+  "id": "the-fight-caves",
+  "name": "The Fight Caves",
+  "npcIds": [3127, 6506],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/TzTok-Jad/Strategies",
+  "mechanics": [
+    {
+      "id": "magic-attack",
+      "name": "Magic Attack",
+      "description": "Jad rears up on his hind legs and spits fire. It reaches you the instant the animation starts, not when the fireball lands.",
+      "counterplay": "Pray Protect from Magic the moment he rears. Watching the projectile is already too late.",
+      "detection": [
+        { "type": "animation", "id": 2656 },
+        { "type": "projectile", "id": 447 },
+        { "type": "projectile", "id": 448 }
+      ],
+      "preview": { "animationId": 2656, "npcId": 3127, "staticFallback": false, "zoom": 2924, "shiftY": 63 }
+    },
+    {
+      "id": "ranged-attack",
+      "name": "Ranged Attack",
+      "description": "He slams the ground and rocks drop on you from above. The tell is the stamp, and it comes just as fast as the magic one.",
+      "counterplay": "Pray Protect from Missiles as he stamps. The two attacks alternate unpredictably, so watch every animation.",
+      "detection": [
+        { "type": "animation", "id": 2652 },
+        { "type": "projectile", "id": 445 }
+      ],
+      "preview": { "animationId": 2652, "npcId": 3127, "staticFallback": false, "zoom": 3347, "shiftY": 60 }
+    },
+    {
+      "id": "healers",
+      "name": "Yt-HurKot Healers",
+      "description": "At half health four healers crawl out and attach to him, and they put back more than you can take off.",
+      "counterplay": "Pull all four onto yourself first, then trap them away from him and go back to Jad.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3128 },
+        { "type": "npc-spawn", "id": 7701 },
+        { "type": "npc-spawn", "id": 7705 }
+      ],
+      "preview": { "animationId": 2636, "npcId": 3128, "staticFallback": false, "zoom": 2733, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). THIS PAGE IS CURATED AS TZTOK-JAD, NOT AS THE WHOLE MINIGAME. The collection log page is titled 'The Fight Caves' and covers sixty-three waves of TzHaar, but every wave before Jad is ordinary monsters with no boss mechanics, and the page's rewards all come from him. npcIds is therefore TzTok-Jad 3127 with his clan cup copy 6506, and wikiUrl points at his strategy page rather than the minigame's. THIS BOSS SHARES ITS ANIMATION SET WITH AN UNRELATED NPC. Npc 3127's standing animation is 2650, which the gamevals name LORDMAGMUS_READY, so the whole Jad animation set is Lord Magmus's reused: SMASH 2652, ATTACK 2655 and FIRE 2656. Struct 3565, the Combat Achievements screen's own entry for this boss, corroborates it by framing model 9319 on animation 2650. THE ATTACK-TO-STYLE MAPPING IS AN INFERENCE from those reused names against the wiki's description, and it is the most consequential inference in this file because getting it backwards would teach a player the wrong prayer: LORDMAGMUS_FIRE 2656 is curated as the magic attack because the wiki describes Jad rearing and spitting fire for magic, and LORDMAGMUS_SMASH 2652 as the ranged attack because it describes him slamming the ground for ranged. LORDMAGMUS_ATTACK 2655 is presumably his melee and is not curated, since Jad's melee is only reachable by standing next to him and the wiki does not treat it as a mechanic. Projectiles TZHAAR_FIRE_SPIT_LAUNCH 447 and TZHAAR_FIRE_SPIT_TRAVEL 448 go to the magic attack and TZHAAR_FIRE_LAUNCH_TRAVEL 445 to the ranged one, on the same reading; TZHAAR_FIRE_LAUNCH_IMPACT 446, the two remaining FIRE_SPIT travel variants 449 and 450, and TZHAAR_FIREBREATH_ATTACK 439 are graphics or unassigned and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). The healers detect on npc-spawn across all three Yt-HurKot ids, since it is not established which the caves use. staticFallback is false on all three; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'The Fight Caves', matching 'name', article included.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. CONFIRM THE MAGIC AND RANGED MAPPING BEFORE ANYONE RELIES ON IT. Both animations come from a reused Lord Magmus set and the assignment rests on matching the gameval name to the wiki's prose. This is the one place in the wave where a wrong inference would actively teach the wrong prayer. 3. Decide whether the earlier waves deserve mechanics of their own; the page covers the whole minigame and this file covers only Jad. 4. Establish which of Yt-HurKot 3128, 7701 and 7705 the caves actually spawn. 5. staticFallback is false on all three; confirm each body animation reads at the shipped zoom."
+}

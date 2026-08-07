@@ -1,0 +1,50 @@
+{
+  "id": "chaos-elemental",
+  "name": "Chaos Elemental",
+  "npcIds": [2054, 6505],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Chaos_Elemental",
+  "mechanics": [
+    {
+      "id": "standard-attack",
+      "name": "Standard Attack",
+      "description": "Its ordinary attack, thrown between the three specials it is actually known for.",
+      "counterplay": "Nothing special. Keep an overhead up and expect it to be the wrong one sometimes.",
+      "detection": [
+        { "type": "animation", "id": 3146 }
+      ],
+      "preview": { "animationId": 3146, "npcId": 2054, "staticFallback": false, "zoom": 1927, "shiftY": 68 }
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "description": "It attacks with melee, ranged or magic without warning which is coming.",
+      "counterplay": "There is no tell, so wear gear with defence across all three rather than stacking one.",
+      "detection": [
+        { "type": "animation", "id": 3148 }
+      ],
+      "preview": { "animationId": 3148, "npcId": 2054, "staticFallback": false, "zoom": 2014, "shiftY": 68 }
+    },
+    {
+      "id": "confusion",
+      "name": "Confusion",
+      "description": "It teleports you a short way off, breaking whatever you were doing and putting it out of reach.",
+      "counterplay": "Walk back and carry on. Nothing prevents it.",
+      "detection": [
+        { "type": "animation", "id": 3149 }
+      ],
+      "preview": { "animationId": 3149, "npcId": 2054, "staticFallback": false, "zoom": 2014, "shiftY": 68 }
+    },
+    {
+      "id": "madness",
+      "name": "Madness",
+      "description": "It unequips up to four pieces of what you are wearing, straight into your inventory.",
+      "counterplay": "Keep four free inventory slots so nothing drops, and re-equip as soon as it happens.",
+      "detection": [
+        { "type": "animation", "id": 3150 }
+      ],
+      "preview": { "animationId": 3150, "npcId": 2054, "staticFallback": false, "zoom": 1939, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: CHAOSELEMENTAL 2054 and CLANCUP_CHAOSELEMENTAL 6505. CHAOS_ELEMENTAL_PET 2055, POH_CHAOS_ELEMENTAL_PET 5907 and MINI_CHAOS_ELE 6620 are pets or miniatures and are excluded. THIS IS THE RARE BOSS WHOSE SPECIALS ARE NAMED IN THE CACHE EXACTLY AS THE WIKI NAMES THEM, which is why all three get their own mechanic with an unambiguous trigger: CHAOSELEMENTAL_DISCORD 3148, CHAOSELEMENTAL_CASTING 3149 and CHAOSELEMENTAL_MADNESS_CASTING 3150, alongside the ordinary CHAOSELEMENTAL_ATTACK 3146. CONFUSION IS CURATED ON CHAOSELEMENTAL_CASTING 3149 BY ELIMINATION, not by name: discord and madness each have a sequence carrying their own name, 3149 is the only casting sequence left, and confusion is the only special left. That is the one inference in this file. NO PROJECTILE OR GRAPHIC TRIGGERS ARE CURATED. The cache carries nine CHAOSELEMENTAL_SPOTANIM_* ids (550 through 558), three each for madness, confusion and discord, in a casting, travel and impact set. The travel ids are almost certainly projectiles, but every one of the nine is prefixed SPOTANIM_ in Jagex's own naming, which is the same word the schema uses for a graphic, so none of them meets this wave's bar of an unambiguous projectile name. A graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18), so all nine are left for the live pass. ZOOM IS DELIBERATELY LARGER THAN FitZoom'S OWN FIT ON ALL FOUR MECHANICS. The model floats, so its vertical envelope sits entirely above the ground line the engine anchors to, and the shiftY that centres it projects past the 70px half-box ceiling BundledBossDataTest enforces. Raising zoom shrinks the model and its required offset by the same factor, so it stays centred and renders smaller: each zoom here is the smallest that brings shiftY to 68. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Chaos Elemental', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Confirm CHAOSELEMENTAL_CASTING 3149 is confusion. It is curated by elimination rather than by name, and swapping it with 3150 would silently mislabel two mechanics. 3. Establish which of the nine CHAOSELEMENTAL_SPOTANIM ids 550 through 558 are fired as projectiles rather than applied as graphics; the three TRAVEL ids 551, 554 and 557 are the likely candidates and would give each special a second trigger. 4. Confirm the raised zooms read correctly in game, since all four depart from FitZoom's own fit. 5. staticFallback is false on all four; confirm each body animation reads at the shipped zoom."
+}
