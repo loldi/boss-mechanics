@@ -7,8 +7,8 @@
     {
       "id": "zuk-barrage",
       "name": "Zuk's Barrage",
-      "description": "Zuk fires down the arena in a wide line that nothing survives standing in. He does it relentlessly for the whole fight.",
-      "counterplay": "Keep a healer or a pillar between you and him at all times. The whole fight is a positioning problem, not a damage one.",
+      "description": "Zuk fires a wide barrage down the arena that hits for enormous damage through anything except the shield.",
+      "counterplay": "Keep the moving shield between you and him at all times.",
       "detection": [
         { "type": "animation", "id": 7566 },
         { "type": "projectile", "id": 1375 }
@@ -18,8 +18,8 @@
     {
       "id": "healers",
       "name": "Jal-MejJak Healers",
-      "description": "At Zuk's halfway point healers come out and put his health back faster than most people can take it off.",
-      "counterplay": "Pull them all onto yourself and hold them away from him while your damage goes back onto Zuk.",
+      "description": "Healers spawn at the halfway point and pour health back into Zuk.",
+      "counterplay": "Drag them away and kill them before they reach him.",
       "detection": [
         { "type": "npc-spawn", "id": 7708 }
       ],
@@ -28,8 +28,8 @@
     {
       "id": "jal-zek",
       "name": "Jal-Zek",
-      "description": "The mage. It hits hardest of the waves and, worse, revives the other monsters you have already killed.",
-      "counterplay": "Kill it before anything else on the wave. Everything it brings back has to be killed twice.",
+      "description": "The mager. It hits hard through the wrong prayer and revives dead minions around it.",
+      "counterplay": "Pray Protect from Magic and kill it first. It undoes every other kill while it lives.",
       "detection": [
         { "type": "npc-spawn", "id": 7699 },
         { "type": "npc-spawn", "id": 7703 }
@@ -37,22 +37,54 @@
       "preview": { "animationId": 7609, "npcId": 7699, "staticFallback": false, "zoom": 1633, "shiftY": 62 }
     },
     {
-      "id": "jal-xil-and-imkot",
-      "name": "Jal-Xil and Jal-ImKot",
-      "description": "The ranger and the melee. The ranger hits from anywhere; the melee closes the gap and digs to reach you if you break line of sight.",
-      "counterplay": "Pray against whichever is actually attacking you, and never assume the melee cannot reach a safespot.",
+      "id": "jal-xil",
+      "name": "Jal-Xil",
+      "description": "The ranger. It throws from across the arena and keeps throwing while you deal with anything else.",
+      "counterplay": "Pray Protect from Missiles when its attack is the one in the air.",
       "detection": [
         { "type": "npc-spawn", "id": 7698 },
-        { "type": "npc-spawn", "id": 7702 },
-        { "type": "npc-spawn", "id": 7697 }
+        { "type": "npc-spawn", "id": 7702 }
       ],
       "preview": { "animationId": 7602, "npcId": 7698, "staticFallback": false, "zoom": 2390, "shiftY": 64 }
     },
     {
+      "id": "jal-imkot",
+      "name": "Jal-ImKot",
+      "description": "The melee minion. It walks straight at you and hits hard once it arrives.",
+      "counterplay": "Keep it at a distance or pray Protect from Melee. It is the one you can outrun.",
+      "detection": [
+        { "type": "npc-spawn", "id": 7697 }
+      ],
+      "preview": { "animationId": 7595, "npcId": 7697, "staticFallback": false, "zoom": 1529, "shiftY": 62 }
+    },
+    {
+      "id": "jal-mejrah",
+      "name": "Jal-MejRah",
+      "description": "The bat. It attacks at range and drains your stats with every hit that lands.",
+      "counterplay": "Kill it early. The drain is what makes the later waves unmanageable.",
+      "detection": [
+        { "type": "npc-spawn", "id": 7692 }
+      ],
+      "preview": { "animationId": 7577, "npcId": 7692, "staticFallback": false, "zoom": 929, "shiftY": 64 }
+    },
+    {
+      "id": "jal-ak",
+      "name": "Jal-Ak",
+      "description": "The blob. Hit it and it splits into three smaller creatures, one of each attack style.",
+      "counterplay": "Stand next to it and kill it in one go so the three pieces spawn on top of you and can be cleared together.",
+      "detection": [
+        { "type": "npc-spawn", "id": 7693 },
+        { "type": "npc-spawn", "id": 7694 },
+        { "type": "npc-spawn", "id": 7695 },
+        { "type": "npc-spawn", "id": 7696 }
+      ],
+      "preview": { "animationId": 7586, "npcId": 7693, "staticFallback": false, "zoom": 946, "shiftY": 61 }
+    },
+    {
       "id": "nibblers",
       "name": "Jal-Nib Nibblers",
-      "description": "Small monsters that swarm the pillars rather than you. Every pillar they chew through is one less place to hide.",
-      "counterplay": "Clear them with something that hits several at once. Losing pillars early is what loses runs late.",
+      "description": "Small creatures that swarm in numbers and chew through the shield if you ignore them.",
+      "counterplay": "Clear them with a chinchompa or any splash damage before they reach the shield.",
       "detection": [
         { "type": "npc-spawn", "id": 7691 },
         { "type": "npc-spawn", "id": 7674 },
@@ -61,6 +93,6 @@
       "preview": { "animationId": 7573, "npcId": 7691, "staticFallback": false, "zoom": 402, "shiftY": 64 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). THIS PAGE IS CURATED DIFFERENTLY FROM THE FIGHT CAVES, ON PURPOSE. Both are wave minigames whose collection log page covers the whole thing, but the Inferno's waves are the content: Jal-Zek reviving what you have killed and the nibblers eating your pillars are the mechanics people actually fail on, not footnotes before the boss. So npcIds holds only TzKal-Zuk 7706, and the wave monsters are curated as npc-spawn mechanics in their own right, which is the same shape Abyssal Sire's spawns already ship under. Animations: ZUK_ATTACK 7566 and ZUK_IDLE 7564 are unambiguous gameval names. Projectile INFERNO_ZUK_PROJECTILE 1375 says projectile outright and is curated; ZUK_PROJ 7571 and ZUK_PROJ_SHORT 10106 carry the same meaning but sit in the animation space rather than the spotanim space a projectile trigger reads, so they are not usable as triggers. THE WAVE MECHANICS DETECT ON npc-spawn ONLY, so each unlocks when that monster first appears rather than when it does anything. That is the honest shape here: each wave monster has its own animation set (Jal-Zek's 7608 and 7609, Jal-Xil's 7602 and 7603, Jal-ImKot's 7595 and 7596, Jal-Nib's 7572 and 7573), but those animations are played by the wave npcs rather than by a boss in npcIds, and an animation trigger only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17). Adding every wave monster to npcIds instead would make the plugin treat the whole Inferno as one boss and let any wave animation unlock any mechanic, which is worse. The wave previews are allowed to use those animations, since a preview has no such restriction. Every preview here is fitted against its own npc rather than borrowing another's, which matters more than usual because the five span an enormous size range: Jal-Nib fits at zoom 201 and Zuk at 3730, a factor of eighteen. The healer's negative shiftY of -25 is correct rather than a mistake; its model dips below the ground plane, the same case as Giant Mole's burrow. Jal-Ak and its three Jal-AkRek offspring (7693 through 7696), Jal-MejRah 7692 and the second Yt-HurKot set are not curated, to keep the list to the five things that decide a run. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'The Inferno', matching 'name', article included. PREVIEW PASS 2026-08-07: The nibbler filled the box because its fitted zoom, 201, scales a very small npc up until it touches the edges. Doubled to 402 so it reads as the small add it is. This is a judgement call rather than a fitted number, and wants an eyeball.",
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). THIS PAGE IS CURATED DIFFERENTLY FROM THE FIGHT CAVES, ON PURPOSE. Both are wave minigames whose collection log page covers the whole thing, but the Inferno's waves are the content: Jal-Zek reviving what you have killed and the nibblers eating your pillars are the mechanics people actually fail on, not footnotes before the boss. So npcIds holds only TzKal-Zuk 7706, and the wave monsters are curated as npc-spawn mechanics in their own right, which is the same shape Abyssal Sire's spawns already ship under. Animations: ZUK_ATTACK 7566 and ZUK_IDLE 7564 are unambiguous gameval names. Projectile INFERNO_ZUK_PROJECTILE 1375 says projectile outright and is curated; ZUK_PROJ 7571 and ZUK_PROJ_SHORT 10106 carry the same meaning but sit in the animation space rather than the spotanim space a projectile trigger reads, so they are not usable as triggers. THE WAVE MECHANICS DETECT ON npc-spawn ONLY, so each unlocks when that monster first appears rather than when it does anything. That is the honest shape here: each wave monster has its own animation set (Jal-Zek's 7608 and 7609, Jal-Xil's 7602 and 7603, Jal-ImKot's 7595 and 7596, Jal-Nib's 7572 and 7573), but those animations are played by the wave npcs rather than by a boss in npcIds, and an animation trigger only matches when played by an npc the engine is currently tracking as this boss (docs/DECISIONS.md D17). Adding every wave monster to npcIds instead would make the plugin treat the whole Inferno as one boss and let any wave animation unlock any mechanic, which is worse. The wave previews are allowed to use those animations, since a preview has no such restriction. Every preview here is fitted against its own npc rather than borrowing another's, which matters more than usual because the five span an enormous size range: Jal-Nib fits at zoom 201 and Zuk at 3730, a factor of eighteen. The healer's negative shiftY of -25 is correct rather than a mistake; its model dips below the ground plane, the same case as Giant Mole's burrow. Jal-Ak and its three Jal-AkRek offspring (7693 through 7696), Jal-MejRah 7692 and the second Yt-HurKot set are not curated, to keep the list to the five things that decide a run. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'The Inferno', matching 'name', article included. PREVIEW PASS 2026-08-07: The nibbler filled the box because its fitted zoom, 201, scales a very small npc up until it touches the edges. Doubled to 402 so it reads as the small add it is. This is a judgement call rather than a fitted number, and wants an eyeball. BATCH 4 2026-08-07: Split to one row per mob, as asked, and the Bat and Blob are added. The gamevals make the whole wave set unambiguous: INFERNO_CREATURE_MELEE 7697 is Jal-ImKot, CREATURE_RANGER 7698 is Jal-Xil, CREATURE_MAGER 7699 is Jal-Zek, CREATURE_HARPIE 7692 is the bat Jal-MejRah, and CREATURE_SPLITTER 7693 is the blob Jal-Ak with 7694/7695/7696 the three pieces it splits into, all four curated on the one row so any of them discovers it. Every id here is confident.",
   "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Confirm whether ZUK_PROJ 7571 or ZUK_PROJ_SHORT 10106 exists in the spotanim space, which would give the barrage a second trigger. 3. Consider splitting Jal-Xil and Jal-ImKot into separate mechanics; they are combined here because both are answered by praying correctly, but their positioning counterplay differs. 4. Decide whether Jal-Ak and the Jal-AkRek offspring deserve a mechanic. 5. staticFallback is false on all five; confirm each animation reads at the shipped zoom."
 }

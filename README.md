@@ -71,14 +71,14 @@ track the live pass.
 | Deranged Archaeologist | 2 |
 | Doom of Mokhaiotl | 11 |
 | Duke Sucellus | 6 |
-| Fortis Colosseum | 8 |
+| Fortis Colosseum | 12 |
 | General Graardor | 5 |
 | Giant Mole | 2 |
 | Grotesque Guardians | 6 |
 | Hespori | 3 |
 | K'ril Tsutsaroth | 4 |
 | Kalphite Queen | 2 |
-| King Black Dragon | 3 |
+| King Black Dragon | 4 |
 | Kraken | 3 |
 | Kree'arra | 4 |
 | Maggot King | 3 |
@@ -95,10 +95,10 @@ track the live pass.
 | The Fight Caves | 3 |
 | The Gauntlet | 4 |
 | The Hueycoatl | 6 |
-| The Inferno | 5 |
-| The Leviathan | 5 |
+| The Inferno | 8 |
+| The Leviathan | 6 |
 | The Mad Angel | 5 |
-| The Nightmare | 7 |
+| The Nightmare | 8 |
 | The Whisperer | 5 |
 | Thermonuclear Smoke Devil | 1 |
 | Vardorvis | 5 |
