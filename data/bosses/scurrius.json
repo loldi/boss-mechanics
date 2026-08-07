@@ -5,28 +5,19 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/Scurrius/Strategies",
   "mechanics": [
     {
-      "id": "melee-bite",
-      "name": "Bite",
-      "description": "His ordinary attack, used on whoever is standing closest.",
-      "counterplay": "Pray Protect from Melee.",
-      "detection": [
-        { "type": "animation", "id": 10692 },
-        { "type": "animation", "id": 10693 }
-      ],
-      "preview": { "animationId": 10692, "modelId": 50146, "staticFallback": false, "zoom": 2000, "shiftY": 43 }
-    },
-    {
-      "id": "ranged-and-magic",
-      "name": "Ranged and Magic",
-      "description": "He also attacks at range with both ranged and magic, so he stays dangerous when you back off.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "He bites whoever is standing closest, and switches to ranged and magic when you back off, so no distance puts you out of reach.",
       "counterplay": "Swap your overhead to whichever he throws.",
       "detection": [
+        { "type": "animation", "id": 10692 },
+        { "type": "animation", "id": 10693 },
         { "type": "animation", "id": 10694 },
         { "type": "animation", "id": 10696 },
         { "type": "animation", "id": 10695 },
         { "type": "animation", "id": 10697 }
       ],
-      "preview": { "animationId": 10694, "modelId": 50146, "staticFallback": false, "zoom": 2000, "shiftY": 43 }
+      "preview": { "animationId": 10692, "modelId": 50146, "staticFallback": false, "zoom": 2000, "shiftY": 43 }
     },
     {
       "id": "tail-stomp",
@@ -61,6 +52,6 @@
       "preview": { "animationId": 10688, "modelId": 50146, "staticFallback": false, "zoom": 2000, "shiftY": 43 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 7221, 7222 and 15548, all sharing the same four-part model set and standing animation. SCURRIUS_PET 7616 and POH_SCURRIUS_PET 7219 are excluded. Jagex's internal name for this boss is RAT_BOSS, not Scurrius, which is why a gameval name search for 'scurrius' finds only the pets. Animations are the NPC_RAT_BOSS_* set, all unambiguous gameval names, and this boss has an unusual shape: almost every attack exists twice, once ordinarily and once in a feeding stance (ATTACK_RANGED 10694 with FEEDING_ATTACK_RANGED 10695, ATTACK_MAGIC 10696 with FEEDING_ATTACK_MAGIC 10697, ATTACK_STOMP 10698 with FEEDING_ATTACK_STOMP 10699). Both variants are curated as triggers on the same mechanic, since the stance changes the animation and nothing about the counterplay. THE GIANT RATS DETECT ON THE SUMMON ANIMATION RATHER THAN ON THE RATS. NPC_RAT_BOSS_ATTACK_SUMMON_01 10700 is unambiguous, whereas the rats themselves are ordinary Giant rat npcs of which the cache holds well over a dozen copies scattered across the game, none marked as belonging to this fight; curating an npc-spawn on any of them would fire in a sewer. NO PROJECTILE IS CURATED: the cache names no RAT_BOSS or Scurrius spotanim at all, so there is nothing with an unambiguous projectile name to add, and his ranged and magic attacks detect on their animations alone. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all five sequences tried. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 775, the Combat Achievements screen's own entry for this boss, which pins model 50146 at zoom 2000, and compute shiftY from the bind pose extents at that zoom. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Scurrius', matching 'name'.",
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 7221, 7222 and 15548, all sharing the same four-part model set and standing animation. SCURRIUS_PET 7616 and POH_SCURRIUS_PET 7219 are excluded. Jagex's internal name for this boss is RAT_BOSS, not Scurrius, which is why a gameval name search for 'scurrius' finds only the pets. Animations are the NPC_RAT_BOSS_* set, all unambiguous gameval names, and this boss has an unusual shape: almost every attack exists twice, once ordinarily and once in a feeding stance (ATTACK_RANGED 10694 with FEEDING_ATTACK_RANGED 10695, ATTACK_MAGIC 10696 with FEEDING_ATTACK_MAGIC 10697, ATTACK_STOMP 10698 with FEEDING_ATTACK_STOMP 10699). Both variants are curated as triggers on the same mechanic, since the stance changes the animation and nothing about the counterplay. THE GIANT RATS DETECT ON THE SUMMON ANIMATION RATHER THAN ON THE RATS. NPC_RAT_BOSS_ATTACK_SUMMON_01 10700 is unambiguous, whereas the rats themselves are ordinary Giant rat npcs of which the cache holds well over a dozen copies scattered across the game, none marked as belonging to this fight; curating an npc-spawn on any of them would fire in a sewer. NO PROJECTILE IS CURATED: the cache names no RAT_BOSS or Scurrius spotanim at all, so there is nothing with an unambiguous projectile name to add, and his ranged and magic attacks detect on their animations alone. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all five sequences tried. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 775, the Combat Achievements screen's own entry for this boss, which pins model 50146 at zoom 2000, and compute shiftY from the bind pose extents at that zoom. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Scurrius', matching 'name'. FEEDBACK PASS 2026-08-07 (Andrew reviewed every boss in game): \"Bite\" and \"Ranged and Magic\" are collapsed into one \"Standard Attacks\". Tail Stomp, Giant Rats and Feeding stay separate as named specials. The merged row carries the union of every source row's triggers, so a player who witnesses any of the old attacks still discovers it; the old mechanic ids simply stop matching inside an existing discovered CSV, which docs/DECISIONS.md D18 makes safe without a migration. It keeps the first source row's preview verbatim, since every source already shared a model.",
   "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 3. Find out whether the giant rats he summons are a distinct npc id rather than the generic Giant rat. If they are, the mechanic should detect on the spawn as well as the summon animation. 4. Split ranged-and-magic into two mechanics: they have separate animations (10694 and 10696) and separate prayers, and are only combined here because the wiki treats his style switching as one behaviour. This is the clearest improvement available in this file. 5. Confirm whether the feeding stance is worth its own mechanic at all, or whether it should collapse into the others' descriptions."
 }

@@ -5,54 +5,34 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/Kalphite_Queen/Strategies",
   "mechanics": [
     {
-      "id": "jaws-attack",
-      "name": "Jaws",
-      "description": "Her melee attack in the first form, used when you stand close enough to reach.",
-      "counterplay": "Pray Protect from Melee, or keep out of her reach entirely.",
-      "phase": "First form",
-      "detection": [
-        { "type": "animation", "id": 6241 }
-      ],
-      "preview": { "animationId": 6241, "npcId": 963, "staticFallback": false, "zoom": 1501, "shiftY": 64 }
-    },
-    {
-      "id": "ranged-spines",
-      "name": "Spines",
-      "description": "She fires spines at range in her first form, and she mixes this with magic, so the style changes between attacks.",
+      "id": "melee-form",
+      "name": "Melee Form",
+      "description": "Her first form fights on the ground. She bites whoever is close enough to reach, and fires spines mixed with magic at anyone who is not, so the style changes between attacks.",
       "counterplay": "Watch which she throws and swap your overhead. Nothing tells you in advance.",
-      "phase": "First form",
+      "phase": "Phase 1",
       "detection": [
+        { "type": "animation", "id": 6241 },
         { "type": "animation", "id": 6240 },
         { "type": "projectile", "id": 288 },
         { "type": "projectile", "id": 289 }
       ],
-      "preview": { "animationId": 6240, "npcId": 963, "staticFallback": false, "zoom": 2310, "shiftY": 61 }
+      "preview": { "animationId": 6241, "npcId": 963, "staticFallback": false, "zoom": 1501, "shiftY": 64 }
     },
     {
-      "id": "second-form",
-      "name": "Second Form",
-      "description": "At zero health she sheds her shell and rises into a flying form with full health again, hitting harder and faster than the first.",
-      "counterplay": "Keep supplies for this half, and re-pray immediately: your overhead is turned off as she changes.",
-      "phase": "Second form",
+      "id": "flying-form",
+      "name": "Flying Form",
+      "description": "At zero health she sheds her shell and rises into a flying form with full health again, still mixing ranged and magic but hitting harder and faster than before.",
+      "counterplay": "Re-pray immediately, your overhead is turned off as she changes, and keep supplies for this half.",
+      "phase": "Phase 2",
       "detection": [
         { "type": "npc-spawn", "id": 965 },
-        { "type": "animation", "id": 6235 }
-      ],
-      "preview": { "animationId": 6235, "npcId": 965, "staticFallback": false, "zoom": 2244, "shiftY": 68 }
-    },
-    {
-      "id": "flying-ranged",
-      "name": "Flying Barrage",
-      "description": "In her second form she keeps mixing ranged and magic from the air, at higher damage than before.",
-      "counterplay": "Same job as the first form, swap your overhead per attack, but the punishment for missing is larger.",
-      "phase": "Second form",
-      "detection": [
+        { "type": "animation", "id": 6235 },
         { "type": "animation", "id": 6234 },
         { "type": "projectile", "id": 280 }
       ],
-      "preview": { "animationId": 6234, "npcId": 965, "staticFallback": false, "zoom": 1859, "shiftY": 68 }
+      "preview": { "animationId": 6235, "npcId": 965, "staticFallback": false, "zoom": 2244, "shiftY": 68 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 963 and 965 are the two forms, and both are in npcIds because she transforms rather than respawning (docs/DECISIONS.md D17); the form-to-npc mapping is read off each npc's own standing animation against the gamevals, 963 standing 6239 KALPHITE_UPDATE_QUEEN_READY and 965 standing 6236 KALPHITE_UPDATE_FLYING_QUEEN_READY_WALK. Npc 128 shares the name but has no models or animations at all and is excluded as a placeholder. Animations are the KALPHITE_UPDATE_* set, all unambiguous gameval names: QUEEN_JAWS_ATTACK 6241, QUEEN_RANGED_ATTACK 6240, FLYING_QUEEN_STINGER_ATTACK 6235 and FLYING_QUEEN_RANGED_ATTACK 6234. The older unprefixed KALPHITE_* set (QUEEN_ATTACK_CLAWS 1178, ATTACK_MANDIBLES 1184, ATTACK_CLAWS 1185) belongs to the pre-rework model and is deliberately not curated, as are the four emote sequences 6243 through 6246. Projectiles KALPHITE_SPINE 288, KALPHITE_QUEEN_SPINE 289 and KALPHITE_GLOW_TRAVEL 280 are curated: the first two name the spine attack outright, and 280 carries an explicit TRAVEL suffix distinguishing it from KALPHITE_GLOW 278 and KALPHITE_GLOW_IMPACT 281, which are graphics and are left out, since a graphic trigger has no source actor to check (D17) and discovery never revokes (D18). THE MAGIC AND RANGED ATTACKS ARE NOT SPLIT, which is the one place this file understates the fight. Her switching between the two is the whole difficulty of the boss, but the cache names one ranged attack sequence per form and no magic one, so a separate magic mechanic would have to detect on the same animation and would unlock at the same moment. The description carries the switching instead. ZOOM IS DELIBERATELY LARGER THAN FitZoom'S OWN FIT ON BOTH SECOND-FORM MECHANICS. The flying form's model sits entirely above the ground line the engine anchors to, so the shiftY that centres it projects past the 70px half-box ceiling BundledBossDataTest enforces; raising zoom shrinks the model and its offset by the same factor, and each is the smallest zoom that brings shiftY to 68. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Kalphite Queen', matching 'name'.",
-  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Find the trigger that distinguishes her magic attack from her ranged one. It is the defining mechanic of this boss and is currently folded into the ranged mechanic's description because the cache names no separate sequence. KALPHITE_UPDATE_RANGED_ATTACK 6231 is unassigned and is worth checking. 3. Confirm the projectile assignment of 280, 288 and 289 across the two forms. 4. Confirm the two raised second-form zooms read correctly in game."
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 963 and 965 are the two forms, and both are in npcIds because she transforms rather than respawning (docs/DECISIONS.md D17); the form-to-npc mapping is read off each npc's own standing animation against the gamevals, 963 standing 6239 KALPHITE_UPDATE_QUEEN_READY and 965 standing 6236 KALPHITE_UPDATE_FLYING_QUEEN_READY_WALK. Npc 128 shares the name but has no models or animations at all and is excluded as a placeholder. Animations are the KALPHITE_UPDATE_* set, all unambiguous gameval names: QUEEN_JAWS_ATTACK 6241, QUEEN_RANGED_ATTACK 6240, FLYING_QUEEN_STINGER_ATTACK 6235 and FLYING_QUEEN_RANGED_ATTACK 6234. The older unprefixed KALPHITE_* set (QUEEN_ATTACK_CLAWS 1178, ATTACK_MANDIBLES 1184, ATTACK_CLAWS 1185) belongs to the pre-rework model and is deliberately not curated, as are the four emote sequences 6243 through 6246. Projectiles KALPHITE_SPINE 288, KALPHITE_QUEEN_SPINE 289 and KALPHITE_GLOW_TRAVEL 280 are curated: the first two name the spine attack outright, and 280 carries an explicit TRAVEL suffix distinguishing it from KALPHITE_GLOW 278 and KALPHITE_GLOW_IMPACT 281, which are graphics and are left out, since a graphic trigger has no source actor to check (D17) and discovery never revokes (D18). THE MAGIC AND RANGED ATTACKS ARE NOT SPLIT, which is the one place this file understates the fight. Her switching between the two is the whole difficulty of the boss, but the cache names one ranged attack sequence per form and no magic one, so a separate magic mechanic would have to detect on the same animation and would unlock at the same moment. The description carries the switching instead. ZOOM IS DELIBERATELY LARGER THAN FitZoom'S OWN FIT ON BOTH SECOND-FORM MECHANICS. The flying form's model sits entirely above the ground line the engine anchors to, so the shiftY that centres it projects past the 70px half-box ceiling BundledBossDataTest enforces; raising zoom shrinks the model and its offset by the same factor, and each is the smallest zoom that brings shiftY to 68. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Kalphite Queen', matching 'name'. FEEDBACK PASS 2026-08-07 (Andrew reviewed every boss in game): Four rows become two: Jaws and Spines are now \"Melee Form\" (Phase 1) and Second Form and Flying Barrage are now \"Flying Form\" (Phase 2). This supersedes the note above about the magic and ranged attacks not being split, which is now the intended shape rather than a shortfall: each form is one row and its description carries the switching. The merged row carries the union of every source row's triggers, so a player who witnesses any of the old attacks still discovers it; the old mechanic ids simply stop matching inside an existing discovered CSV, which docs/DECISIONS.md D18 makes safe without a migration. It keeps the first source row's preview verbatim, since every source already shared a model.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Find the trigger that distinguishes her magic attack from her ranged one. It is the defining mechanic of this boss and is currently folded into the ranged mechanic's description because the cache names no separate sequence. KALPHITE_UPDATE_RANGED_ATTACK 6231 is unassigned and is worth checking. 3. Confirm the projectile assignment of 280, 288 and 289 across the two forms. 4. Confirm the two raised second-form zooms read correctly in game. 5. Dropped 2026-08-07 in the merge: the Flying Barrage preview (animationId 6234, zoom 1859, shiftY 68). Flying Form keeps the Second Form preview (6235)."
 }

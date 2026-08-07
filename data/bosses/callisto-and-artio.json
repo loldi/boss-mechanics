@@ -5,39 +5,21 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/Callisto/Strategies",
   "mechanics": [
     {
-      "id": "melee-swipe",
-      "name": "Swipe",
-      "description": "A close range swipe that reaches diagonally and catches anyone standing near you as well. It hits harder than almost anything else in the Wilderness.",
-      "counterplay": "Fight from range. Protect from Melee only halves it, so distance is worth more than the prayer.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "It cycles between a swipe that reaches diagonally and catches anyone standing beside you, a ranged attack, and a magic attack.",
+      "counterplay": "Fight from range so the swipe never reaches you, and swap your overhead to whichever style it throws.",
       "detection": [
-        { "type": "animation", "id": 10012 }
+        { "type": "animation", "id": 10012 },
+        { "type": "animation", "id": 10013 },
+        { "type": "projectile", "id": 2350 },
+        { "type": "animation", "id": 10014 }
       ],
       "preview": { "animationId": 10012, "modelId": 47396, "staticFallback": false, "zoom": 4500, "shiftY": 32 }
     },
     {
-      "id": "ranged-attack",
-      "name": "Ranged Attack",
-      "description": "Its ranged attack, used when you keep your distance rather than closing in.",
-      "counterplay": "Pray Protect from Missiles while you fight from range.",
-      "detection": [
-        { "type": "animation", "id": 10013 },
-        { "type": "projectile", "id": 2350 }
-      ],
-      "preview": { "animationId": 10013, "modelId": 47396, "staticFallback": false, "zoom": 4500, "shiftY": 32 }
-    },
-    {
-      "id": "magic-attack",
-      "name": "Magic Attack",
-      "description": "Its magic attack, the third style it cycles through at range.",
-      "counterplay": "Pray Protect from Magic when it casts rather than swipes.",
-      "detection": [
-        { "type": "animation", "id": 10014 }
-      ],
-      "preview": { "animationId": 10014, "modelId": 47396, "staticFallback": false, "zoom": 4500, "shiftY": 32 }
-    },
-    {
       "id": "enrage-roar",
-      "name": "Enrage",
+      "name": "Roar",
       "description": "At two thirds and one third health it roars, breaking free of any bind, scattering bear traps, and throwing a white orb that knocks you backwards. The knockback hurts more the closer you land to a wall.",
       "counterplay": "Swap to Protect from Magic as the orb lands, and fight away from the arena walls so there is room to be thrown.",
       "detection": [
@@ -46,6 +28,6 @@
       "preview": { "animationId": 10015, "modelId": 47396, "staticFallback": false, "zoom": 4500, "shiftY": 32 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES, which is why the page title carries both names and why npcIds spans them: CALLISTO 6609 is the multi-combat Wilderness boss, CALLISTO_SINGLES 11992 is Artio, and CLANCUP_CALLISTO 6503 is the clan cup copy. Artio is mechanically identical to Callisto at lower stats, so the two share one mechanic list rather than being split by phase labels. POH_CALLISTO_PET 497 and CALLISTOPET 5558 are pets and are excluded. Animations are the NPC_CALLISTO_* set, all unambiguous gameval names: ATTACK_MELEE01 10012, ATTACK_RANGED01 10013, ATTACK_MAGIC01 10014 and ENRAGED01 10015. The older unprefixed CALLISTO_* set (WALK 10018, IDLE 10019, ATTACK_MELEE 10020, ATTACK_ENRAGED 10021, DEFEND 10022, DEATH 10023) belongs to the pre-rework model and is deliberately not curated. Projectile FX_CALLISTO_RANGED_PROJECTILE 2350 is curated because its name says projectile outright; FX_CALLISTO_TRAP 2343, FX_CALLISTO_RANGED_SPOTANIM 2349, FX_CALLISTO_RANGED_IMPACT 2351, FX_CALLISTO_ENRAGE 2352 and FX_CALLISTO_ENRAGE_SMALL 2353 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). THE BEAR TRAPS ARE FOLDED INTO THE ENRAGE MECHANIC rather than given their own row: FX_CALLISTO_TRAP 2343 is a graphic, and the roar that scatters them is the honest trigger. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all four sequences, which is the signature of a skeletal sequence having no frames to walk. The values here follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 3553, the Combat Achievements screen's own entry for this boss, which pins model 47396 at zoom 4500, and compute shiftY from the bind pose extents at that zoom. 4500 is the largest CA zoom of any boss in this wave, and model 47396 is unusually deep (Z[-652..406] against X[-232..232]), so the fit is dominated by its length rather than its height. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Callisto and Artio', matching 'name'.",
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES, which is why the page title carries both names and why npcIds spans them: CALLISTO 6609 is the multi-combat Wilderness boss, CALLISTO_SINGLES 11992 is Artio, and CLANCUP_CALLISTO 6503 is the clan cup copy. Artio is mechanically identical to Callisto at lower stats, so the two share one mechanic list rather than being split by phase labels. POH_CALLISTO_PET 497 and CALLISTOPET 5558 are pets and are excluded. Animations are the NPC_CALLISTO_* set, all unambiguous gameval names: ATTACK_MELEE01 10012, ATTACK_RANGED01 10013, ATTACK_MAGIC01 10014 and ENRAGED01 10015. The older unprefixed CALLISTO_* set (WALK 10018, IDLE 10019, ATTACK_MELEE 10020, ATTACK_ENRAGED 10021, DEFEND 10022, DEATH 10023) belongs to the pre-rework model and is deliberately not curated. Projectile FX_CALLISTO_RANGED_PROJECTILE 2350 is curated because its name says projectile outright; FX_CALLISTO_TRAP 2343, FX_CALLISTO_RANGED_SPOTANIM 2349, FX_CALLISTO_RANGED_IMPACT 2351, FX_CALLISTO_ENRAGE 2352 and FX_CALLISTO_ENRAGE_SMALL 2353 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). THE BEAR TRAPS ARE FOLDED INTO THE ENRAGE MECHANIC rather than given their own row: FX_CALLISTO_TRAP 2343 is a graphic, and the roar that scatters them is the honest trigger. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents for all four sequences, which is the signature of a skeletal sequence having no frames to walk. The values here follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 3553, the Combat Achievements screen's own entry for this boss, which pins model 47396 at zoom 4500, and compute shiftY from the bind pose extents at that zoom. 4500 is the largest CA zoom of any boss in this wave, and model 47396 is unusually deep (Z[-652..406] against X[-232..232]), so the fit is dominated by its length rather than its height. staticFallback is false on all four; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'Callisto and Artio', matching 'name'. FEEDBACK PASS 2026-08-07 (Andrew reviewed every boss in game): Mechanic \"Enrage\" is now \"Roar\", which is what the wiki calls it. The three attack-style rows (Swipe, Ranged Attack, Magic Attack) are collapsed into one \"Standard Attacks\". The merged row carries the union of every source row's triggers, so a player who witnesses any of the old attacks still discovers it; the old mechanic ids simply stop matching inside an existing discovered CSV, which docs/DECISIONS.md D18 makes safe without a migration. It keeps the first source row's preview verbatim, since every source already shared a model.",
   "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on, against both Callisto and Artio, since only one set of ids is curated for both. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above. 3. Confirm Artio plays the same animation ids as Callisto; the assumption that it does is what lets one mechanic list cover both. 4. Add the graphic triggers deliberately left out, in particular FX_CALLISTO_TRAP 2343, which would let the bear traps become a mechanic of their own. 5. staticFallback is false on all four; confirm each body animation reads at the shipped zoom."
 }
