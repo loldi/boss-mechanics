@@ -1,0 +1,74 @@
+{
+  "id": "araxxor",
+  "name": "Araxxor",
+  "npcIds": [13668, 13669],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Araxxor/Strategies",
+  "mechanics": [
+    {
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "He picks a style by rolling against your defences. Melee comes when you are close, ranged drains nearly a tenth of your Defence on a hit, and magic drains the same slice of your Prayer.",
+      "counterplay": "Pray against whichever style he picks. The roll happens as the attack starts, so a late switch does nothing.",
+      "detection": [
+        { "type": "animation", "id": 11480 },
+        { "type": "animation", "id": 11476 },
+        { "type": "animation", "id": 11479 },
+        { "type": "animation", "id": 11483 },
+        { "type": "animation", "id": 11484 },
+        { "type": "projectile", "id": 1621 },
+        { "type": "projectile", "id": 1622 }
+      ],
+      "preview": { "animationId": 11480, "npcId": 13668, "staticFallback": false, "zoom": 3017, "shiftY": 55 }
+    },
+    {
+      "id": "acid-spray",
+      "name": "Acid Spray",
+      "description": "He sprays acid across the ground. The splatter hurts as it lands, and the pool it leaves hurts more the longer you stand in it.",
+      "counterplay": "Step off the moment it lands. The damage climbs the longer you stay.",
+      "detection": [
+        { "type": "animation", "id": 11478 },
+        { "type": "animation", "id": 11477 },
+        { "type": "projectile", "id": 2924 }
+      ],
+      "preview": { "animationId": 11478, "npcId": 13668, "staticFallback": false, "zoom": 2064, "shiftY": 52 }
+    },
+    {
+      "id": "acid-cannon",
+      "name": "Acid Cannon",
+      "description": "He braces and fires a concentrated jet of acid rather than the usual spray.",
+      "counterplay": "Get out of the line it is aimed down.",
+      "detection": [
+        { "type": "animation", "id": 11493 }
+      ],
+      "preview": { "animationId": 11493, "npcId": 13668, "staticFallback": false, "zoom": 2004, "shiftY": 51 }
+    },
+    {
+      "id": "araxyte-eggs",
+      "name": "Araxyte Eggs",
+      "description": "Nine eggs ring the lair, three of each colour, and one hatches after every third attack. Acidic araxytes splatter acid when killed, mirrorbacks send a share of Araxxor's damage back at you, and rupturas run at you and burst.",
+      "counterplay": "Break the eggs before they hatch. If a mirrorback is out, stop attacking Araxxor until it is gone.",
+      "detection": [
+        { "type": "npc-spawn", "id": 13671 },
+        { "type": "npc-spawn", "id": 13673 },
+        { "type": "npc-spawn", "id": 13675 },
+        { "type": "npc-spawn", "id": 13680 }
+      ],
+      "preview": { "animationId": 9137, "npcId": 13675, "staticFallback": false, "zoom": 756, "shiftY": 61 }
+    },
+    {
+      "id": "enrage-cleave",
+      "name": "Enraged Cleave",
+      "description": "Below a quarter health he enrages, attacks faster, and his melee becomes a cleave that reaches two tiles and leaves acid behind it.",
+      "counterplay": "He shouts before the cleave. Step out of the strip he is aiming at.",
+      "phase": "Enraged",
+      "detection": [
+        { "type": "animation", "id": 11487 },
+        { "type": "animation", "id": 11488 },
+        { "type": "animation", "id": 11489 }
+      ],
+      "preview": { "animationId": 11487, "npcId": 13668, "staticFallback": false, "zoom": 2981, "shiftY": 55 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids: 13668 is the boss, 13669 the death and loot state, which is in npcIds because it is a transform of the same npc rather than a new spawn (docs/DECISIONS.md D17). The araxytes are adds and detect on npc-spawn: Mirrorback 13671, Ruptura 13673, Acidic 13675 and Dreadborn 13680. The generic Araxyte npcs 11174 through 11176, 13666 and 13667 are the ordinary lair spiders rather than the boss's spawns and are deliberately not curated. Animations are the NPC_ARAXXOR_01_* set, which is unusually complete and unambiguous: ATTACK_MELEE 11480, ATTACK_RANGED 11476, ATTACK_MAGIC 11479, the slow variants ATTACK_SLOW_MELEE 11483 and ATTACK_SLOW_RANGED 11484, ATTACK_ACID_SPRAY 11478, ATTACK_ACID_LEAK 11477, ACID_CANNON 11493, ATTACK_MELEE_ENRAGED 11487 and the two ENRAGE_TRANSITION sequences 11488 and 11489. Both slow attack variants are curated as triggers on the standard-attacks mechanic, since they are the same attacks at the pre-enrage speed. Projectiles ARAXXOR_RANGED_PROJECTILE 1621, ARAXXOR_MAGIC_PROJECTILE 1622 and ARAXXOR_POOLS_PROJ 2924 are curated because each carries an explicit projectile suffix in Jagex's own name, which is the bar for a projectile trigger in this wave; ARAXXOR_MAGIC_IMPACT 1625, ARAXXOR_POOLS_SPLASH 2923, the two araxyte explosion spotanims 2925 and 2926 and the three egg spotanims 2927 through 2929 are graphics and are deliberately left out, since a graphic trigger has no source actor to check (D17) and discovery never revokes (D18). THE EGGS THEMSELVES ARE NOT DETECTED, ONLY WHAT HATCHES OUT OF THEM. The three egg spotanims exist but are graphics, and the eggs are scenery until they hatch, so the mechanic fires when an araxyte spawns rather than when an egg appears. THE ARAXYTE PREVIEW SHOWS THE ACIDIC VARIANT specifically, on its own standing animation 9137 per docs/DECISIONS.md D26, because all four araxyte types share that animation and only their models differ; none of the four carries a recolour table, so any of them would render colour-true and the choice is arbitrary. Zoom and shiftY are FitZoom output at the shipped 291x140 box plus the standard 10% margin; none of the five needed the zoom correction the flying and oversized models in the God Wars batch did. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Araxxor', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Establish whether the araxyte explosion and egg spotanims (2925 through 2929) are fired as projectiles or applied as graphics; the acidic araxyte's death splatter and the ruptura's burst are both real mechanics currently folded into the egg mechanic's description rather than detected. 3. Confirm what distinguishes ATTACK_SLOW_MELEE 11483 and ATTACK_SLOW_RANGED 11484 from their ordinary counterparts, since they are curated as the same mechanic on the assumption they are the pre-enrage speed. 4. NPC_ARAXYTE02_* animations 11494 through 11500 name per-type araxyte attacks; if the araxytes are worth splitting into their own mechanics, those are the triggers. 5. staticFallback is false on all five; confirm each body animation reads at the shipped zoom."
+}

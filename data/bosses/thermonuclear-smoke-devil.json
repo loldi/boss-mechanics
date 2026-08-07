@@ -1,0 +1,31 @@
+{
+  "id": "thermonuclear-smoke-devil",
+  "name": "Thermonuclear Smoke Devil",
+  "npcIds": [499],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Thermonuclear_smoke_devil",
+  "mechanics": [
+    {
+      "id": "smoke-barrage",
+      "name": "Smoke Barrage",
+      "description": "Its only attack is a magical ranged hit that goes straight through protection prayers. It hits for very little but it never stops, attacking every other tick.",
+      "counterplay": "No overhead helps, so wear magic defence gear and bring food. Wind spells hit it hardest.",
+      "detection": [
+        { "type": "animation", "id": 3847 },
+        { "type": "projectile", "id": 644 }
+      ],
+      "preview": { "animationId": 3847, "npcId": 499, "staticFallback": false, "zoom": 1674, "shiftY": 64 }
+    },
+    {
+      "id": "no-safespot",
+      "name": "Walks Through Everything",
+      "description": "Unlike almost every other monster it walks straight through other monsters and players, so the smoke devils in its lair cannot be used as cover. Cannons set up in the room are destroyed.",
+      "counterplay": "There is no safespot and no cannon. Fight it in the open.",
+      "detection": [
+        { "type": "npc-spawn", "id": 499 }
+      ],
+      "preview": { "animationId": 1829, "npcId": 499, "staticFallback": false, "zoom": 1701, "shiftY": 64 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). THIS BOSS HAS NO ANIMATIONS OF ITS OWN. Npc 499's standing animation is 1829, which the gamevals name LORE_DUST_DEVIL_READY, so it reuses the ordinary dust devil set wholesale, and LORE_DUST_DEVIL_ATTACK 3847 is curated as its attack on that basis. The projectile is SMOKE_DEVIL_SMOKE_PROJ 644, whose explicit _PROJ suffix in Jagex's own name is the bar for a projectile trigger in this wave; the sibling SMOKE_DEVIL_CLOUD_SPOTANIM 642 and SMOKE_DEVIL_SMOKE_PLAYER_SPOTANIM 643 are graphics and are deliberately left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). Because both the animation and the projectile are the generic smoke and dust devil ones rather than boss-specific, the animation trigger is doing the real work here: an animation only matches when played by an npc the engine is currently tracking as this boss (D17), so an ordinary smoke devil in the same lair playing 3847 cannot false-positive. The projectile is source-checked the same way whenever the game reports a source. LORE_DUST_DEVIL_ATTACK_SPECIAL_01 11854 and _02 11855 exist and are deliberately not curated: they are named for the dust devil rather than for this boss, and nothing establishes that the Thermonuclear smoke devil plays them at all. THE SECOND MECHANIC DETECTS ON THE BOSS'S OWN NPC-SPAWN, so it unlocks the moment you walk into the lair rather than on anything the boss does. That is deliberate and is the honest shape for it, because what it describes is a property of the npc rather than a move: there is nothing to witness. TWO MECHANICS IS AN HONEST COUNT FOR THIS BOSS, not a shortfall. It has one attack and no specials; the wiki's entire combat section is the prayer penetration and the fact that you cannot safespot it. Zoom and shiftY are FitZoom output at the shipped 291x140 box plus the standard 10% margin. staticFallback is false on both; whether either body animation reads has not been eyeballed in game. THE COLLECTION LOG PAGE TITLE NEEDS CHECKING. The cache's collection log page reads 'Thermonuclear Smoke Devil' with a capital S and D, while the npc itself is named 'Thermonuclear smoke devil' in lower case, and 'name' follows the page rather than the npc because the page title is what BossPageIndex matches. Matching folds case anyway, so either would work today, but the page is the load-bearing one.",
+  "_followups": "1. Live verification of both ids per the curation checklist, with Log boss trigger ids on. 2. Confirm LORE_DUST_DEVIL_ATTACK 3847 is what this boss actually plays, since it is the generic dust devil animation rather than a boss-specific one. 3. Find out whether LORE_DUST_DEVIL_ATTACK_SPECIAL_01 11854 and _02 11855 belong to this boss or only to the reworked dust devil; if the former, this boss has a special attack that is missing here. 4. staticFallback is false on both; confirm each body animation reads at the shipped zoom."
+}

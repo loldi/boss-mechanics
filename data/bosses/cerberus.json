@@ -1,0 +1,64 @@
+{
+  "id": "cerberus",
+  "name": "Cerberus",
+  "npcIds": [5862, 5863, 5866],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Cerberus/Strategies",
+  "mechanics": [
+    {
+      "id": "melee-bite",
+      "name": "Bite",
+      "description": "She bites whoever is standing in melee range. This is the only one of her three styles she cannot use from a distance.",
+      "counterplay": "Pray Protect from Melee. The prayer has to be up when the attack starts, not when it lands.",
+      "detection": [
+        { "type": "animation", "id": 4491 }
+      ],
+      "preview": { "animationId": 4491, "npcId": 5862, "staticFallback": false, "zoom": 1822, "shiftY": 64 }
+    },
+    {
+      "id": "ranged-quills",
+      "name": "Quill Kick",
+      "description": "She rears onto her hind legs and kicks out with her front paws, throwing a translucent spiked ball.",
+      "counterplay": "Pray Protect from Missiles as she rears up.",
+      "detection": [
+        { "type": "animation", "id": 4490 }
+      ],
+      "preview": { "animationId": 4490, "npcId": 5862, "staticFallback": false, "zoom": 2667, "shiftY": 62 }
+    },
+    {
+      "id": "fire-breath",
+      "name": "Fire Breath",
+      "description": "She lowers her heads and spits a smooth black ball. This is her magic attack.",
+      "counterplay": "Pray Protect from Magic as her heads drop.",
+      "detection": [
+        { "type": "animation", "id": 4492 }
+      ],
+      "preview": { "animationId": 4492, "npcId": 5862, "staticFallback": false, "zoom": 2016, "shiftY": 58 }
+    },
+    {
+      "id": "summoned-souls",
+      "name": "Summoned Souls",
+      "description": "She howls and three ghosts rise behind the skull at the back of the room. They cannot be attacked, and each one attacks once in turn from west to east, one per style.",
+      "counterplay": "Pray against each soul's style in the order they sit, west to east. A blocked hit still drains prayer, so bring restores.",
+      "detection": [
+        { "type": "animation", "id": 4494 },
+        { "type": "npc-spawn", "id": 5867 },
+        { "type": "npc-spawn", "id": 5868 },
+        { "type": "npc-spawn", "id": 5869 }
+      ],
+      "preview": { "animationId": 8526, "npcId": 5867, "staticFallback": false, "zoom": 812, "shiftY": 64 }
+    },
+    {
+      "id": "lava-pools",
+      "name": "Lava Pools",
+      "description": "She howls and drops three pools of lava, one under your feet and two elsewhere in the room. They keep burning after they land.",
+      "counterplay": "Move the moment she howls, and stay off the pools. An antifire cuts the burn.",
+      "detection": [
+        { "type": "animation", "id": 4493 },
+        { "type": "animation", "id": 4501 }
+      ],
+      "preview": { "animationId": 4493, "npcId": 5862, "staticFallback": false, "zoom": 1931, "shiftY": 64 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 5862, 5863 and 5866 are the three Cerberus copies, all sharing model 29270; the three summoned souls (5867, 5868, 5869) are adds and detect on npc-spawn rather than sitting in npcIds, the same call already shipped for Zulrah's snakelings. Animations, all unambiguous gameval names: CERBERUS_BITE 4491, CERBERUS_ATTACK_RANGE 4490, CERBERUS_FIRE_BREATH 4492, CERBERUS_HOWL 4494, CERBERUS_SPECIAL_ATTACK_SPRAY 4493 and CERBERUS_SPECIAL_ATTACK_FLAME 4501. Detection is animation and npc-spawn only in this file, not because projectiles are excluded in this wave (they are not, as of the God Wars batch) but because the cache names exactly one Cerberus spotanim, CERBERUS_SPECIAL_ATTACK_FLAME 1247, and the name does not say whether the game fires it as a projectile or applies it as a graphic. Graphic triggers have no source actor at all (docs/DECISIONS.md D17) and discovery never revokes (D18), so an id that might be either is left out rather than guessed at. THE TRIPLE ATTACK IS A KNOWN MISSING MECHANIC. It fires first and then after every tenth normal attack, and it is just her magic, ranged and melee animations played two ticks apart, so it has no trigger of its own: curating it would mean hanging it on animations that already belong to the three standard attacks. THE FIRE WALL IS ALSO ABSENT, being permanent arena scenery rather than anything the npc does. WHICH SOUL IS WHICH STYLE IS NOT ESTABLISHED HERE. The wiki gives the order as red melee, blue magic, green ranged, but the three soul npcs differ only by model (5867 model 29267, 5868 model 29268, 5869 model 29266) and nothing in the cache names a colour, so they are curated as a single mechanic detecting on all three rather than as three mechanics with a guessed mapping. The preview shows soul 5867 on its own standing animation 8526, per docs/DECISIONS.md D26's prefer-the-idle guidance. Zoom and shiftY are FitZoom output at the shipped 291x140 box plus the standard 10% margin; none of the five needed the zoom correction the flying and oversized models in the God Wars batch did. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Cerberus', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Establish whether CERBERUS_SPECIAL_ATTACK_FLAME 1247 is fired as a projectile or applied as a graphic, and add it if it is a projectile. 3. Work out which of soul npcs 5867, 5868 and 5869 is the red, blue and green soul, and split the summoned-souls mechanic into three if the per-style prayer order is worth curating separately. 4. The triple attack and the fire wall are both missing and both need something the schema does not have: the triple attack needs a sequence-of-animations trigger, the fire wall a scenery trigger. 5. staticFallback is false on all five; confirm each body animation reads at the shipped zoom."
+}
