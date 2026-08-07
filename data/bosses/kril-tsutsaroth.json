@@ -1,0 +1,60 @@
+{
+  "id": "kril-tsutsaroth",
+  "name": "K'ril Tsutsaroth",
+  "npcIds": [3129, 6495, 12446, 3130, 3131, 3132],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/K%27ril_Tsutsaroth/Strategies",
+  "mechanics": [
+    {
+      "id": "scimitar-swipe",
+      "name": "Scimitar Swipe",
+      "description": "His usual attack, and the one he throws most often. It swipes both scimitars at a single target and can poison you even when Protect from Melee is stopping the damage.",
+      "counterplay": "Pray Protect from Melee and bring an antipoison. Magic defence gear cuts his accuracy.",
+      "detection": [
+        { "type": "animation", "id": 6948 }
+      ],
+      "preview": { "animationId": 6948, "npcId": 3129, "staticFallback": false, "zoom": 3350, "shiftY": 68 }
+    },
+    {
+      "id": "magic-shockwave",
+      "name": "Magic Shockwave",
+      "description": "He raises both scimitars and slams them down, sending a shock wave at a single target.",
+      "counterplay": "Pray Protect from Magic, or accept the hit and stay on Protect from Melee if his melee is the bigger threat.",
+      "detection": [
+        { "type": "animation", "id": 6950 }
+      ],
+      "preview": { "animationId": 6950, "npcId": 3129, "staticFallback": false, "zoom": 3347, "shiftY": 68 }
+    },
+    {
+      "id": "balfrug-kreeyath",
+      "name": "Balfrug Kreeyath",
+      "description": "The black demon bodyguard. It attacks with magic from anywhere in the room.",
+      "counterplay": "Kill it early. Your overhead prayer is busy covering K'ril, so nothing is stopping this.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3132 }
+      ],
+      "preview": { "animationId": 69, "npcId": 3132, "staticFallback": false, "zoom": 1983, "shiftY": 68 }
+    },
+    {
+      "id": "tstanon-karlak",
+      "name": "Tstanon Karlak",
+      "description": "The greater demon bodyguard. It attacks with melee and hits the softest of the three.",
+      "counterplay": "Protect from Melee already covers it while you are praying against K'ril. Leave it for last.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3130 }
+      ],
+      "preview": { "animationId": 64, "npcId": 3130, "staticFallback": false, "zoom": 1628, "shiftY": 68 }
+    },
+    {
+      "id": "zakln-gritch",
+      "name": "Zakl'n Gritch",
+      "description": "The lesser demon bodyguard. It attacks with ranged and hits the hardest of the three.",
+      "counterplay": "Kill it early. Your overhead prayer is busy covering K'ril, so nothing is stopping this.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3131 }
+      ],
+      "preview": { "animationId": 7077, "npcId": 3131, "staticFallback": false, "zoom": 1903, "shiftY": 59 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Jagex's internal name for this boss is GODWARS_ZAMORAK_AVATAR, the same avatar convention General Graardor's GODWARS_BANDOS_AVATAR follows. Npc ids: 3129 is the live boss, 6495 the clan cup copy and 12446 the Deadman breach copy. The three bodyguards (Tstanon Karlak 3130, Zakl'n Gritch 3131, Balfrug Kreeyath 3132) are in npcIds rather than treated as spawns, because like Graardor's sergeants they are present for the whole fight. Note the gameval names at 3130 through 3132 are the generic GODWARS_ANCIENT_GREATER_DEMON / _LESSER_DEMON / _BLACK_DEMON rather than the bodyguards' display names; the mapping above is from the cache's own npc names, which do carry the display names. Animations: GODWARS_ZAMORAK_ATTACK 6948 (melee) and GODWARS_ZAMORAK_MAGIC_ATTACK 6950, both unambiguous gameval names. THE PRAYER SMASH IS A KNOWN MISSING MECHANIC. It is one of this boss's signature moves, but it has no animation of its own in the cache: it plays the ordinary melee sequence and is announced by an overhead 'YARRRRRRR!'. Curating it on animation 6948 would unlock it on any ordinary melee swing, which is wrong, and the schema has no overhead-text trigger type, so it is deliberately absent rather than dishonestly detected. DETECTION IS ANIMATION AND NPC-SPAWN ONLY, BY DELIBERATE CHOICE FOR EVERY SKELETON IN THIS WAVE. Projectile triggers fall back to a boss-presence gate when the game reports no source actor, and graphic triggers have no source actor at all (docs/DECISIONS.md D17), so an unverified id of either kind can false-positive, and discovery never revokes (D18). GODWARS_ZAMORAK_MAGIC_ATTACK_SPOTANIM 6951, _SPOT 7079, _PROJ 7080, GODWARS_ZAMAROK_BDYGRD_RANGED_SPOT 7076 (Jagex's own typo), _PROJ 7078 and GODWARS_BLACK_DEMON_FIREBALL_SPOT 7081 / _PROJ 7082 are the ids to add during the live pass. The bodyguards detect on npc-spawn rather than their attack animations, so they unlock on room entry rather than on the attack. Their previews use GODWARS_ZAMORAK_BDYGRD_RANGED 7077 for Zakl'n Gritch, which is a named bodyguard attack, and the generic demon set for the other two, DEMON_ATTACK 64 for the melee greater demon and DEMON_CASTING 69 for the magic-casting black demon; those two are an inference from the wiki's attack styles onto the generic demon animation set, not an attested mapping. A wrong guess there shows the wrong animation in the preview pane and cannot cause a false discovery, since none of the three is a trigger. ZOOM IS DELIBERATELY LARGER THAN FitZoom'S OWN FIT ON FOUR OF THE FIVE MECHANICS. K'ril and the two larger demons are oversized models whose vertical envelope sits entirely above the ground line the engine anchors to (K'ril at animation 6948 measures Y[-699..-188], never reaching y=0), and the shiftY that centres such a model projects past the 70px half-box ceiling BundledBossDataTest enforces. Raising zoom shrinks the model and its required offset by the same factor, so the model stays centred and simply renders smaller: those four zooms are the smallest that bring shiftY to 68. Zakl'n Gritch at 7077 fits inside the ceiling and ships at FitZoom's own value. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'K'ril Tsutsaroth', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. The prayer smash needs a trigger type the schema does not have yet (overhead text, or a chat message). It is this boss's most distinctive mechanic and is missing until then; file it as a schema issue rather than curating it onto the melee animation. 3. Add the projectile and graphic triggers deliberately left out of this skeleton, starting with spotanims 6951, 7076 through 7082. 4. Upgrade the three bodyguards from npc-spawn to their real attack animations, and confirm whether DEMON_ATTACK 64 and DEMON_CASTING 69 are what Tstanon Karlak and Balfrug Kreeyath actually play. 5. Confirm the four raised zooms read correctly in game."
+}

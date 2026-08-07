@@ -1,0 +1,60 @@
+{
+  "id": "kreearra",
+  "name": "Kree'arra",
+  "npcIds": [3162, 6492, 12443, 15697, 3163, 3164, 3165],
+  "wikiUrl": "https://oldschool.runescape.wiki/w/Kree%27arra/Strategies",
+  "mechanics": [
+    {
+      "id": "tornado-barrage",
+      "name": "Tornado Barrage",
+      "description": "Kree'arra throws tornadoes of dust that hit every player in the chamber at once and shove them back a tile. Grey tornadoes are ranged; blue ones are magic that rolls against your ranged defence rather than your magic defence.",
+      "counterplay": "Keep Protect from Missiles up for the whole fight. Stand in a corner of the chamber so the knockback has nowhere to push you.",
+      "detection": [
+        { "type": "animation", "id": 6980 }
+      ],
+      "preview": { "animationId": 6980, "npcId": 3162, "staticFallback": false, "zoom": 3678, "shiftY": 68 }
+    },
+    {
+      "id": "talon-swipe",
+      "name": "Talon Swipe",
+      "description": "If nothing is holding his attention he walks over to his target and rakes them with his talons.",
+      "counterplay": "Stay out of his reach. Protect from Missiles does nothing against this one.",
+      "detection": [
+        { "type": "animation", "id": 6981 }
+      ],
+      "preview": { "animationId": 6981, "npcId": 3162, "staticFallback": false, "zoom": 3480, "shiftY": 68 }
+    },
+    {
+      "id": "wingman-skree",
+      "name": "Wingman Skree",
+      "description": "The magic bodyguard. It is the least accurate of the three and rarely lands anything worth worrying about.",
+      "counterplay": "Leave it for last. Protect from Missiles does not stop it, but it barely hits.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3163 }
+      ],
+      "preview": { "animationId": 6952, "npcId": 3163, "staticFallback": false, "zoom": 2208, "shiftY": 68 }
+    },
+    {
+      "id": "flockleader-geerin",
+      "name": "Flockleader Geerin",
+      "description": "The ranged bodyguard, and the hardest hitting of the three.",
+      "counterplay": "Protect from Missiles already covers it, so kill it whenever convenient.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3164 }
+      ],
+      "preview": { "animationId": 6955, "npcId": 3164, "staticFallback": false, "zoom": 2764, "shiftY": 68 }
+    },
+    {
+      "id": "flight-kilisa",
+      "name": "Flight Kilisa",
+      "description": "The melee bodyguard, and the only minion your overhead prayer leaves uncovered.",
+      "counterplay": "Kill it first. Protect from Missiles does nothing against it.",
+      "detection": [
+        { "type": "npc-spawn", "id": 3165 }
+      ],
+      "preview": { "animationId": 6956, "npcId": 3165, "staticFallback": false, "zoom": 2749, "shiftY": 68 }
+    }
+  ],
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Jagex's internal name for this boss is GODWARS_ARMADYL_AVATAR, the same avatar convention General Graardor's GODWARS_BANDOS_AVATAR follows. Npc ids: 3162 is the live boss, 6492 the clan cup copy, 12443 the Deadman breach copy, and 15697 a fourth copy carrying the identical model set and animations. The three bodyguards (Wingman Skree 3163, Flockleader Geerin 3164, Flight Kilisa 3165) are in npcIds rather than treated as spawns, because like Graardor's sergeants they are present for the whole fight. Animations: GODWARS_ARMADYL_AVATAR_WIND_ATTACK 6980 and GODWARS_ARMADYL_AVATAR_CLAW_ATTACK 6981 belong to Kree'arra himself; the unprefixed GODWARS_ARMADYL_* set (READY 6952, CANNON_ATTACK 6955, SPEAR_ATTACK 6956, SWORD_ATTACK 6957) belongs to the bodyguards, all three of which share standing animation 6952. THE RANGED AND MAGIC TORNADOES SHARE ONE ANIMATION and are curated as a single mechanic: the cache names one wind attack, and the wiki separates the two only by tornado colour, which is a spotanim difference the live pass can split if it is worth splitting. DETECTION IS ANIMATION AND NPC-SPAWN ONLY, BY DELIBERATE CHOICE FOR EVERY SKELETON IN THIS WAVE. Projectile triggers fall back to a boss-presence gate when the game reports no source actor, and graphic triggers have no source actor at all (docs/DECISIONS.md D17), so an unverified id of either kind can false-positive, and discovery never revokes (D18). GODWARS_ARMADYL_BOLT_ATTACK_SPOTANIM 6962, _PROJANIM 6963, _HIT_SPOTANIM 6964, SPEAR_TRAVEL_SPOTANIM 6960 and AXE_TRAVEL_SPOTANIM 6961 are the ids to add during the live pass. The bodyguards detect on npc-spawn rather than their attack animations, so they unlock on room entry rather than on the attack. THEIR PREVIEW ANIMATIONS ARE AN INFERENCE FROM THE WIKI'S ATTACK STYLES, NOT AN ATTESTED MAPPING: the wiki gives Geerin ranged, Kilisa melee and Skree magic, so CANNON_ATTACK 6955 is put on Geerin and SPEAR_ATTACK 6956 on Kilisa, while SWORD_ATTACK 6957 fits none of Skree's magic and Skree therefore previews on the shared idle 6952 per docs/DECISIONS.md D26. A wrong guess here shows the wrong animation in the preview pane; it cannot cause a false discovery, since none of these three ids is a trigger. ZOOM IS DELIBERATELY LARGER THAN FitZoom'S OWN FIT ON ALL FIVE MECHANICS. Every model in this file flies, so its vertical envelope sits entirely above the ground line the engine anchors to (Skree at animation 6952 measures Y[-359..-228], never reaching y=0), and the shiftY that centres such a model projects past the 70px half-box ceiling BundledBossDataTest enforces. Raising zoom shrinks the model and its required offset by the same factor, so the model stays centred and simply renders smaller: each zoom here is the smallest that brings shiftY to 68, computed as round(shiftY_units * 512 / 68) from FitZoom's own extents. The alternative, clamping shiftY at the ceiling and keeping the tighter zoom, would leave the model riding high in the box. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Kree'arra', matching 'name'.",
+  "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Add the projectile and graphic triggers deliberately left out of this skeleton, starting with spotanims 6960 through 6964. 3. Confirm the bodyguard preview animation mapping (6955 Geerin, 6956 Kilisa, idle for Skree), which is inferred from the wiki's attack styles rather than from a gameval name, and find out what GODWARS_ARMADYL_SWORD_ATTACK 6957 actually belongs to. 4. Split the ranged and magic tornadoes into two mechanics if the live pass finds distinct spotanims worth curating; they share animation 6980 today. 5. Confirm the raised zooms read correctly in game, since all five depart from FitZoom's own fit."
+}
