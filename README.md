@@ -42,13 +42,71 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 
 ## Supported bosses
 
+Every page in the collection log's **Bosses** tab, 57 of 57.
+
+Most of these ship as **skeletons**: their ids come from Jagex's own gameval names
+rather than guesses, but they have not been confirmed in a live fight yet. Each boss
+file records exactly what is settled and what is not, and the open curation issues
+track the live pass.
+
 | Boss | Mechanics |
 |---|---|
 | Abyssal Sire | 9 |
-| Vorkath | 6 |
+| Alchemical Hydra | 5 |
+| Amoxliatl | 3 |
+| Araxxor | 5 |
+| Barrows Chests | 7 |
+| Brutus | 3 |
+| Bryophyta | 2 |
+| Callisto and Artio | 4 |
+| Cerberus | 5 |
+| Chaos Elemental | 4 |
+| Chaos Fanatic | 1 |
+| Commander Zilyana | 5 |
+| Corporeal Beast | 5 |
+| Crazy Archaeologist | 2 |
+| Dagannoth Kings | 4 |
+| Deranged Archaeologist | 2 |
 | Doom of Mokhaiotl | 11 |
-| The Mad Angel | 5 |
+| Duke Sucellus | 6 |
+| Fortis Colosseum | 7 |
 | General Graardor | 5 |
+| Giant Mole | 2 |
+| Grotesque Guardians | 6 |
+| Hespori | 3 |
+| K'ril Tsutsaroth | 5 |
+| Kalphite Queen | 4 |
+| King Black Dragon | 3 |
+| Kraken | 3 |
+| Kree'arra | 5 |
+| Maggot King | 5 |
+| Moons of Peril | 4 |
+| Nex | 6 |
+| Obor | 1 |
+| Phantom Muspah | 6 |
+| Royal Titans | 5 |
+| Sarachnis | 2 |
+| Scorpia | 2 |
+| Scurrius | 5 |
+| Shellbane Gryphon | 5 |
+| Skotizo | 4 |
+| Tempoross | 4 |
+| The Fight Caves | 3 |
+| The Gauntlet | 5 |
+| The Hueycoatl | 6 |
+| The Inferno | 5 |
+| The Leviathan | 5 |
+| The Mad Angel | 5 |
+| The Nightmare | 7 |
+| The Whisperer | 5 |
+| Thermonuclear Smoke Devil | 2 |
+| Vardorvis | 5 |
+| Venenatis and Spindel | 5 |
+| Vet'ion and Calvar'ion | 4 |
+| Vorkath | 6 |
+| Wintertodt | 3 |
+| Yama | 6 |
+| Zalcano | 5 |
 | Zulrah | 5 |
 
 ## Settings
