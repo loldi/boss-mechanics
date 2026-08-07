@@ -5,36 +5,18 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/Venenatis/Strategies",
   "mechanics": [
     {
-      "id": "melee-lunge",
-      "name": "Lunge",
-      "description": "If you stand next to her she lunges, and she will use nothing else while you are there.",
-      "counterplay": "Pray Protect from Melee, or step away and take the ranged and magic cycle instead.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "She lunges if you stand next to her, and will use nothing else while you are there. At range she cycles eight ranged spits, then eight magic casts.",
+      "counterplay": "Pray Protect from Melee up close, or step away and count to eight between the ranged and magic halves.",
       "detection": [
-        { "type": "animation", "id": 9991 }
-      ],
-      "preview": { "animationId": 9991, "npcId": 6610, "staticFallback": false, "zoom": 1766, "shiftY": 50 }
-    },
-    {
-      "id": "ranged-spit",
-      "name": "Ranged Spit",
-      "description": "She spits green venom at range. She throws eight of these before switching to magic.",
-      "counterplay": "Pray Protect from Missiles and count to eight.",
-      "detection": [
+        { "type": "animation", "id": 9991 },
         { "type": "animation", "id": 9989 },
-        { "type": "projectile", "id": 2356 }
-      ],
-      "preview": { "animationId": 9989, "npcId": 6610, "staticFallback": false, "zoom": 1766, "shiftY": 50 }
-    },
-    {
-      "id": "web-magic",
-      "name": "Web Cast",
-      "description": "She throws webs at range, eight of them, before cycling back to her ranged attack.",
-      "counterplay": "Pray Protect from Magic for this half of the cycle.",
-      "detection": [
+        { "type": "projectile", "id": 2356 },
         { "type": "animation", "id": 9990 },
         { "type": "projectile", "id": 2358 }
       ],
-      "preview": { "animationId": 9990, "npcId": 6610, "staticFallback": false, "zoom": 1766, "shiftY": 50 }
+      "preview": { "animationId": 9991, "npcId": 6610, "staticFallback": false, "zoom": 1766, "shiftY": 50 }
     },
     {
       "id": "sticky-web",
@@ -59,6 +41,6 @@
       "preview": { "animationId": 6247, "npcId": 12000, "staticFallback": false, "zoom": 411, "shiftY": 59 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES, which is why the page title carries both names and why npcIds spans them: VENENATIS 6610 is the multi-combat Wilderness boss, VENENATIS_SINGLES 11998 is Spindel, and CLANCUP_VENENATIS 6504 is the clan cup copy. Spindel is mechanically identical at lower defence, so the two share one mechanic list rather than being split by phase labels. The spiderlings are adds and detect on npc-spawn: VENENATIS_SPIDERLING 12000, SPINDEL_SPIDERLING 12001 and 11981, a third spiderling npc carrying the older model pair. POH_VENENATIS_PET 495 and VENENATISPET 5557 are pets and are excluded, which matters here because they share model 47393 with the boss and would otherwise look like the same npc. Animations are the NPC_VENENATIS_* set, all unambiguous gameval names: RANGED_01 9989, MAGIC_01 9990 and MELEE_01 9991. Projectiles FX_VENENATIS_RANGED_PROJECTILE 2356, FX_VENENATIS_MAGIC_PROJECTILE 2358 and FX_VENENATIS_WEB_PROJECTILE 2360 are curated because each says projectile outright in Jagex's own name; the three matching IMPACT ids 2357, 2359 and 2361 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). Note the cache carries the same four VFX_VENENATIS_* ids twice, once in the animation space (9994 through 9997) and once in the spotanim space (2356 through 2361); the spotanim copies are the ones a projectile trigger reads. THE STICKY WEB DETECTS ON A PROJECTILE ALONE, with no animation beside it, because it is thrown during the ordinary magic cast and shares animation 9990 with it. Curating 9990 on both would unlock the web on any magic attack, so the web projectile is the only honest trigger, and the two mechanics deliberately share a preview animation for the same reason. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. Unlike Callisto and Vet'ion on the same collection log tab, this boss's sequences are classic rather than skeletal, so FitZoom fitted them normally and these zooms are real arithmetic rather than a bind-pose estimate. The collection log page is titled 'Venenatis and Spindel', matching 'name'.",
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). ONE COLLECTION LOG PAGE COVERS TWO BOSSES, which is why the page title carries both names and why npcIds spans them: VENENATIS 6610 is the multi-combat Wilderness boss, VENENATIS_SINGLES 11998 is Spindel, and CLANCUP_VENENATIS 6504 is the clan cup copy. Spindel is mechanically identical at lower defence, so the two share one mechanic list rather than being split by phase labels. The spiderlings are adds and detect on npc-spawn: VENENATIS_SPIDERLING 12000, SPINDEL_SPIDERLING 12001 and 11981, a third spiderling npc carrying the older model pair. POH_VENENATIS_PET 495 and VENENATISPET 5557 are pets and are excluded, which matters here because they share model 47393 with the boss and would otherwise look like the same npc. Animations are the NPC_VENENATIS_* set, all unambiguous gameval names: RANGED_01 9989, MAGIC_01 9990 and MELEE_01 9991. Projectiles FX_VENENATIS_RANGED_PROJECTILE 2356, FX_VENENATIS_MAGIC_PROJECTILE 2358 and FX_VENENATIS_WEB_PROJECTILE 2360 are curated because each says projectile outright in Jagex's own name; the three matching IMPACT ids 2357, 2359 and 2361 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). Note the cache carries the same four VFX_VENENATIS_* ids twice, once in the animation space (9994 through 9997) and once in the spotanim space (2356 through 2361); the spotanim copies are the ones a projectile trigger reads. THE STICKY WEB DETECTS ON A PROJECTILE ALONE, with no animation beside it, because it is thrown during the ordinary magic cast and shares animation 9990 with it. Curating 9990 on both would unlock the web on any magic attack, so the web projectile is the only honest trigger, and the two mechanics deliberately share a preview animation for the same reason. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. Unlike Callisto and Vet'ion on the same collection log tab, this boss's sequences are classic rather than skeletal, so FitZoom fitted them normally and these zooms are real arithmetic rather than a bind-pose estimate. The collection log page is titled 'Venenatis and Spindel', matching 'name'. FEEDBACK PASS 2026-08-07 (Andrew reviewed every boss in game): \"Web Cast\" was the magic half of her ranged cycle rather than a separate move, so Lunge, Ranged Spit and Web Cast are collapsed into one \"Standard Attacks\". The merged row carries the union of every source row's triggers, so a player who witnesses any of the old attacks still discovers it; the old mechanic ids simply stop matching inside an existing discovered CSV, which docs/DECISIONS.md D18 makes safe without a migration. It keeps the first source row's preview verbatim, since every source already shared a model.",
   "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on, against both Venenatis and Spindel, since only one set of ids is curated for both. 2. Confirm Spindel plays the same animation ids as Venenatis; the assumption that it does is what lets one mechanic list cover both. 3. Confirm which of the three spiderling npc ids actually spawn, and whether 11981 belongs to this fight at all. 4. Add the graphic triggers deliberately left out, the three IMPACT spotanims 2357, 2359 and 2361. 5. staticFallback is false on all five; confirm each body animation reads at the shipped zoom."
 }

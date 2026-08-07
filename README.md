@@ -42,7 +42,9 @@ collection log.  When opened but it is draggable by its title bar anywhere on sc
 
 ## Supported bosses
 
-Every page in the collection log's **Bosses** tab, 57 of 57.
+Every combat boss in the collection log's **Bosses** tab, 54 of 57. Tempoross,
+Wintertodt and Zalcano are deliberately out of scope: they are skilling
+encounters with no attack rotation to learn.
 
 Most of these ship as **skeletons**: their ids come from Jagex's own gameval names
 rather than guesses, but they have not been confirmed in a live fight yet. Each boss
@@ -58,14 +60,14 @@ track the live pass.
 | Barrows Chests | 7 |
 | Brutus | 3 |
 | Bryophyta | 2 |
-| Callisto and Artio | 4 |
-| Cerberus | 5 |
+| Callisto and Artio | 2 |
+| Cerberus | 3 |
 | Chaos Elemental | 4 |
 | Chaos Fanatic | 1 |
-| Commander Zilyana | 5 |
-| Corporeal Beast | 5 |
+| Commander Zilyana | 4 |
+| Corporeal Beast | 4 |
 | Crazy Archaeologist | 2 |
-| Dagannoth Kings | 4 |
+| Dagannoth Kings | 3 |
 | Deranged Archaeologist | 2 |
 | Doom of Mokhaiotl | 11 |
 | Duke Sucellus | 6 |
@@ -74,39 +76,36 @@ track the live pass.
 | Giant Mole | 2 |
 | Grotesque Guardians | 6 |
 | Hespori | 3 |
-| K'ril Tsutsaroth | 5 |
-| Kalphite Queen | 4 |
+| K'ril Tsutsaroth | 4 |
+| Kalphite Queen | 2 |
 | King Black Dragon | 3 |
 | Kraken | 3 |
-| Kree'arra | 5 |
-| Maggot King | 5 |
-| Moons of Peril | 4 |
+| Kree'arra | 4 |
+| Maggot King | 3 |
+| Moons of Peril | 3 |
 | Nex | 6 |
 | Obor | 1 |
 | Phantom Muspah | 6 |
 | Royal Titans | 5 |
 | Sarachnis | 2 |
 | Scorpia | 2 |
-| Scurrius | 5 |
-| Shellbane Gryphon | 5 |
+| Scurrius | 4 |
+| Shellbane Gryphon | 4 |
 | Skotizo | 4 |
-| Tempoross | 4 |
 | The Fight Caves | 3 |
-| The Gauntlet | 5 |
+| The Gauntlet | 4 |
 | The Hueycoatl | 6 |
 | The Inferno | 5 |
 | The Leviathan | 5 |
 | The Mad Angel | 5 |
 | The Nightmare | 7 |
 | The Whisperer | 5 |
-| Thermonuclear Smoke Devil | 2 |
+| Thermonuclear Smoke Devil | 1 |
 | Vardorvis | 5 |
-| Venenatis and Spindel | 5 |
+| Venenatis and Spindel | 3 |
 | Vet'ion and Calvar'ion | 4 |
 | Vorkath | 6 |
-| Wintertodt | 3 |
 | Yama | 6 |
-| Zalcano | 5 |
 | Zulrah | 5 |
 
 ## Settings

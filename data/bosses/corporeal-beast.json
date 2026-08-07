@@ -5,12 +5,18 @@
   "wikiUrl": "https://oldschool.runescape.wiki/w/Corporeal_Beast/Strategies",
   "mechanics": [
     {
-      "id": "swipe",
-      "name": "Swipe",
-      "description": "Its melee attack, thrown at whoever is standing closest.",
-      "counterplay": "Pray Protect from Melee. Everything it does other than magic is stopped by that one prayer.",
+      "id": "standard-attacks",
+      "name": "Standard Attacks",
+      "description": "It swipes at whoever is closest, and casts at range when it cannot reach. The magic comes in three strengths.",
+      "counterplay": "Protect from Melee stops everything except the magic. Choosing which one to eat is the fight.",
       "detection": [
-        { "type": "animation", "id": 1683 }
+        { "type": "animation", "id": 1683 },
+        { "type": "animation", "id": 1679 },
+        { "type": "animation", "id": 1680 },
+        { "type": "animation", "id": 1681 },
+        { "type": "projectile", "id": 314 },
+        { "type": "projectile", "id": 315 },
+        { "type": "projectile", "id": 316 }
       ],
       "preview": { "animationId": 1683, "npcId": 319, "staticFallback": false, "zoom": 917, "shiftY": 64 }
     },
@@ -35,21 +41,6 @@
       "preview": { "animationId": 1686, "npcId": 319, "staticFallback": false, "zoom": 1259, "shiftY": 59 }
     },
     {
-      "id": "magic-attack",
-      "name": "Magic Attack",
-      "description": "Its ranged option, and the one attack Protect from Melee leaves you open to. It comes in three strengths.",
-      "counterplay": "This is what makes the fight a choice: Protect from Magic stops it but leaves every other attack landing.",
-      "detection": [
-        { "type": "animation", "id": 1679 },
-        { "type": "animation", "id": 1680 },
-        { "type": "animation", "id": 1681 },
-        { "type": "projectile", "id": 314 },
-        { "type": "projectile", "id": 315 },
-        { "type": "projectile", "id": 316 }
-      ],
-      "preview": { "animationId": 1679, "npcId": 319, "staticFallback": false, "zoom": 917, "shiftY": 64 }
-    },
-    {
       "id": "dark-core",
       "name": "Dark Core",
       "description": "A dark core drifts out and heals the beast for everything it drains from anyone standing near it.",
@@ -61,6 +52,6 @@
       "preview": { "animationId": 7980, "npcId": 318, "staticFallback": false, "zoom": 540, "shiftY": 64 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id 319, with the dark core (318 and 388, two npcs sharing model 11069) as an add detecting on npc-spawn. Animations are the CORPBEAST_* set, all unambiguous gameval names: SWIPING_ATTACK 1683, STOMP_ATTACK 1682, DOUBLE_STOMP 1686 and the three SPRITE_SHOOT sequences 1679, 1680 and 1681. All three shoot sequences are curated on one mechanic rather than three, matching the three projectile strengths. Projectiles CORP_SPIRIT_BEAST_WEAK_PROJ 314, MID_PROJ 315 and STRONG_PROJ 316 are curated because each carries an explicit _PROJ suffix in Jagex's own name, which is the bar for a projectile trigger in this wave; CORP_GROUND_STOMP 318 and CORPBEAST_DOUBLESTOMP_SPOTANIM 1687 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). Note that spotanim 318 and npc 318 share a number and are unrelated; the npc is the dark core, the spotanim is the stomp's ground effect. THE DARK CORE PREVIEW USES ANIMATION 7980, npc 318's own standing animation, per docs/DECISIONS.md D26's prefer-the-idle guidance. Its sibling npc 388 carries a different standing animation (1688) for the same model, which suggests one is a reworked version of the other; both are curated as triggers so whichever the game spawns is caught. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Corporeal Beast', matching 'name'.",
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc id 319, with the dark core (318 and 388, two npcs sharing model 11069) as an add detecting on npc-spawn. Animations are the CORPBEAST_* set, all unambiguous gameval names: SWIPING_ATTACK 1683, STOMP_ATTACK 1682, DOUBLE_STOMP 1686 and the three SPRITE_SHOOT sequences 1679, 1680 and 1681. All three shoot sequences are curated on one mechanic rather than three, matching the three projectile strengths. Projectiles CORP_SPIRIT_BEAST_WEAK_PROJ 314, MID_PROJ 315 and STRONG_PROJ 316 are curated because each carries an explicit _PROJ suffix in Jagex's own name, which is the bar for a projectile trigger in this wave; CORP_GROUND_STOMP 318 and CORPBEAST_DOUBLESTOMP_SPOTANIM 1687 are graphics and are left out, since a graphic trigger has no source actor to check (docs/DECISIONS.md D17) and discovery never revokes (D18). Note that spotanim 318 and npc 318 share a number and are unrelated; the npc is the dark core, the spotanim is the stomp's ground effect. THE DARK CORE PREVIEW USES ANIMATION 7980, npc 318's own standing animation, per docs/DECISIONS.md D26's prefer-the-idle guidance. Its sibling npc 388 carries a different standing animation (1688) for the same model, which suggests one is a reworked version of the other; both are curated as triggers so whichever the game spawns is caught. staticFallback is false on all five; whether each body animation reads has not been eyeballed in game. The collection log page is titled 'Corporeal Beast', matching 'name'. FEEDBACK PASS 2026-08-07 (Andrew reviewed every boss in game): \"Swipe\" and \"Magic Attack\" are collapsed into one \"Standard Attacks\". Stomp and Double Stomp stay separate: they are named specials, not the basic attack cycle. The merged row carries the union of every source row's triggers, so a player who witnesses any of the old attacks still discovers it; the old mechanic ids simply stop matching inside an existing discovered CSV, which docs/DECISIONS.md D18 makes safe without a migration. It keeps the first source row's preview verbatim, since every source already shared a model.",
   "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. Establish which of dark core npcs 318 and 388 the game actually spawns, and drop the other. 3. Confirm whether the three sprite-shoot animations 1679 through 1681 map one-to-one onto the three projectile strengths 314 through 316; if they do, the magic attack could split into three mechanics, though the counterplay is identical for all three and probably does not warrant it. 4. staticFallback is false on all five; confirm each body animation reads at the shipped zoom."
 }

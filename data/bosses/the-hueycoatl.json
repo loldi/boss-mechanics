@@ -18,7 +18,7 @@
     },
     {
       "id": "glowing-symbols",
-      "name": "Glowing Symbols",
+      "name": "Lightning Strike",
       "description": "Marks appear on the floor and four ticks later lightning comes down on them.",
       "counterplay": "Step off a marked tile. You have four ticks, which is plenty if you are watching the ground.",
       "detection": [
@@ -29,10 +29,10 @@
     },
     {
       "id": "body-segments",
-      "name": "Body Segments",
+      "name": "Body",
       "description": "She starts strung across the ground as five body segments blocking the way to the summit. They do not fight back, they just have to come apart.",
       "counterplay": "Break the segments while dodging symbols and flicking prayers for rain fire. Nothing here hits you except what she is already doing.",
-      "phase": "Body",
+      "phase": "Phase 1",
       "detection": [
         { "type": "animation", "id": 11683 },
         { "type": "animation", "id": 11684 },
@@ -45,7 +45,7 @@
       "name": "Prayer Pillars",
       "description": "In the head phase a seer charges three pillars, one per prayer type, and they only charge if the team is split evenly across the three. Getting all three lit is a large damage bonus that lasts until the balance breaks.",
       "counterplay": "Agree who is praying what before the phase starts. This is the whole difference between a fast kill and a slow one.",
-      "phase": "Head",
+      "phase": "Phase 2",
       "detection": [
         { "type": "animation", "id": 11700 }
       ],
@@ -53,10 +53,10 @@
     },
     {
       "id": "shielded",
-      "name": "Shielded Phase",
+      "name": "Shielded Form",
       "description": "At half health she wraps herself and stops taking damage, sending you to the tail instead.",
       "counterplay": "Leave the head alone and go to the tail. Nothing you do to her while she is wrapped counts.",
-      "phase": "Shielded",
+      "phase": "Phase 3",
       "detection": [
         { "type": "animation", "id": 11676 },
         { "type": "animation", "id": 11673 },
@@ -68,10 +68,10 @@
     },
     {
       "id": "tail-shockwave",
-      "name": "Tail Shockwave",
+      "name": "Shockwave",
       "description": "The tail has very little health but caps how much any single hit can do to it, and it swaps sides every twenty seconds or so. Every so often it slams the ground and sends a shockwave out.",
       "counterplay": "Bring something that hits many times rather than hard. Dodge the shockwave or stand in a spot it does not reach.",
-      "phase": "Tail",
+      "phase": "Phase 2/3/4",
       "detection": [
         { "type": "npc-spawn", "id": 14014 },
         { "type": "npc-spawn", "id": 14015 }
@@ -79,6 +79,6 @@
       "preview": { "animationId": 11722, "npcId": 14014, "staticFallback": false, "zoom": 4200, "shiftY": 0 }
     }
   ],
-  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 14009 through 14013 are the head, all in npcIds because the boss transforms between its ordinary, shielded (14011, standing 11672) and knocked-out (14012, standing 11680) states rather than respawning (docs/DECISIONS.md D17). The tail (14014, and 14015 once broken) and the body segments (14017) are separate npcs and detect on npc-spawn. Animations are the HUEY_* set, all unambiguous gameval names, and this boss is unusually well described by them: ATTACK_MELEE 11669, ATTACK_RANGE 11670 and ATTACK_MAGIC 11671 for the ordinary head, the matching SHIELD_ATTACK_* trio 11673 through 11675, SHIELD_ACTIVATION 11676, SCREECH 11677 with SCREECH_RESET 11678, KNOCKOUT 11679, AWAKEN 11681 and BODY_SPAWN 11683 with BODY_SPAWN_DIAG 11684. THE THREE ATTACK ANIMATIONS ARE ONE MECHANIC, NOT THREE, which is the opposite of the usual call and is deliberate. For most bosses each style is its own mechanic because each has its own counterplay; here the counterplay is a single skill, reading the feather colour and flicking to match, and splitting it into three rows would say the same sentence three times. THE GLOWING SYMBOLS ARE CURATED ON THE SCREECH SEQUENCES BY ELIMINATION. Nothing in the set names lightning or symbols, and the screech is the only non-attack sequence the head plays often enough to fit. This is an inference and the weakest trigger in the file. THE PILLAR MECHANIC DETECTS ON HUEY_P2_BARRIER_TRANSITION 11700, which is a phase transition rather than the pillars themselves; the pillars have their own animations under a PILLAR_ZEMA01_PRAYER01_PHASE prefix (11691 through 11697) but those are played by pillar entities rather than by the boss, so an animation trigger on them would never match (D17). No projectile is curated: the cache names FX_BEAM_HUEY 11594 in the animation space but no HUEY spotanim with an unambiguous projectile name. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 1019, the Combat Achievements screen's own entry, which pins model 54462 at zoom 4200, and compute shiftY from the bind pose extents at that zoom. 4200 is the second largest CA zoom in the wave and model 54462 is enormously wide (X[-848..846], Z[-1198..195]), which is why its shiftY of 23 is so small: the fit is dominated by width, not height. The tail's shiftY of 0 is correct rather than missing, its model being symmetric about the ground plane at Y[-181..181]. staticFallback is false on all six; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'The Hueycoatl', matching 'name', article included.",
+  "_note": "SKELETON, NOT LIVE-VERIFIED. Ids come from Jagex's own gameval names rather than guesses, but nothing here has been confirmed in a live fight. Provenance: gamevals from runelite-api 1.12.35 (net.runelite.api.gameval.*), because this cache download ships an empty GAMEVALS index (idx24) and ScanGameVal cannot read it; npc names, models, sequences and extents from the live cache (revision of 2026-08-06). Npc ids 14009 through 14013 are the head, all in npcIds because the boss transforms between its ordinary, shielded (14011, standing 11672) and knocked-out (14012, standing 11680) states rather than respawning (docs/DECISIONS.md D17). The tail (14014, and 14015 once broken) and the body segments (14017) are separate npcs and detect on npc-spawn. Animations are the HUEY_* set, all unambiguous gameval names, and this boss is unusually well described by them: ATTACK_MELEE 11669, ATTACK_RANGE 11670 and ATTACK_MAGIC 11671 for the ordinary head, the matching SHIELD_ATTACK_* trio 11673 through 11675, SHIELD_ACTIVATION 11676, SCREECH 11677 with SCREECH_RESET 11678, KNOCKOUT 11679, AWAKEN 11681 and BODY_SPAWN 11683 with BODY_SPAWN_DIAG 11684. THE THREE ATTACK ANIMATIONS ARE ONE MECHANIC, NOT THREE, which is the opposite of the usual call and is deliberate. For most bosses each style is its own mechanic because each has its own counterplay; here the counterplay is a single skill, reading the feather colour and flicking to match, and splitting it into three rows would say the same sentence three times. THE GLOWING SYMBOLS ARE CURATED ON THE SCREECH SEQUENCES BY ELIMINATION. Nothing in the set names lightning or symbols, and the screech is the only non-attack sequence the head plays often enough to fit. This is an inference and the weakest trigger in the file. THE PILLAR MECHANIC DETECTS ON HUEY_P2_BARRIER_TRANSITION 11700, which is a phase transition rather than the pillars themselves; the pillars have their own animations under a PILLAR_ZEMA01_PRAYER01_PHASE prefix (11691 through 11697) but those are played by pillar entities rather than by the boss, so an animation trigger on them would never match (D17). No projectile is curated: the cache names FX_BEAM_HUEY 11594 in the animation space but no HUEY spotanim with an unambiguous projectile name. THIS BOSS'S ANIMATIONS ARE SKELETAL, SO THE PREVIEW VALUES ARE AN ESTIMATE, NOT ARITHMETIC (docs/DECISIONS.md D36). FitZoom returned empty extents. The values follow the method Doom of Mokhaiotl already ships under: take the zoom from struct 1019, the Combat Achievements screen's own entry, which pins model 54462 at zoom 4200, and compute shiftY from the bind pose extents at that zoom. 4200 is the second largest CA zoom in the wave and model 54462 is enormously wide (X[-848..846], Z[-1198..195]), which is why its shiftY of 23 is so small: the fit is dominated by width, not height. The tail's shiftY of 0 is correct rather than missing, its model being symmetric about the ground plane at Y[-181..181]. staticFallback is false on all six; whether each body animation reads has not been eyeballed in game, and for a skeletal boss that check matters more than usual. The collection log page is titled 'The Hueycoatl', matching 'name', article included. FEEDBACK PASS 2026-08-07 (Andrew reviewed every boss in game): Four renames, and the phase tags now name phase numbers rather than repeating the body part: \"Glowing Symbols\" is now \"Lightning Strike\" (Phase 2/3/4), \"Body Segments\" is now \"Body\" (Phase 1), \"Shielded Phase\" is now \"Shielded Form\" (Phase 3), and \"Tail Shockwave\" is now \"Shockwave\" (Phase 2/3/4). Prayer Pillars is tagged Phase 2.",
   "_followups": "1. Live verification of every id per the curation checklist, with Log boss trigger ids on. 2. THE PREVIEW SCALE NEEDS AN IN-GAME LOOK BEFORE IT CAN BE TRUSTED, for the skeletal reason above, and this model is the widest in the wave so it may read as a thin band. 3. Find the real trigger for the glowing symbols; the screech is a stand-in chosen by elimination. 4. Confirm the pillar mechanic's trigger, and check whether the seer or the pillars are npcs, which would give it an exact npc-spawn. 5. Work out what HUEY_KNOCKOUT 11679 and HUEY_AWAKEN 11681 correspond to; the fourth phase described on the wiki has no mechanic here and those are the likely triggers. 6. staticFallback is false on all six; confirm each animation reads at the shipped zoom."
 }
